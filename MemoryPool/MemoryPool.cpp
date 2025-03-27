@@ -1,28 +1,35 @@
 ﻿#include <iostream>
 #include <Windows.h>
 
-#include "MemoryPool.h"
-
 using namespace std;
 
+#include "MemoryPool.h"
 
+class CTest
+{
+public:
+    CTest()
+    {
+        cout << "CTEST 생성자 호출" << endl;
+        _x = 1;
+    }
+    ~CTest()
+    {
+        cout << "CTEST 소멸자 호출" << endl;
+        _x = 0;
+    }
+
+    int _x;
+};
 
 int main()
 {
-    procademy::MemoryPool<int> mp(0);
-    int* a = mp.Alloc();
+    procademy::MemoryPool<CTest> mp(10, true);
 
-    *a = 3;
-    cout << *a << endl;
-
+    CTest* a = mp.Alloc();
     mp.Free(a);
 
-    int* b = mp.Alloc();
-    cout << *b << endl;
-    *b = 5;
-
-    cout << *b << endl;
-
-    cout << mp.GetUseCount() << endl;
-    cout << mp.GetCapacity() << endl;
+    CTest* b = mp.Alloc();
+    mp.Free(b);
+    
 }
