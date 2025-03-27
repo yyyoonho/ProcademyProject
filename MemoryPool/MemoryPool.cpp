@@ -11,7 +11,7 @@ public:
     CTest()
     {
         cout << "CTEST 생성자 호출" << endl;
-        _x = 1;
+        _x = 0xff;
     }
     ~CTest()
     {
@@ -20,16 +20,18 @@ public:
     }
 
     int _x;
+    //char _y;
 };
 
 int main()
 {
-    procademy::MemoryPool<CTest> mp(10, true);
+    procademy::MemoryPool<CTest> mp(1, true);
 
-    CTest* a = mp.Alloc();
-    mp.Free(a);
+    /*CTest* a = mp.Alloc();
+    mp.Free(a);*/
 
     CTest* b = mp.Alloc();
-    mp.Free(b);
     
+    
+    int bf2 = 3;
 }

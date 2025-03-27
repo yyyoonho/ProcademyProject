@@ -7,17 +7,17 @@ namespace procademy
 	class MemoryPool
 	{
 	private:
-
 		struct Node
 		{
-		public:
 			DATA _data;
-			Node* _pNext = NULL;
 		};
 
 	public:
 		MemoryPool(int iBlockNum, bool bPlacement = false);
 		virtual ~MemoryPool();
+
+		/* 테스트 */
+		void Init();
 
 		DATA* Alloc();
 		bool Free(DATA* pData);
@@ -32,37 +32,52 @@ namespace procademy
 		Node* _pFreeNode = NULL;
 
 		bool _bPlacement = false;
+
+		__int64 _poolId;
 	};
 	
 
 	template<typename DATA>
 	inline MemoryPool<DATA>::MemoryPool(int iBlockNum, bool bPlacement)
 	{
+		Init();
+
 		_bPlacement = bPlacement;
 
 		// 지금 초기 세팅할때 생성자 호출하고, 이후로는 하지 않는다.ex) 직렬화버퍼 풀
+		// 공간 확보 + 생성자 호출
 		if (_bPlacement == false) 
 		{
 			for (int i = 0; i < iBlockNum; i++)
 			{
-				Node* newNode = (Node*)malloc(sizeof(DATA) + sizeof(Node*));
-				
-				// placement new
-				new((DATA*)newNode) DATA();
+				// malloc
+				Node* newNode = (Node*)malloc(sizeof(Node*) + sizeof(Node) + sizeof(Node*));
 
-				newNode->_pNext = _pFreeNode;
+				newNode = newNode + 1; // Free할때 -1 해서 Free 해야한다!!!
+
+				// placement new
+				new(newNode) DATA();
+
+				// nextNode 세팅
+				Node** ppNext = (Node**)((BYTE*)newNode + sizeof(Node));
+				*ppNext = _pFreeNode;
+				
 				_pFreeNode = newNode;
+				
+				// prev 세팅
+				Node** ppPrev = (Node**)((BYTE*)newNode - sizeof(Node*));
+				*ppPrev = (Node*)_poolId;
+
 			}
 		}
 		// 어차피 Alloc할때마다 생성자 호출할거니, 지금은 생성자 호출 하지않겠다.
+		// 공간만 확보
 		else
 		{
 			for (int i = 0; i < iBlockNum; i++)
 			{
-				Node* newNode = (Node*)malloc(sizeof(DATA) + sizeof(Node*));
+				Node* newNode = (Node*)malloc(sizeof(Node*) + sizeof(DATA) + sizeof(Node*));
 
-				newNode->_pNext = _pFreeNode;
-				_pFreeNode = newNode;
 			}
 		}
 
@@ -74,65 +89,44 @@ namespace procademy
 	{
 		if (_bPlacement == true)
 		{
-			Node* tmpNext = _pFreeNode;
-		
-			while (tmpNext != NULL)
-			{
-				Node* targetNode = tmpNext;
-				tmpNext = targetNode->_pNext;
-
-				free(targetNode);
-			}
-
+			
 		}
 		else
 		{
-			Node* tmpNext = _pFreeNode;
 
-			while (tmpNext != NULL)
-			{
-				Node* targetNode = tmpNext;
-				tmpNext = targetNode->_pNext;
-
-				DATA* tmpData = (DATA*)targetNode;
-				tmpData->~DATA();
-
-				free(targetNode);
-			}
 		}		
+	}
+
+	template<typename DATA>
+	inline void MemoryPool<DATA>::Init()
+	{
+		// TODO: srand는 한번만 해도 되니 수정하자.
+		srand(time(NULL));
+
+		__int64 tmp = rand();
+
+		for (int i = 1; i <= 4; i++)
+		{
+			_poolId = _poolId | (tmp << i * 16);
+		}
 	}
 
 	template<typename DATA>
 	inline DATA* MemoryPool<DATA>::Alloc()
 	{
-		if (_pFreeNode == NULL)
+		/*if (_pFreeNode == NULL)
 		{
-			Node* newNode = (Node*)malloc(sizeof(DATA) + sizeof(Node*));
-
-			// placement new
-			new((DATA*)newNode) DATA();
-
-			_useCount++;
-			_capacity++;
-
-			return (DATA*)newNode;
+			
 		}
 		else
 		{
-			Node* retNode = _pFreeNode;
-			_pFreeNode = _pFreeNode->_pNext;
-
-			// bPlacement == ture 시, Alloc할때마다 초기화 해주겠다.
-			if (_bPlacement == true)
-			{
-				// placement new
-				new((DATA*)retNode) DATA();
-			}
 
 			_useCount++;
 
 			return (DATA*)retNode;
-		}
+		}*/
+
+		return NULL;
 	}
 
 	template<typename DATA>
