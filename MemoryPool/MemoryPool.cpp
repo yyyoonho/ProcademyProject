@@ -25,13 +25,13 @@ public:
 
 int main()
 {
-    procademy::MemoryPool<CTest> mp(1, true);
+    procademy::MemoryPool<CTest> mp(10, true);
 
-    /*CTest* a = mp.Alloc();
-    mp.Free(a);*/
+    CTest* a = mp.Alloc(); // CTEST 생성자 -> Node 생성자
+    mp.Free(a); // CTest 소멸자
 
-    CTest* b = mp.Alloc();
-    
+    CTest* b = mp.Alloc(); // CTEST 생성자
+    //mp.Free(b); // CTest 소멸자
     
     int bf2 = 3;
 }
