@@ -42,7 +42,7 @@ enum
 
 // 윈도우 메시지 처리함수
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-void DrawLine(HWND hWnd, int oldX, int oldY, int curX, int curY);
+void DrawParentLine(HDC hdc);
 
 /* 펜, 브러쉬 */
 HBRUSH g_hObstacleTileBrush;        // 장애물용 브러시
@@ -50,7 +50,8 @@ HBRUSH g_hStartTileBrush;           // 스타트포인트용 브러시
 HBRUSH g_hEndTileBrush;             // 엔드포인트용 브러시
 HBRUSH g_hOpenListTileBrush;        // 오픈리스트용 브러시
 HBRUSH g_hCloseListTileBrush;       // 클로즈리스트용 브러시
-HPEN   g_hParentPen;                  // 부모노드 연결용 펜
+HPEN   g_hParentPen;                // 부모노드 연결용 펜
+HPEN   g_hCompleteRoutePen;                // 완성된 경로 연결용 펜
 
 HPEN g_hGridPen;                    // 그리드용 펜
 
@@ -70,8 +71,11 @@ double F_Tile[GRID_HEIGHT][GRID_WIDTH];
 
 list<Node*> openList;
 list<Node*> closeList;
+list<Node*> completeRouteList;
 Node* startNode = NULL;
 Node* endNode = NULL;
+
+bool bFlag = false;
 
 int dy[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
 int dx[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
@@ -147,6 +151,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         RenderNode(g_hMemDC);
         RenderGrid(g_hMemDC);
 
+        DrawParentLine(g_hMemDC);
+
         hdc = BeginPaint(hWnd, &ps);
         BitBlt(hdc, 0, 0, g_MemDCRect.right, g_MemDCRect.bottom, g_hMemDC, 0, 0, SRCCOPY);
         EndPaint(hWnd, &ps);
@@ -163,7 +169,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_hMemDCBitmap_old = (HBITMAP)SelectObject(g_hMemDC, g_hMemDCBitmap);
 
         g_hGridPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-        g_hParentPen = CreatePen(PS_SOLID, 1, RGB(200, 0, 0));
+        g_hParentPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
+        g_hCompleteRoutePen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
 
         g_hObstacleTileBrush = CreateSolidBrush(RGB(100, 100, 100));
 
@@ -242,26 +249,78 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_KEYDOWN:
     {
+        if (wParam == 'T')
+        {
+            SetTimer(hWnd, 10, 30, NULL);
+
+            Init();
+
+            startNode->_G = 0;
+            startNode->_H = GetManhattan(startNode->_y, startNode->_x, endNode->_y, endNode->_x);
+            startNode->_F = 0 + startNode->_H;
+            F_Tile[startNode->_y][startNode->_x] = startNode->_F;
+            openList.push_front(startNode);
+
+        }
+        if (wParam == 'Y')
+        {
+            KillTimer(hWnd, 10);
+
+        }
         if (wParam == 'G')
         {
+            if (bFlag == false)
+            {
+                Init();
+
+                startNode->_G = 0;
+                startNode->_H = GetManhattan(startNode->_y, startNode->_x, endNode->_y, endNode->_x);
+                startNode->_F = 0 + startNode->_H;
+                F_Tile[startNode->_y][startNode->_x] = startNode->_F;
+                openList.push_front(startNode);
+
+                bFlag = true;
+            }
+
             FindPath(hWnd);
+
+            InvalidateRect(hWnd, NULL, false);
         }
         if (wParam == 'R')
         {
-            for (int i = 0; i < GRID_HEIGHT; i++)
-            {
-                for (int j = 0; j < GRID_WIDTH; j++)
-                {
-                    g_Tile[i][j] = NONE;
-                }
-            }
+            Reset();
 
             InvalidateRect(hWnd, NULL, false);
         }
     }
     break;
 
+    case WM_TIMER:
+        switch (wParam)
+        {
+        case 10:
+            {
+                FindPath(hWnd);
+                InvalidateRect(hWnd, NULL, false);
+            }
+            break;
+        }
+        break;
+
     case WM_DESTROY:
+
+        DeleteObject(g_hGridPen);
+        DeleteObject(g_hParentPen);
+        DeleteObject(g_hCompleteRoutePen);
+        DeleteObject(g_hObstacleTileBrush);
+        DeleteObject(g_hStartTileBrush);
+        DeleteObject(g_hEndTileBrush);
+        DeleteObject(g_hOpenListTileBrush);
+        DeleteObject(g_hCloseListTileBrush);
+
+        SelectObject(g_hMemDC, g_hMemDCBitmap_old);
+        DeleteObject(g_hMemDC);
+        DeleteObject(g_hMemDCBitmap);
 
         PostQuitMessage(0);
         break;
@@ -276,16 +335,82 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
 
-void DrawLine(HWND hWnd, int oldX, int oldY, int curX, int curY)
+void DrawParentLine(HDC hdc)
 {
-    /*HDC hdc = GetDC(hWnd);
-    HPEN hPenOld = (HPEN)SelectObject(hdc, hPen);
+    HPEN hPenOld = (HPEN)SelectObject(hdc, g_hParentPen);
 
-    MoveToEx(hdc, oldX, oldY, NULL);
-    LineTo(hdc, curX, curY);
+    list<Node*>::iterator iter;
+    for (iter = openList.begin(); iter != openList.end(); ++iter)
+    {
+        Node* tmp = *iter;
+
+        int oldX = tmp->_x;
+        oldX = oldX * GRID_SIZE + (GRID_SIZE / 2);
+        int oldY = tmp->_y;
+        oldY = oldY * GRID_SIZE + (GRID_SIZE / 2);
+
+        int curX = tmp->parent->_x;
+        curX = curX * GRID_SIZE + (GRID_SIZE / 2);
+        int curY = tmp->parent->_y;
+        curY = curY * GRID_SIZE + (GRID_SIZE / 2);
+
+        curX = curX + (oldX - curX) / 2;
+        curY = curY + (oldY - curY) / 2;
+
+        MoveToEx(hdc, oldX, oldY, NULL);
+        LineTo(hdc, curX, curY);
+    }
+
+    for (iter = closeList.begin(); iter != closeList.end(); ++iter)
+    {
+        Node* tmp = *iter;
+
+        if (tmp->parent == NULL)
+            continue;
+
+        int oldX = tmp->_x;
+        oldX = oldX * GRID_SIZE + (GRID_SIZE / 2);
+        int oldY = tmp->_y;
+        oldY = oldY * GRID_SIZE + (GRID_SIZE / 2);
+
+        int curX = tmp->parent->_x;
+        curX = curX * GRID_SIZE + (GRID_SIZE / 2);
+        int curY = tmp->parent->_y;
+        curY = curY * GRID_SIZE + (GRID_SIZE / 2);
+
+        curX = curX + (oldX - curX) / 2;
+        curY = curY + (oldY - curY) / 2;
+
+        MoveToEx(hdc, oldX, oldY, NULL);
+        LineTo(hdc, curX, curY);
+    }
 
     SelectObject(hdc, hPenOld);
-    ReleaseDC(hWnd, hdc);*/
+
+    hPenOld = (HPEN)SelectObject(hdc, g_hCompleteRoutePen);
+
+    for (iter = completeRouteList.begin(); iter != completeRouteList.end(); ++iter)
+    {
+        Node* tmp = *iter;
+
+        if (tmp->parent == NULL)
+            continue;
+
+        int oldX = tmp->_x;
+        oldX = oldX * GRID_SIZE + (GRID_SIZE / 2);
+        int oldY = tmp->_y;
+        oldY = oldY * GRID_SIZE + (GRID_SIZE / 2);
+
+        int curX = tmp->parent->_x;
+        curX = curX * GRID_SIZE + (GRID_SIZE / 2);
+        int curY = tmp->parent->_y;
+        curY = curY * GRID_SIZE + (GRID_SIZE / 2);
+
+        MoveToEx(hdc, oldX, oldY, NULL);
+        LineTo(hdc, curX, curY);
+    }
+
+    SelectObject(hdc, hPenOld);
 }
 
 /* 타일그리기용 함수 */
@@ -437,120 +562,121 @@ int GetManhattan(int nowY, int nowX, int targetY, int targetX)
 
 void FindPath(HWND hWnd)
 {
-    Init();
-
-    startNode->_G = 0;
-    startNode->_H = GetManhattan(startNode->_y, startNode->_x, endNode->_y, endNode->_x);
-    startNode->_F = 0 + startNode->_H;
-    F_Tile[startNode->_y][startNode->_x] = startNode->_F;
-    openList.push_front(startNode);
-
-
-    while (!openList.empty())
+    if (openList.empty())
     {
-        /* Render */
-        HDC hdc = GetDC(hWnd);
-        RenderNode(hdc);
-        RenderGrid(hdc);
+        // TODO: 그만.
+        bFlag = false;
+        KillTimer(hWnd, 10);
+    }
 
-        // TODO: 최솟값 찾아서 맨앞으로.
-        GetMinFNode();
+    GetMinFNode();
 
-        Node* nowNode = openList.front();
-        openList.pop_front();
-        closeList.push_front(nowNode);
+    Node* nowNode = openList.front();
+    openList.pop_front();
+    closeList.push_front(nowNode);
 
-        int a = 3;
+    int a = 3;
 
+    if(nowNode != startNode)
         g_Tile[nowNode->_y][nowNode->_x] = CLOSELIST;
 
-        // 종료조건, 길찾기 끝
-        if (nowNode->_x == endNode->_x && nowNode->_y == endNode->_y)
+    // 종료조건, 길찾기 끝
+    if (nowNode->_x == endNode->_x && nowNode->_y == endNode->_y)
+    {
+        // 길찾기 끝
+        g_Tile[endNode->_y][endNode->_x] = END;
+
+        // TODO: 부모 길 그리기
+        Node* tmpNode = nowNode;
+        while (1)
         {
-            // 길찾기 끝
-            g_Tile[endNode->_y][endNode->_x] = END;
+            if (tmpNode->parent == NULL)
+                break;
 
-            // TODO: 부모 길 그리기
+            completeRouteList.push_front(tmpNode);
 
-            /* Render */
-            HDC hdc = GetDC(hWnd);
-            RenderNode(hdc);
-            RenderGrid(hdc);
-            ReleaseDC(hWnd, hdc);
-
-            return;
+            tmpNode = tmpNode->parent;
         }
 
-        for (int i = 0; i < 8; i++)
+        bFlag = false;
+        KillTimer(hWnd, 10);
+        return;
+    }
+
+    for (int i = 0; i < 8; i++)
+    {
+        int nextY = nowNode->_y + dy[i];
+        int nextX = nowNode->_x + dx[i];
+
+        if (nextY >= GRID_HEIGHT || nextY < 0 || nextX >= GRID_WIDTH || nextX < 0)
+            continue;
+        if (g_Tile[nextY][nextX] == OBSTACLE)
+            continue;
+        if (g_Tile[nextY][nextX] == CLOSELIST)
+            continue;
+        if (g_Tile[nextY][nextX] == START)
+            continue;
+
+        if (g_Tile[nextY][nextX] == OPENLIST)
         {
-            int nextY = nowNode->_y + dy[i];
-            int nextX = nowNode->_x + dx[i];
+            double g = nowNode->_G + euclidVal[i];
+            double h = GetManhattan(nextY, nextX, endNode->_y, endNode->_x);
+            double f = g + h;
 
-            if (nextY >= GRID_HEIGHT || nextY < 0 || nextX >= GRID_WIDTH || nextX < 0)
-                continue;
-            if (g_Tile[nextY][nextX] == OBSTACLE)
-                continue;
-            if (g_Tile[nextY][nextX] == CLOSELIST)
-                continue;
-
-            if (g_Tile[nextY][nextX] == OPENLIST)
+            if (f < F_Tile[nextY][nextX])
             {
-                double g = nowNode->_G + euclidVal[i];
-                double h = GetManhattan(nextY, nextX, endNode->_y, endNode->_x);
-                double f = g + h;
-
-                if (f < F_Tile[nextY][nextX])
+                list<Node*>::iterator iter;
+                for (iter = openList.begin(); iter != openList.end(); ++iter)
                 {
-                    list<Node*>::iterator iter;
-                    for (iter = openList.begin(); iter != openList.end(); ++iter)
+                    if ((*iter)->_x == nextX && (*iter)->_y == nextY)
                     {
-                        if ((*iter)->_x == nextX && (*iter)->_y == nextY)
-                        {
-                            (*iter)->_G = g;
-                            (*iter)->_H = h;
-                            (*iter)->_F = f;
+                        (*iter)->_G = g;
+                        (*iter)->_H = h;
+                        (*iter)->_F = f;
 
-                            (*iter)->parent = nowNode;
+                        (*iter)->parent = nowNode;
 
-                            F_Tile[nextY][nextX] = f;
+                        F_Tile[nextY][nextX] = f;
 
-                            break;
-                        }
+                        break;
                     }
                 }
             }
-            else
-            {
-                Node* newNode = new Node();
-
-                newNode->_y = nextY;
-                newNode->_x = nextX;
-
-                newNode->_G = nowNode->_G + euclidVal[i];
-                newNode->_H = GetManhattan(nextY, nextX, endNode->_y, endNode->_x);
-                newNode->_F = newNode->_G + newNode->_H;
-
-                newNode->parent = nowNode;
-
-                F_Tile[nextY][nextX] = newNode->_F;
-
-                openList.push_back(newNode);
-                g_Tile[newNode->_y][newNode->_x] = OPENLIST;
-            }
-
         }
+        else
+        {
+            Node* newNode = new Node();
+
+            newNode->_y = nextY;
+            newNode->_x = nextX;
+
+            newNode->_G = nowNode->_G + euclidVal[i];
+            newNode->_H = GetManhattan(nextY, nextX, endNode->_y, endNode->_x);
+            newNode->_F = newNode->_G + newNode->_H;
+
+            newNode->parent = nowNode;
+
+            F_Tile[nextY][nextX] = newNode->_F;
+
+            openList.push_back(newNode);
+            g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+        }
+
     }
 
 }
 
 void Init()
 {
+    completeRouteList.clear();
+
     while (!openList.empty())
     {
         Node* tmp = openList.front();
         openList.pop_front();
 
-        g_Tile[tmp->_y][tmp->_x] = NONE;
+        if(g_Tile[tmp->_y][tmp->_x] == OPENLIST)
+            g_Tile[tmp->_y][tmp->_x] = NONE;
 
         if (tmp == startNode || tmp == endNode)
             continue;
@@ -563,7 +689,8 @@ void Init()
         Node* tmp = closeList.front();
         closeList.pop_front();
 
-        g_Tile[tmp->_y][tmp->_x] = NONE;
+        if (g_Tile[tmp->_y][tmp->_x] == CLOSELIST)
+            g_Tile[tmp->_y][tmp->_x] = NONE;
 
         if (tmp == startNode || tmp == endNode)
             continue;
@@ -599,4 +726,51 @@ void GetMinFNode()
     openList.erase(minIter);
     openList.push_front(tmp);
 
+}
+
+void Reset()
+{
+    completeRouteList.clear();
+
+    while (!openList.empty())
+    {
+        Node* tmp = openList.front();
+        openList.pop_front();
+
+        g_Tile[tmp->_y][tmp->_x] = NONE;
+
+        if (tmp == startNode || tmp == endNode)
+            continue;
+
+        delete tmp;
+    }
+
+    while (!closeList.empty())
+    {
+        Node* tmp = closeList.front();
+        closeList.pop_front();
+
+        g_Tile[tmp->_y][tmp->_x] = NONE;
+
+        if (tmp == startNode || tmp == endNode)
+            continue;
+
+        delete tmp;
+    }
+
+    for (int i = 0; i < GRID_HEIGHT; i++)
+    {
+        for (int j = 0; j < GRID_WIDTH; j++)
+        {
+            F_Tile[i][j] = 999999;
+        }
+    }
+
+    for (int i = 0; i < GRID_HEIGHT; i++)
+    {
+        for (int j = 0; j < GRID_WIDTH; j++)
+        {
+            g_Tile[i][j] = NONE;
+        }
+    }
 }
