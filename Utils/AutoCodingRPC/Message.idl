@@ -1,0 +1,17 @@
+void mpCreateMyCharacter(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y, char hp):0
+
+void mpCreateOtherCharacter(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y, char hp):1
+
+void mpDeleteCharacter(SerializePacket* pPacket, DWORD id):2
+
+void mpMoveStart(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y):11
+
+void mpMoveStop(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y):13
+
+void mpAttack1(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y):21
+
+void mpAttack2(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y):23
+
+void mpAttack3(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y):25
+
+void mpDamage(SerializePacket* sPacket, DWORD attackId, DWORD damageId, char damageHp):30
