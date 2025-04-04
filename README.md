@@ -6,7 +6,7 @@
 ### [AsyncSelectModel: NetDraw](https://github.com/yyyoonho/ProcademyProject/tree/main/AsyncSelect_NetDraw_Client)
 ### [SelectModel: StarGame](https://github.com/yyyoonho/ProcademyProject/tree/main/StarGame)
 ### [SendFileToServer](https://github.com/yyyoonho/ProcademyProject/tree/main/SendFileToServer)
-### [절차지향 게임] (https://github.com/yyyoonho/ProcademyProject/tree/main/S1)
+### [절차지향 게임](https://github.com/yyyoonho/ProcademyProject/tree/main/S1)
 
 ## Utils
 ### [AStar](https://github.com/yyyoonho/ProcademyProject/tree/main/S3)
