@@ -1,8 +1,6 @@
 # ProcademyProject
 프로카데미 코스 별 실습 및 프로젝트 정리
 
----
-
 ## 프로젝트 및 실습
 
 ### [SelectMode: TCP_Fighter](https://github.com/yyyoonho/ProcademyProject/tree/main/TCP_Fighter)
@@ -12,8 +10,6 @@
 ### [SelectModel: StarGame](https://github.com/yyyoonho/ProcademyProject/tree/main/StarGame)
 
 ### [SendFileToServer](https://github.com/yyyoonho/ProcademyProject/tree/main/SendFileToServer)
-
----
 
 ## Utils
 
