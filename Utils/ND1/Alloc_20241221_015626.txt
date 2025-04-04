@@ -1,0 +1,4 @@
+NOALLOC [0x012C2FD4] 
+ARRAY [0x012C297C] [      84] C:\Users\yoonho\Desktop\ND1\NewMain.cpp : 25
+LEAK [0x012C2FD8] [       8] C:\Users\yoonho\Desktop\ND1\NewMain.cpp : 21
+LEAK [0x012C2978] [      84] C:\Users\yoonho\Desktop\ND1\NewMain.cpp : 25

@@ -1,0 +1,8 @@
+ITEM=0,1
+ENEMYBULLETSPEED=1
+MOVEPATTERN=1
+MAP=
+                    
+                    
+                    
+                  1 1 1 2 2 2 2 1 1 1 

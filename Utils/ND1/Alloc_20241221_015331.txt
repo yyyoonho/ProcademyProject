@@ -1,0 +1,4 @@
+ARRAY [0x013D2FD8] [       8] C:\Users\yoonho\Desktop\ND1\NewMain.cpp : 21
+ARRAY [0x013D2978] [      80] C:\Users\yoonho\Desktop\ND1\NewMain.cpp : 25
+LEAK [0x013D2FD8] [       8] C:\Users\yoonho\Desktop\ND1\NewMain.cpp : 21
+LEAK [0x013D2978] [      80] C:\Users\yoonho\Desktop\ND1\NewMain.cpp : 25

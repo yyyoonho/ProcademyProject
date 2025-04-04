@@ -1,0 +1,2 @@
+           Name  |        Average   |            Min   |            Max   |      Call  |
+          TEST1  |         1.3439§Á |         1.2000§Á |       144.1000§Á |    183444  |

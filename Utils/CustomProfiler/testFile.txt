@@ -1,0 +1,2 @@
+           Name  |        Average   |            Min   |            Max   |      Call  |
+          TEST1  |          -0001§Á |          -0001§Á |          -0001§Á |        -2  |

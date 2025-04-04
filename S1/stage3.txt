@@ -1,0 +1,11 @@
+ITEM=1
+ENEMYBULLETSPEED=3
+MOVEPATTERN=3
+MAP=
+     3    3      4     4        5 5 5 
+     3    3       4   4             5  
+      3  3         4 4             5          
+       3            4             5          
+      3  3          4            5             
+     3    3         4           5         
+     3    3         4          5 5 5     
