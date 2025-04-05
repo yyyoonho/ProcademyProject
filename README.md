@@ -3,9 +3,13 @@
 
 ## 프로젝트 및 실습
 [SelectMode: TCP_Fighter](https://github.com/yyyoonho/ProcademyProject/tree/main/TCP_Fighter)
+
 [AsyncSelectModel: NetDraw](https://github.com/yyyoonho/ProcademyProject/tree/main/AsyncSelect_NetDraw_Client)
+
 [SelectModel: StarGame](https://github.com/yyyoonho/ProcademyProject/tree/main/StarGame)
+
 [SendFileToServer](https://github.com/yyyoonho/ProcademyProject/tree/main/SendFileToServer)
+
 [절차지향 게임](https://github.com/yyyoonho/ProcademyProject/tree/main/S1)
 
 ## Utils
