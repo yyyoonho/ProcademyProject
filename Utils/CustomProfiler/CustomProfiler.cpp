@@ -58,7 +58,7 @@ void ProfileBegin(const char* targetName)
 		profileArrSize++;
 	}
 
-	QueryPerformanceCounter(&profileArr[idx].start);	
+	QueryPerformanceCounter(&profileArr[idx].start);
 
 	profileArr[idx].isUsing = true;
 }
@@ -157,7 +157,7 @@ void ProfileDataOutText(char* szFileName)
 				-1,
 				-1,
 				profileArr[i].call);
-			
+
 			fwrite(buf, strlen(buf), 1, fp);
 			continue;
 		}
@@ -166,7 +166,7 @@ void ProfileDataOutText(char* szFileName)
 		__int64 maxSum = 0;
 		__int64 minSum = 0;
 		__int64 call = profileArr[i].call - 2;
-		
+
 		maxSum += profileArr[i].max;
 		minSum += profileArr[i].min;
 
@@ -180,7 +180,7 @@ void ProfileDataOutText(char* szFileName)
 
 		sprintf_s(buf, "%15s  |%15.4f㎲ |%15.4f㎲ |%15.4f㎲ |%10lld  |\n",
 			profileArr[i].tagName,
-			average  * MICROSEC / frequency.QuadPart,
+			average * MICROSEC / frequency.QuadPart,
 			minTime,
 			maxTime,
 			call);
@@ -232,7 +232,7 @@ void Logic()
 	PRO_BEGIN("TEST2");
 	for (int i = 0; i < 3000; i++)
 	{
-		
+
 	}
 	PRO_END("TEST2");
 }
