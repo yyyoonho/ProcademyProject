@@ -220,31 +220,31 @@ void Input()
 	}
 }
 
-//void Logic()
-//{
-//	PRO_BEGIN("TEST1");
-//	for (int i = 0; i < 1000; i++)
-//	{
-//		
-//	}
-//	PRO_END("TEST1");
-//
-//	//PRO_BEGIN("TEST2");
-//	for (int i = 0; i < 3000; i++)
-//	{
-//		
-//	}
-//	//PRO_END("TEST2");
-//}
+void Logic()
+{
+	PRO_BEGIN("TEST1");
+	for (int i = 0; i < 1000; i++)
+	{
+		int a = 3;
+	}
+	PRO_END("TEST1");
 
-//int main()
-//{
-//	while (1)
-//	{
-//		Input();
-//
-//		Logic();
-//	};
-//
-//	return 0;
-//}
+	PRO_BEGIN("TEST2");
+	for (int i = 0; i < 3000; i++)
+	{
+		
+	}
+	PRO_END("TEST2");
+}
+
+int main()
+{
+	while (1)
+	{
+		Input();
+
+		Logic();
+	};
+
+	return 0;
+}

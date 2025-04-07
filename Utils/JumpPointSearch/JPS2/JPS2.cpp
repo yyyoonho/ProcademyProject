@@ -693,6 +693,168 @@ void FindPath(HWND hWnd)
     }
     if ((nowDir & RU) == RU)
     {
+        int nextY = nowNode->_y;
+        int nextX = nowNode->_x;
+        int cnt = 0;
+
+        while (1)
+        {
+            cnt++;
+
+            nextY = nextY - 1;
+            nextX = nextX + 1;
+
+            if (CanGo(nextY, nextX) == false)
+                break;
+
+            if (IsCorner(RU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+            {
+                double g = nowNode->_G + 1.4 * cnt;
+                double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                double f = g + h;
+
+                if (g_Tile[nextY][nextX] == OPENLIST)
+                {
+                    if (f < F_Tile[nextY][nextX])
+                    {
+                        list<Node*>::iterator iter;
+                        for (iter = openList.begin(); iter != openList.end(); ++iter)
+                        {
+                            if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                            {
+                                (*iter)->_G = g;
+                                (*iter)->_H = h;
+                                (*iter)->_F = f;
+
+                                // TODO: 방향설정
+
+                                (*iter)->parent = nowNode;
+
+                                F_Tile[nextY][nextX] = f;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Node* newNode = new Node();
+
+                    newNode->_y = nextY;
+                    newNode->_x = nextX;
+
+                    newNode->_G = g;
+                    newNode->_H = h;
+                    newNode->_F = f; 
+
+                    // 기본 방향
+                    newNode->_dir = newNode->_dir | RU;
+
+                    // 옵션 방향
+                    if (TileMap[newNode->_y + 1][newNode->_x] == false && TileMap[newNode->_y + 1][newNode->_x + 1] == true)
+                        newNode->_dir = newNode->_dir | RD;
+                    if (TileMap[newNode->_y][newNode->_x - 1] == false && TileMap[newNode->_y - 1][newNode->_x - 1] == true)
+                        newNode->_dir = newNode->_dir | LU;
+
+                    newNode->parent = nowNode;
+
+                    F_Tile[nextY][nextX] = newNode->_F;
+
+                    openList.push_back(newNode);
+                    g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                }
+
+                break;
+            }
+
+            // 수평 쭉 체크
+            int horizontal_nextX = nextX;
+            int horizontal_cnt = 0;
+            while (1)
+            {
+                horizontal_cnt++;
+                horizontal_nextX = horizontal_nextX + 1;
+
+                if (CanGo(nextY, horizontal_nextX) == false)
+                    break;
+
+                if (IsCorner(RR, nextY, horizontal_nextX) || (horizontal_nextX == endNodeYX.second && nextY == endNodeYX.first))
+                {
+                    double g = nowNode->_G + 1.4 * cnt;
+                    double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                    double f = g + h;
+
+                    if (g_Tile[nextY][nextX] == OPENLIST)
+                    {
+                        if (f < F_Tile[nextY][nextX])
+                        {
+                            list<Node*>::iterator iter;
+                            for (iter = openList.begin(); iter != openList.end(); ++iter)
+                            {
+                                if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                                {
+                                    (*iter)->_G = g;
+                                    (*iter)->_H = h;
+                                    (*iter)->_F = f;
+
+                                    // TODO: 방향설정
+                                    (*iter)->_dir = 0;
+                                    (*iter)->_dir = (*iter)->_dir | RU | RR;
+
+                                    (*iter)->parent = nowNode;
+
+                                    F_Tile[nextY][nextX] = f;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Node* newNode = new Node();
+
+                        newNode->_y = nextY;
+                        newNode->_x = nextX;
+
+                        newNode->_G = g;
+                        newNode->_H = h;
+                        newNode->_F = f;
+
+                        // 기본 방향
+                        newNode->_dir = newNode->_dir | RU | RR;
+
+                        newNode->parent = nowNode;
+
+                        F_Tile[nextY][nextX] = newNode->_F;
+
+                        openList.push_back(newNode);
+                        g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                    }
+
+                    break;
+                }
+            }
+
+            // 수직 쭉 체크
+            int vertical_nextY = nextY - 1;
+            int vertical_cnt = 0;
+            while (1)
+            {
+                vertical_cnt++;
+                vertical_nextY = vertical_nextY - 1;
+
+                if (CanGo(nextY, horizontal_nextX) == false)
+                    break;
+                
+                if (IsCorner(UU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+                {
+                    // TODO: 노드생성
+                    break;
+                }
+            }
+        }
 
     }
     if ((nowDir & RR) == RR)
@@ -893,7 +1055,7 @@ bool IsCorner(unsigned int dir, int y, int x)
     }
     if ((dir & RU) == RU)
     {
-        if (TileMap[y + 1][x] == false && TileMap[y + 1][x - 1] == true ||
+        if (TileMap[y + 1][x] == false && TileMap[y + 1][x + 1] == true ||
             TileMap[y][x - 1] == false && TileMap[y - 1][x - 1] == true)
             return true;
         else
