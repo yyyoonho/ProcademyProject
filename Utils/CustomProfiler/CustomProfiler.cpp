@@ -220,6 +220,7 @@ void Input()
 	}
 }
 
+/*
 void Logic()
 {
 	PRO_BEGIN("TEST1");
@@ -248,3 +249,4 @@ int main()
 
 	return 0;
 }
+*/

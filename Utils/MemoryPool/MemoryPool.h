@@ -1,6 +1,19 @@
 #pragma once
 #include <new.h>
 
+/* 메모리풀 클래스 사용법 
+
+procademy::MemoryPool mp(int size, bool placementNew)
+
+1.	size 인자만큼 초기 할당을 진행합니다.
+	0을 넣었다면 FreeList로 진행합니다.
+
+2. placementNew false -> Alloc으로 메모리를 할당받을 때, 생성자를 호출하지 않습니다. 최초 1회만 호출합니다.
+				true -> Alloc으로 메모리를 할당받을 때, 매번 생성자를 호출합니다.
+
+
+*/
+
 namespace procademy
 {
 	template <typename DATA>
@@ -37,7 +50,7 @@ namespace procademy
 
 		__int64 _poolId;
 	};
-	
+
 
 	template<typename DATA>
 	inline MemoryPool<DATA>::MemoryPool(int iBlockNum, bool bPlacement)
@@ -48,7 +61,7 @@ namespace procademy
 
 		// 지금 초기 세팅할때 생성자 호출하고, 이후로는 하지 않는다.ex) 직렬화버퍼 풀
 		// 공간 확보 + 생성자 호출
-		if (_bPlacement == false) 
+		if (_bPlacement == false)
 		{
 			for (int i = 0; i < iBlockNum; i++)
 			{
@@ -57,7 +70,7 @@ namespace procademy
 				// nextNode 세팅
 				newNode->_pNextNode = _pFreeNode;
 				_pFreeNode = newNode;
-				
+
 				// prev 세팅
 				newNode->_underflowGuard = (Node*)_poolId;
 
@@ -73,7 +86,7 @@ namespace procademy
 				Node* newNode = (Node*)malloc(sizeof(Node));
 				if (newNode == NULL)
 				{
-					cout << "Error malloc" << endl;
+					//cout << "Error malloc" << endl;
 					return;
 				}
 
@@ -96,13 +109,13 @@ namespace procademy
 		{
 			Node* next = NULL;
 			next = _pFreeNode;
-			
+
 			while (next != NULL)
 			{
 				Node* targetNode = next;
 				next = targetNode->_pNextNode;
 
-				free (targetNode);
+				free(targetNode);
 			}
 		}
 		else
@@ -117,7 +130,7 @@ namespace procademy
 
 				delete targetNode;
 			}
-		}		
+		}
 	}
 
 	template<typename DATA>
@@ -140,6 +153,9 @@ namespace procademy
 		if (_pFreeNode == NULL)
 		{
 			Node* newNode = new Node;
+
+			// prev 세팅
+			newNode->_underflowGuard = (Node*)_poolId;
 
 			// overflowGuard 세팅
 			newNode->_pNextNode = (Node*)_poolId;
