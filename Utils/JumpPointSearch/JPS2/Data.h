@@ -7,14 +7,14 @@
 
 enum
 {
-    NONE = 1,
-    OPENLIST = 1,
+    NONE,
+    OPENLIST,
 
-    OBSTACLE = 2,
-    CLOSELIST = 2,
+    OBSTACLE,
+    CLOSELIST,
 
-    START = 3,
-    END = 4,
+    START,
+    END,
 };
 
 enum
@@ -40,5 +40,5 @@ struct Node
 
     unsigned int _dir = 0;
 
-    Node* parent;
+    Node* parent = NULL;
 };

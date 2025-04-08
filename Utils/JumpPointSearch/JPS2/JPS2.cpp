@@ -121,7 +121,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         RenderNode(g_hMemDC);
         RenderGrid(g_hMemDC);
 
-        //DrawParentLine(g_hMemDC);
+        DrawParentLine(g_hMemDC);
 
         hdc = BeginPaint(hWnd, &ps);
         BitBlt(hdc, 0, 0, g_MemDCRect.right, g_MemDCRect.bottom, g_hMemDC, 0, 0, SRCCOPY);
@@ -225,7 +225,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         endNodeYX.first = iTileY;
         endNodeYX.second = iTileX;
-        g_Tile[endNodeYX.first][endNodeYX.second] = START;
+        g_Tile[endNodeYX.first][endNodeYX.second] = END;
 
         InvalidateRect(hWnd, NULL, false);
     }
@@ -241,11 +241,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             Node* startNode = new Node;
             startNode->_y = startNodeYX.first;
-            startNode->_y = startNodeYX.second;
+            startNode->_x = startNodeYX.second;
 
             startNode->_dir = LL | LU | UU | RU | RR | RD | DD | LD;
 
-            startNode->_G = GetEuclid(startNode->_y, startNode->_x, endNodeYX.first, endNodeYX.second);
+            startNode->_G = 0;
             startNode->_H = GetManhattan(startNode->_y, startNode->_x, endNodeYX.first, endNodeYX.second);
             startNode->_F = startNode->_G + startNode->_H;
 
@@ -333,7 +333,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 void DrawParentLine(HDC hdc)
 {
-    HPEN hPenOld = (HPEN)SelectObject(hdc, g_hParentPen);
+    /*HPEN hPenOld = (HPEN)SelectObject(hdc, g_hParentPen);
 
     list<Node*>::iterator iter;
     for (iter = openList.begin(); iter != openList.end(); ++iter)
@@ -382,9 +382,10 @@ void DrawParentLine(HDC hdc)
     }
 
     SelectObject(hdc, hPenOld);
+    */
 
-    hPenOld = (HPEN)SelectObject(hdc, g_hCompleteRoutePen);
-
+    HPEN hPenOld = (HPEN)SelectObject(hdc, g_hCompleteRoutePen);
+    list<Node*>::iterator iter;
     for (iter = completeRouteList.begin(); iter != completeRouteList.end(); ++iter)
     {
         Node* tmp = *iter;
@@ -526,7 +527,19 @@ void FindPath(HWND hWnd)
     if (nowNode->_x == endNodeYX.second && nowNode->_y == endNodeYX.first)
     {
         // TODO: 도착
-        cout << "1" << endl;
+        
+        Node* tmpNode = nowNode;
+        while (1)
+        {
+            if (tmpNode->parent == NULL)
+                break;
+
+            completeRouteList.push_front(tmpNode);
+
+            tmpNode = tmpNode->parent;
+        }
+
+        KillTimer(hWnd, 10);
         return;
     }
 
@@ -544,10 +557,13 @@ void FindPath(HWND hWnd)
         int nextY = nowNode->_y;
         int nextX = nowNode->_x;
         int cnt = 0;
-        
+
         while (1)
         {
             cnt++;
+
+            cout << cnt << endl;
+
             nextX = nextX - 1;
 
             if (CanGo(nextY, nextX) == false)
@@ -572,6 +588,16 @@ void FindPath(HWND hWnd)
                             (*iter)->_G = g;
                             (*iter)->_H = h;
                             (*iter)->_F = f;
+
+                            // 기본 방향
+                            (*iter)->_dir = 0;
+                            (*iter)->_dir = (*iter)->_dir | LL;
+
+                            // 옵션 방향
+                            if (TileMap[(*iter)->_y + 1][(*iter)->_x] == false && TileMap[(*iter)->_y + 1][(*iter)->_x - 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | LU;
+                            if (TileMap[(*iter)->_y - 1][(*iter)->_x] == false && TileMap[(*iter)->_y - 1][(*iter)->_x - 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | LD;
 
                             (*iter)->parent = nowNode;
 
@@ -613,9 +639,231 @@ void FindPath(HWND hWnd)
             break;
         }
     }
-    if ((nowDir & LU) == LU)
+    /*if ((nowDir & LU) == LU)
     {
+        int nextY = nowNode->_y;
+        int nextX = nowNode->_x;
+        int cnt = 0;
 
+        while (1)
+        {
+            cnt++;
+
+            nextY = nextY - 1;
+            nextX = nextX - 1;
+
+            if (CanGo(nextY, nextX) == false)
+                break;
+
+            if (IsCorner(LU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+            {
+                double g = nowNode->_G + 1.4 * cnt;
+                double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                double f = g + h;
+
+                if (g_Tile[nextY][nextX] == OPENLIST)
+                {
+                    if (f < F_Tile[nextY][nextX])
+                    {
+                        list<Node*>::iterator iter;
+                        for (iter = openList.begin(); iter != openList.end(); ++iter)
+                        {
+                            if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                            {
+                                (*iter)->_G = g;
+                                (*iter)->_H = h;
+                                (*iter)->_F = f;
+
+                                // TODO: 방향설정
+                                // 기본 방향
+                                (*iter)->_dir = 0;
+                                (*iter)->_dir = (*iter)->_dir | LU | LL | UU;
+
+                                // 옵션 방향
+                                if (TileMap[nextY][nextX + 1] == false && TileMap[nextY - 1][nextX + 1] == true)
+                                    (*iter)->_dir = (*iter)->_dir | RU;
+                                if (TileMap[nextY + 1][nextX] == false && TileMap[nextY + 1][nextX - 1] == true)
+                                    (*iter)->_dir = (*iter)->_dir | LD;
+
+                                (*iter)->parent = nowNode;
+
+                                F_Tile[nextY][nextX] = f;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Node* newNode = new Node();
+
+                    newNode->_y = nextY;
+                    newNode->_x = nextX;
+
+                    newNode->_G = g;
+                    newNode->_H = h;
+                    newNode->_F = f;
+
+                    // 기본 방향
+                    newNode->_dir = newNode->_dir | LU | LL | UU;
+
+                    // 옵션 방향
+                    if (TileMap[newNode->_y][newNode->_x + 1] == false && TileMap[newNode->_y - 1][newNode->_x + 1] == true)
+                        newNode->_dir = newNode->_dir | RU;
+                    if (TileMap[newNode->_y + 1][newNode->_x] == false && TileMap[newNode->_y + 1][newNode->_x - 1] == true)
+                        newNode->_dir = newNode->_dir | LD;
+
+                    newNode->parent = nowNode;
+
+                    F_Tile[nextY][nextX] = newNode->_F;
+
+                    openList.push_back(newNode);
+                    g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                }
+
+                break;
+            }
+
+            // 수평 쭉 체크
+            int horizontal_nextX = nextX;
+            int horizontal_cnt = 0;
+            while (1)
+            {
+                horizontal_cnt++;
+                horizontal_nextX = horizontal_nextX - 1;
+
+                if (CanGo(nextY, horizontal_nextX) == false)
+                    break;
+
+                if (IsCorner(LL, nextY, horizontal_nextX) || (horizontal_nextX == endNodeYX.second && nextY == endNodeYX.first))
+                {
+                    double g = nowNode->_G + 1.4 * cnt;
+                    double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                    double f = g + h;
+
+                    if (g_Tile[nextY][nextX] == OPENLIST)
+                    {
+                        if (f < F_Tile[nextY][nextX])
+                        {
+                            list<Node*>::iterator iter;
+                            for (iter = openList.begin(); iter != openList.end(); ++iter)
+                            {
+                                if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                                {
+                                    (*iter)->_G = g;
+                                    (*iter)->_H = h;
+                                    (*iter)->_F = f;
+
+                                    // TODO: 방향설정
+                                    (*iter)->_dir = 0;
+                                    (*iter)->_dir = (*iter)->_dir | LU | LL | UU;
+
+                                    (*iter)->parent = nowNode;
+
+                                    F_Tile[nextY][nextX] = f;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Node* newNode = new Node();
+
+                        newNode->_y = nextY;
+                        newNode->_x = nextX;
+
+                        newNode->_G = g;
+                        newNode->_H = h;
+                        newNode->_F = f;
+
+                        // 기본 방향
+                        newNode->_dir = newNode->_dir | LU | LL | UU;
+
+                        newNode->parent = nowNode;
+
+                        F_Tile[nextY][nextX] = newNode->_F;
+
+                        openList.push_back(newNode);
+                        g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                    }
+
+                    break;
+                }
+            }
+
+            // 수직 쭉 체크
+            int vertical_nextY = nextY;
+            int vertical_cnt = 0;
+            while (1)
+            {
+                vertical_cnt++;
+                vertical_nextY = vertical_nextY - 1;
+
+                if (CanGo(nextY, horizontal_nextX) == false)
+                    break;
+
+                if (IsCorner(UU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+                {
+                    double g = nowNode->_G + 1.4 * cnt;
+                    double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                    double f = g + h;
+
+                    if (g_Tile[nextY][nextX] == OPENLIST)
+                    {
+                        if (f < F_Tile[nextY][nextX])
+                        {
+                            list<Node*>::iterator iter;
+                            for (iter = openList.begin(); iter != openList.end(); ++iter)
+                            {
+                                if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                                {
+                                    (*iter)->_G = g;
+                                    (*iter)->_H = h;
+                                    (*iter)->_F = f;
+
+                                    // TODO: 방향설정
+                                    (*iter)->_dir = 0;
+                                    (*iter)->_dir = (*iter)->_dir | LU | LL | UU;
+
+                                    (*iter)->parent = nowNode;
+
+                                    F_Tile[nextY][nextX] = f;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Node* newNode = new Node();
+
+                        newNode->_y = nextY;
+                        newNode->_x = nextX;
+
+                        newNode->_G = g;
+                        newNode->_H = h;
+                        newNode->_F = f;
+
+                        // 기본 방향
+                        newNode->_dir = newNode->_dir | LU | LL | UU;
+
+                        newNode->parent = nowNode;
+
+                        F_Tile[nextY][nextX] = newNode->_F;
+
+                        openList.push_back(newNode);
+                        g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                    }
+
+                    break;
+                }
+            }
+
+        }
     }
     if ((nowDir & UU) == UU)
     {
@@ -650,6 +898,16 @@ void FindPath(HWND hWnd)
                             (*iter)->_G = g;
                             (*iter)->_H = h;
                             (*iter)->_F = f;
+
+                            // 기본 방향
+                            (*iter)->_dir = 0;
+                            (*iter)->_dir = (*iter)->_dir | UU;
+
+                            // 옵션 방향
+                            if (TileMap[(*iter)->_y][(*iter)->_x - 1] == false && TileMap[(*iter)->_y - 1][(*iter)->_x - 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | LU;
+                            if (TileMap[(*iter)->_y][(*iter)->_x + 1] == false && TileMap[(*iter)->_y - 1][(*iter)->_x + 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | RU;
 
                             (*iter)->parent = nowNode;
 
@@ -727,6 +985,15 @@ void FindPath(HWND hWnd)
                                 (*iter)->_F = f;
 
                                 // TODO: 방향설정
+                                // 기본 방향
+                                (*iter)->_dir = 0;
+                                (*iter)->_dir = (*iter)->_dir | RU | RR | UU;
+
+                                // 옵션 방향
+                                if (TileMap[nextY + 1][nextX] == false && TileMap[nextY + 1][nextX + 1] == true)
+                                    (*iter)->_dir = (*iter)->_dir | RD;
+                                if (TileMap[nextY][nextX - 1] == false && TileMap[nextY - 1][nextX - 1] == true)
+                                    (*iter)->_dir = (*iter)->_dir | LU;
 
                                 (*iter)->parent = nowNode;
 
@@ -746,10 +1013,10 @@ void FindPath(HWND hWnd)
 
                     newNode->_G = g;
                     newNode->_H = h;
-                    newNode->_F = f; 
+                    newNode->_F = f;
 
                     // 기본 방향
-                    newNode->_dir = newNode->_dir | RU;
+                    newNode->_dir = newNode->_dir | RU | RR | UU;
 
                     // 옵션 방향
                     if (TileMap[newNode->_y + 1][newNode->_x] == false && TileMap[newNode->_y + 1][newNode->_x + 1] == true)
@@ -800,7 +1067,7 @@ void FindPath(HWND hWnd)
 
                                     // TODO: 방향설정
                                     (*iter)->_dir = 0;
-                                    (*iter)->_dir = (*iter)->_dir | RU | RR;
+                                    (*iter)->_dir = (*iter)->_dir | RU | RR | UU;
 
                                     (*iter)->parent = nowNode;
 
@@ -823,7 +1090,7 @@ void FindPath(HWND hWnd)
                         newNode->_F = f;
 
                         // 기본 방향
-                        newNode->_dir = newNode->_dir | RU | RR;
+                        newNode->_dir = newNode->_dir | RU | RR | UU;
 
                         newNode->parent = nowNode;
 
@@ -838,7 +1105,7 @@ void FindPath(HWND hWnd)
             }
 
             // 수직 쭉 체크
-            int vertical_nextY = nextY - 1;
+            int vertical_nextY = nextY;
             int vertical_cnt = 0;
             while (1)
             {
@@ -847,13 +1114,65 @@ void FindPath(HWND hWnd)
 
                 if (CanGo(nextY, horizontal_nextX) == false)
                     break;
-                
+
                 if (IsCorner(UU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
                 {
-                    // TODO: 노드생성
+                    double g = nowNode->_G + 1.4 * cnt;
+                    double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                    double f = g + h;
+
+                    if (g_Tile[nextY][nextX] == OPENLIST)
+                    {
+                        if (f < F_Tile[nextY][nextX])
+                        {
+                            list<Node*>::iterator iter;
+                            for (iter = openList.begin(); iter != openList.end(); ++iter)
+                            {
+                                if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                                {
+                                    (*iter)->_G = g;
+                                    (*iter)->_H = h;
+                                    (*iter)->_F = f;
+
+                                    // TODO: 방향설정
+                                    (*iter)->_dir = 0;
+                                    (*iter)->_dir = (*iter)->_dir | RU | RR | UU;
+
+                                    (*iter)->parent = nowNode;
+
+                                    F_Tile[nextY][nextX] = f;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Node* newNode = new Node();
+
+                        newNode->_y = nextY;
+                        newNode->_x = nextX;
+
+                        newNode->_G = g;
+                        newNode->_H = h;
+                        newNode->_F = f;
+
+                        // 기본 방향
+                        newNode->_dir = newNode->_dir | RU | RR | UU;
+
+                        newNode->parent = nowNode;
+
+                        F_Tile[nextY][nextX] = newNode->_F;
+
+                        openList.push_back(newNode);
+                        g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                    }
+
                     break;
                 }
             }
+
         }
 
     }
@@ -890,6 +1209,16 @@ void FindPath(HWND hWnd)
                             (*iter)->_G = g;
                             (*iter)->_H = h;
                             (*iter)->_F = f;
+
+                            // 기본 방향
+                            (*iter)->_dir = 0;
+                            (*iter)->_dir = (*iter)->_dir | RR;
+
+                            // 옵션 방향
+                            if (TileMap[(*iter)->_y + 1][(*iter)->_x] == false && TileMap[(*iter)->_y + 1][(*iter)->_x + 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | RD;
+                            if (TileMap[(*iter)->_y - 1][(*iter)->_x] == false && TileMap[(*iter)->_y - 1][(*iter)->_x + 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | RU;
 
                             (*iter)->parent = nowNode;
 
@@ -933,7 +1262,229 @@ void FindPath(HWND hWnd)
     }
     if ((nowDir & RD) == RD)
     {
+        int nextY = nowNode->_y;
+        int nextX = nowNode->_x;
+        int cnt = 0;
 
+        while (1)
+        {
+            cnt++;
+
+            nextY = nextY + 1;
+            nextX = nextX + 1;
+
+            if (CanGo(nextY, nextX) == false)
+                break;
+
+            if (IsCorner(RD, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+            {
+                double g = nowNode->_G + 1.4 * cnt;
+                double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                double f = g + h;
+
+                if (g_Tile[nextY][nextX] == OPENLIST)
+                {
+                    if (f < F_Tile[nextY][nextX])
+                    {
+                        list<Node*>::iterator iter;
+                        for (iter = openList.begin(); iter != openList.end(); ++iter)
+                        {
+                            if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                            {
+                                (*iter)->_G = g;
+                                (*iter)->_H = h;
+                                (*iter)->_F = f;
+
+                                // TODO: 방향설정
+                                // 기본 방향
+                                (*iter)->_dir = 0;
+                                (*iter)->_dir = (*iter)->_dir | RD | RR | DD;
+
+                                // 옵션 방향
+                                if (TileMap[nextY - 1][nextX] == false && TileMap[nextY - 1][nextX + 1] == true)
+                                    (*iter)->_dir = (*iter)->_dir | RU;
+                                if (TileMap[nextY][nextX - 1] == false && TileMap[nextY + 1][nextX - 1] == true)
+                                    (*iter)->_dir = (*iter)->_dir | LD;
+
+                                (*iter)->parent = nowNode;
+
+                                F_Tile[nextY][nextX] = f;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Node* newNode = new Node();
+
+                    newNode->_y = nextY;
+                    newNode->_x = nextX;
+
+                    newNode->_G = g;
+                    newNode->_H = h;
+                    newNode->_F = f;
+
+                    // 기본 방향
+                    newNode->_dir = newNode->_dir | RD | RR | DD;
+
+                    // 옵션 방향
+                    if (TileMap[newNode->_y - 1][newNode->_x] == false && TileMap[newNode->_y - 1][newNode->_x + 1] == true)
+                        newNode->_dir = newNode->_dir | RU;
+                    if (TileMap[newNode->_y][newNode->_x - 1] == false && TileMap[newNode->_y + 1][newNode->_x - 1] == true)
+                        newNode->_dir = newNode->_dir | LD;
+
+                    newNode->parent = nowNode;
+
+                    F_Tile[nextY][nextX] = newNode->_F;
+
+                    openList.push_back(newNode);
+                    g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                }
+
+                break;
+            }
+
+            // 수평 쭉 체크
+            int horizontal_nextX = nextX;
+            int horizontal_cnt = 0;
+            while (1)
+            {
+                horizontal_cnt++;
+                horizontal_nextX = horizontal_nextX + 1;
+
+                if (CanGo(nextY, horizontal_nextX) == false)
+                    break;
+
+                if (IsCorner(RR, nextY, horizontal_nextX) || (horizontal_nextX == endNodeYX.second && nextY == endNodeYX.first))
+                {
+                    double g = nowNode->_G + 1.4 * cnt;
+                    double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                    double f = g + h;
+
+                    if (g_Tile[nextY][nextX] == OPENLIST)
+                    {
+                        if (f < F_Tile[nextY][nextX])
+                        {
+                            list<Node*>::iterator iter;
+                            for (iter = openList.begin(); iter != openList.end(); ++iter)
+                            {
+                                if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                                {
+                                    (*iter)->_G = g;
+                                    (*iter)->_H = h;
+                                    (*iter)->_F = f;
+
+                                    // TODO: 방향설정
+                                    (*iter)->_dir = 0;
+                                    (*iter)->_dir = (*iter)->_dir | RD | RR | DD;
+
+                                    (*iter)->parent = nowNode;
+
+                                    F_Tile[nextY][nextX] = f;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Node* newNode = new Node();
+
+                        newNode->_y = nextY;
+                        newNode->_x = nextX;
+
+                        newNode->_G = g;
+                        newNode->_H = h;
+                        newNode->_F = f;
+
+                        // 기본 방향
+                        newNode->_dir = newNode->_dir | RD | RR | DD;
+
+                        newNode->parent = nowNode;
+
+                        F_Tile[nextY][nextX] = newNode->_F;
+
+                        openList.push_back(newNode);
+                        g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                    }
+
+                    break;
+                }
+            }
+
+            // 수직 쭉 체크
+            int vertical_nextY = nextY;
+            int vertical_cnt = 0;
+            while (1)
+            {
+                vertical_cnt++;
+                vertical_nextY = vertical_nextY + 1;
+
+                if (CanGo(nextY, horizontal_nextX) == false)
+                    break;
+
+                if (IsCorner(UU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+                {
+                    double g = nowNode->_G + 1.4 * cnt;
+                    double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                    double f = g + h;
+
+                    if (g_Tile[nextY][nextX] == OPENLIST)
+                    {
+                        if (f < F_Tile[nextY][nextX])
+                        {
+                            list<Node*>::iterator iter;
+                            for (iter = openList.begin(); iter != openList.end(); ++iter)
+                            {
+                                if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                                {
+                                    (*iter)->_G = g;
+                                    (*iter)->_H = h;
+                                    (*iter)->_F = f;
+
+                                    // TODO: 방향설정
+                                    (*iter)->_dir = 0;
+                                    (*iter)->_dir = (*iter)->_dir | RD | RR | DD;
+
+                                    (*iter)->parent = nowNode;
+
+                                    F_Tile[nextY][nextX] = f;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Node* newNode = new Node();
+
+                        newNode->_y = nextY;
+                        newNode->_x = nextX;
+
+                        newNode->_G = g;
+                        newNode->_H = h;
+                        newNode->_F = f;
+
+                        // 기본 방향
+                        newNode->_dir = newNode->_dir | RD | RR | DD;
+
+                        newNode->parent = nowNode;
+
+                        F_Tile[nextY][nextX] = newNode->_F;
+
+                        openList.push_back(newNode);
+                        g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                    }
+
+                    break;
+                }
+            }
+
+        }
     }
     if ((nowDir & DD) == DD)
     {
@@ -968,6 +1519,16 @@ void FindPath(HWND hWnd)
                             (*iter)->_G = g;
                             (*iter)->_H = h;
                             (*iter)->_F = f;
+
+                            // 기본 방향
+                            (*iter)->_dir = 0;
+                            (*iter)->_dir = (*iter)->_dir | DD;
+
+                            // 옵션 방향
+                            if (TileMap[(*iter)->_y][(*iter)->_x - 1] == false && TileMap[(*iter)->_y + 1][(*iter)->_x - 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | RD;
+                            if (TileMap[(*iter)->_y][(*iter)->_x + 1] == false && TileMap[(*iter)->_y + 1][(*iter)->_x + 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | LD;
 
                             (*iter)->parent = nowNode;
 
@@ -1011,14 +1572,236 @@ void FindPath(HWND hWnd)
     }
     if ((nowDir & LD) == LD)
     {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
-    }
+        int nextY = nowNode->_y;
+        int nextX = nowNode->_x;
+        int cnt = 0;
+
+        while (1)
+        {
+            cnt++;
+
+            nextY = nextY + 1;
+            nextX = nextX - 1;
+
+            if (CanGo(nextY, nextX) == false)
+                break;
+
+            if (IsCorner(LD, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+            {
+                double g = nowNode->_G + 1.4 * cnt;
+                double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                double f = g + h;
+
+                if (g_Tile[nextY][nextX] == OPENLIST)
+                {
+                    if (f < F_Tile[nextY][nextX])
+                    {
+                        list<Node*>::iterator iter;
+                        for (iter = openList.begin(); iter != openList.end(); ++iter)
+                        {
+                            if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                            {
+                                (*iter)->_G = g;
+                                (*iter)->_H = h;
+                                (*iter)->_F = f;
+
+                                // TODO: 방향설정
+                                // 기본 방향
+                                (*iter)->_dir = 0;
+                                (*iter)->_dir = (*iter)->_dir | LD | LL | DD;
+
+                                // 옵션 방향
+                                if (TileMap[nextY - 1][nextX] == false && TileMap[nextY - 1][nextX - 1] == true)
+                                    (*iter)->_dir = (*iter)->_dir | LU;
+                                if (TileMap[nextY][nextX + 1] == false && TileMap[nextY + 1][nextX + 1] == true)
+                                    (*iter)->_dir = (*iter)->_dir | RD;
+
+                                (*iter)->parent = nowNode;
+
+                                F_Tile[nextY][nextX] = f;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Node* newNode = new Node();
+
+                    newNode->_y = nextY;
+                    newNode->_x = nextX;
+
+                    newNode->_G = g;
+                    newNode->_H = h;
+                    newNode->_F = f;
+
+                    // 기본 방향
+                    newNode->_dir = newNode->_dir | LD | LL | DD;
+
+                    // 옵션 방향
+                    if (TileMap[newNode->_y - 1][newNode->_x] == false && TileMap[newNode->_y - 1][newNode->_x - 1] == true)
+                        newNode->_dir = newNode->_dir | RU;
+                    if (TileMap[newNode->_y][newNode->_x + 1] == false && TileMap[newNode->_y + 1][newNode->_x + 1] == true)
+                        newNode->_dir = newNode->_dir | LD;
+
+                    newNode->parent = nowNode;
+
+                    F_Tile[nextY][nextX] = newNode->_F;
+
+                    openList.push_back(newNode);
+                    g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                }
+
+                break;
+            }
+
+            // 수평 쭉 체크
+            int horizontal_nextX = nextX;
+            int horizontal_cnt = 0;
+            while (1)
+            {
+                horizontal_cnt++;
+                horizontal_nextX = horizontal_nextX - 1;
+
+                if (CanGo(nextY, horizontal_nextX) == false)
+                    break;
+
+                if (IsCorner(LL, nextY, horizontal_nextX) || (horizontal_nextX == endNodeYX.second && nextY == endNodeYX.first))
+                {
+                    double g = nowNode->_G + 1.4 * cnt;
+                    double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                    double f = g + h;
+
+                    if (g_Tile[nextY][nextX] == OPENLIST)
+                    {
+                        if (f < F_Tile[nextY][nextX])
+                        {
+                            list<Node*>::iterator iter;
+                            for (iter = openList.begin(); iter != openList.end(); ++iter)
+                            {
+                                if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                                {
+                                    (*iter)->_G = g;
+                                    (*iter)->_H = h;
+                                    (*iter)->_F = f;
+
+                                    // TODO: 방향설정
+                                    (*iter)->_dir = 0;
+                                    (*iter)->_dir = (*iter)->_dir | LD | LL | DD;
+
+                                    (*iter)->parent = nowNode;
+
+                                    F_Tile[nextY][nextX] = f;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Node* newNode = new Node();
+
+                        newNode->_y = nextY;
+                        newNode->_x = nextX;
+
+                        newNode->_G = g;
+                        newNode->_H = h;
+                        newNode->_F = f;
+
+                        // 기본 방향
+                        newNode->_dir = newNode->_dir | LD | LL | DD;
+
+                        newNode->parent = nowNode;
+
+                        F_Tile[nextY][nextX] = newNode->_F;
+
+                        openList.push_back(newNode);
+                        g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                    }
+
+                    break;
+                }
+            }
+
+            // 수직 쭉 체크
+            int vertical_nextY = nextY;
+            int vertical_cnt = 0;
+            while (1)
+            {
+                vertical_cnt++;
+                vertical_nextY = vertical_nextY + 1;
+
+                if (CanGo(nextY, horizontal_nextX) == false)
+                    break;
+
+                if (IsCorner(DD, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+                {
+                    double g = nowNode->_G + 1.4 * cnt;
+                    double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
+                    double f = g + h;
+
+                    if (g_Tile[nextY][nextX] == OPENLIST)
+                    {
+                        if (f < F_Tile[nextY][nextX])
+                        {
+                            list<Node*>::iterator iter;
+                            for (iter = openList.begin(); iter != openList.end(); ++iter)
+                            {
+                                if ((*iter)->_x == nextX && (*iter)->_y == nextY)
+                                {
+                                    (*iter)->_G = g;
+                                    (*iter)->_H = h;
+                                    (*iter)->_F = f;
+
+                                    // TODO: 방향설정
+                                    (*iter)->_dir = 0;
+                                    (*iter)->_dir = (*iter)->_dir | LD | LL | DD;
+
+                                    (*iter)->parent = nowNode;
+
+                                    F_Tile[nextY][nextX] = f;
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Node* newNode = new Node();
+
+                        newNode->_y = nextY;
+                        newNode->_x = nextX;
+
+                        newNode->_G = g;
+                        newNode->_H = h;
+                        newNode->_F = f;
+
+                        // 기본 방향
+                        newNode->_dir = newNode->_dir | LD | LL | DD;
+
+                        newNode->parent = nowNode;
+
+                        F_Tile[nextY][nextX] = newNode->_F;
+
+                        openList.push_back(newNode);
+                        g_Tile[newNode->_y][newNode->_x] = OPENLIST;
+                    }
+
+                    break;
+                }
+            }
+
+        }
+    }*/
 
 }
 
 bool CanGo(int y, int x)
 {
-    if (y < 0 || y >= GRID_WIDTH || x < 0 || x >= GRID_HEIGHT)
+    if (y < 0 || y >= GRID_HEIGHT || x < 0 || x >= GRID_WIDTH)
         return false;
 
     if (TileMap[y][x] == false)
