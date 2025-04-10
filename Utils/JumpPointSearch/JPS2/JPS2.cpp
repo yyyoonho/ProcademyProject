@@ -552,6 +552,7 @@ void FindPath(HWND hWnd)
 
     unsigned int nowDir = nowNode->_dir;
 
+    
     if ((nowDir & LL) == LL)
     {
         int nextY = nowNode->_y;
@@ -595,9 +596,9 @@ void FindPath(HWND hWnd)
 
                             // 옵션 방향
                             if (TileMap[(*iter)->_y + 1][(*iter)->_x] == false && TileMap[(*iter)->_y + 1][(*iter)->_x - 1] == true)
-                                (*iter)->_dir = (*iter)->_dir | LU;
-                            if (TileMap[(*iter)->_y - 1][(*iter)->_x] == false && TileMap[(*iter)->_y - 1][(*iter)->_x - 1] == true)
                                 (*iter)->_dir = (*iter)->_dir | LD;
+                            if (TileMap[(*iter)->_y - 1][(*iter)->_x] == false && TileMap[(*iter)->_y - 1][(*iter)->_x - 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | LU;
 
                             (*iter)->parent = nowNode;
 
@@ -624,9 +625,9 @@ void FindPath(HWND hWnd)
 
                 // 옵션 방향
                 if (TileMap[newNode->_y + 1][newNode->_x] == false && TileMap[newNode->_y + 1][newNode->_x - 1] == true)
-                    newNode->_dir = newNode->_dir | LU;
-                if (TileMap[newNode->_y - 1][newNode->_x] == false && TileMap[newNode->_y - 1][newNode->_x - 1] == true)
                     newNode->_dir = newNode->_dir | LD;
+                if (TileMap[newNode->_y - 1][newNode->_x] == false && TileMap[newNode->_y - 1][newNode->_x - 1] == true)
+                    newNode->_dir = newNode->_dir | LU;
 
                 newNode->parent = nowNode;
 
@@ -639,7 +640,8 @@ void FindPath(HWND hWnd)
             break;
         }
     }
-    /*if ((nowDir & LU) == LU)
+    
+    if ((nowDir & LU) == LU)
     {
         int nextY = nowNode->_y;
         int nextX = nowNode->_x;
@@ -693,6 +695,7 @@ void FindPath(HWND hWnd)
                             }
                         }
                     }
+                    break;
                 }
                 else
                 {
@@ -767,6 +770,7 @@ void FindPath(HWND hWnd)
                                 }
                             }
                         }
+                        break;
                     }
                     else
                     {
@@ -802,10 +806,10 @@ void FindPath(HWND hWnd)
                 vertical_cnt++;
                 vertical_nextY = vertical_nextY - 1;
 
-                if (CanGo(nextY, horizontal_nextX) == false)
+                if (CanGo(vertical_nextY, nextX) == false)
                     break;
 
-                if (IsCorner(UU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+                if (IsCorner(UU, vertical_nextY, nextX) || (nextX == endNodeYX.second && vertical_nextY == endNodeYX.first))
                 {
                     double g = nowNode->_G + 1.4 * cnt;
                     double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
@@ -836,6 +840,7 @@ void FindPath(HWND hWnd)
                                 }
                             }
                         }
+                        break;
                     }
                     else
                     {
@@ -865,6 +870,7 @@ void FindPath(HWND hWnd)
 
         }
     }
+    
     if ((nowDir & UU) == UU)
     {
         int nextY = nowNode->_y;
@@ -917,6 +923,7 @@ void FindPath(HWND hWnd)
                         }
                     }
                 }
+                break;
             }
             else
             {
@@ -948,7 +955,8 @@ void FindPath(HWND hWnd)
 
             break;
         }
-    }
+    }    
+    
     if ((nowDir & RU) == RU)
     {
         int nextY = nowNode->_y;
@@ -1003,6 +1011,7 @@ void FindPath(HWND hWnd)
                             }
                         }
                     }
+                    break;
                 }
                 else
                 {
@@ -1077,6 +1086,7 @@ void FindPath(HWND hWnd)
                                 }
                             }
                         }
+                        break;
                     }
                     else
                     {
@@ -1112,10 +1122,10 @@ void FindPath(HWND hWnd)
                 vertical_cnt++;
                 vertical_nextY = vertical_nextY - 1;
 
-                if (CanGo(nextY, horizontal_nextX) == false)
+                if (CanGo(vertical_nextY, nextX) == false)
                     break;
 
-                if (IsCorner(UU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+                if (IsCorner(UU, vertical_nextY, nextX) || (nextX == endNodeYX.second && vertical_nextY == endNodeYX.first))
                 {
                     double g = nowNode->_G + 1.4 * cnt;
                     double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
@@ -1146,6 +1156,7 @@ void FindPath(HWND hWnd)
                                 }
                             }
                         }
+                        break;
                     }
                     else
                     {
@@ -1176,6 +1187,7 @@ void FindPath(HWND hWnd)
         }
 
     }
+    
     if ((nowDir & RR) == RR)
     {
         int nextY = nowNode->_y;
@@ -1228,6 +1240,7 @@ void FindPath(HWND hWnd)
                         }
                     }
                 }
+                break;
             }
             else
             {
@@ -1260,6 +1273,7 @@ void FindPath(HWND hWnd)
             break;
         }
     }
+    
     if ((nowDir & RD) == RD)
     {
         int nextY = nowNode->_y;
@@ -1314,6 +1328,7 @@ void FindPath(HWND hWnd)
                             }
                         }
                     }
+                    break;
                 }
                 else
                 {
@@ -1388,6 +1403,7 @@ void FindPath(HWND hWnd)
                                 }
                             }
                         }
+                        break;
                     }
                     else
                     {
@@ -1423,10 +1439,10 @@ void FindPath(HWND hWnd)
                 vertical_cnt++;
                 vertical_nextY = vertical_nextY + 1;
 
-                if (CanGo(nextY, horizontal_nextX) == false)
+                if (CanGo(vertical_nextY, nextX) == false)
                     break;
 
-                if (IsCorner(UU, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+                if (IsCorner(DD, vertical_nextY, nextX) || (nextX == endNodeYX.second && vertical_nextY == endNodeYX.first))
                 {
                     double g = nowNode->_G + 1.4 * cnt;
                     double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
@@ -1457,6 +1473,7 @@ void FindPath(HWND hWnd)
                                 }
                             }
                         }
+                        break;
                     }
                     else
                     {
@@ -1486,6 +1503,7 @@ void FindPath(HWND hWnd)
 
         }
     }
+    
     if ((nowDir & DD) == DD)
     {
         int nextY = nowNode->_y;
@@ -1526,9 +1544,9 @@ void FindPath(HWND hWnd)
 
                             // 옵션 방향
                             if (TileMap[(*iter)->_y][(*iter)->_x - 1] == false && TileMap[(*iter)->_y + 1][(*iter)->_x - 1] == true)
-                                (*iter)->_dir = (*iter)->_dir | RD;
-                            if (TileMap[(*iter)->_y][(*iter)->_x + 1] == false && TileMap[(*iter)->_y + 1][(*iter)->_x + 1] == true)
                                 (*iter)->_dir = (*iter)->_dir | LD;
+                            if (TileMap[(*iter)->_y][(*iter)->_x + 1] == false && TileMap[(*iter)->_y + 1][(*iter)->_x + 1] == true)
+                                (*iter)->_dir = (*iter)->_dir | RD;
 
                             (*iter)->parent = nowNode;
 
@@ -1538,6 +1556,7 @@ void FindPath(HWND hWnd)
                         }
                     }
                 }
+                break;
             }
             else
             {
@@ -1555,9 +1574,9 @@ void FindPath(HWND hWnd)
 
                 // 옵션 방향
                 if (TileMap[newNode->_y][newNode->_x - 1] == false && TileMap[newNode->_y + 1][newNode->_x - 1] == true)
-                    newNode->_dir = newNode->_dir | RD;
-                if (TileMap[newNode->_y][newNode->_x + 1] == false && TileMap[newNode->_y + 1][newNode->_x + 1] == true)
                     newNode->_dir = newNode->_dir | LD;
+                if (TileMap[newNode->_y][newNode->_x + 1] == false && TileMap[newNode->_y + 1][newNode->_x + 1] == true)
+                    newNode->_dir = newNode->_dir | RD;
 
                 newNode->parent = nowNode;
 
@@ -1570,6 +1589,7 @@ void FindPath(HWND hWnd)
             break;
         }
     }
+    
     if ((nowDir & LD) == LD)
     {
         int nextY = nowNode->_y;
@@ -1624,6 +1644,7 @@ void FindPath(HWND hWnd)
                             }
                         }
                     }
+                    break;
                 }
                 else
                 {
@@ -1641,9 +1662,9 @@ void FindPath(HWND hWnd)
 
                     // 옵션 방향
                     if (TileMap[newNode->_y - 1][newNode->_x] == false && TileMap[newNode->_y - 1][newNode->_x - 1] == true)
-                        newNode->_dir = newNode->_dir | RU;
+                        newNode->_dir = newNode->_dir | LU;
                     if (TileMap[newNode->_y][newNode->_x + 1] == false && TileMap[newNode->_y + 1][newNode->_x + 1] == true)
-                        newNode->_dir = newNode->_dir | LD;
+                        newNode->_dir = newNode->_dir | RD;
 
                     newNode->parent = nowNode;
 
@@ -1698,6 +1719,7 @@ void FindPath(HWND hWnd)
                                 }
                             }
                         }
+                        break;
                     }
                     else
                     {
@@ -1733,10 +1755,10 @@ void FindPath(HWND hWnd)
                 vertical_cnt++;
                 vertical_nextY = vertical_nextY + 1;
 
-                if (CanGo(nextY, horizontal_nextX) == false)
+                if (CanGo(vertical_nextY, nextX) == false)
                     break;
 
-                if (IsCorner(DD, nextY, nextX) || (nextX == endNodeYX.second && nextY == endNodeYX.first))
+                if (IsCorner(DD, vertical_nextY, nextX) || (nextX == endNodeYX.second && vertical_nextY == endNodeYX.first))
                 {
                     double g = nowNode->_G + 1.4 * cnt;
                     double h = GetManhattan(nextY, nextX, endNodeYX.first, endNodeYX.second);
@@ -1767,6 +1789,7 @@ void FindPath(HWND hWnd)
                                 }
                             }
                         }
+                        break;
                     }
                     else
                     {
@@ -1795,8 +1818,8 @@ void FindPath(HWND hWnd)
             }
 
         }
-    }*/
-
+    }
+    
 }
 
 bool CanGo(int y, int x)
