@@ -262,17 +262,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         if (wParam == 'G')
         {
-            /*if (bFlag == false)
+            if (bFlag == false)
             {
                 Init();
 
-                startNode->_G = 0;
-                startNode->_H = GetManhattan(startNode->_y, startNode->_x, endNode->_y, endNode->_x);
-                startNode->_F = 0 + startNode->_H;
+                Node* startNode = new Node;
+                startNode->_y = startNodeYX.first;
+                startNode->_x = startNodeYX.second;
 
                 startNode->_dir = LL | LU | UU | RU | RR | RD | DD | LD;
 
-                F_Tile[startNode->_y][startNode->_x] = startNode->_F;
+                startNode->_G = 0;
+                startNode->_H = GetManhattan(startNode->_y, startNode->_x, endNodeYX.first, endNodeYX.second);
+                startNode->_F = startNode->_G + startNode->_H;
+
+                startNode->parent = NULL;
+
                 openList.push_front(startNode);
 
                 bFlag = true;
@@ -281,7 +286,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             FindPath(hWnd);
 
             InvalidateRect(hWnd, NULL, false);
-            */
+            
         }
         if (wParam == 'R')
         {
@@ -527,7 +532,8 @@ void FindPath(HWND hWnd)
     if (nowNode->_x == endNodeYX.second && nowNode->_y == endNodeYX.first)
     {
         // TODO: 도착
-        
+        bFlag = false;
+
         Node* tmpNode = nowNode;
         while (1)
         {
@@ -535,6 +541,9 @@ void FindPath(HWND hWnd)
                 break;
 
             completeRouteList.push_front(tmpNode);
+
+            // TEST
+            char a = g_Tile[tmpNode->_y][tmpNode->_x];
 
             tmpNode = tmpNode->parent;
         }
@@ -634,6 +643,7 @@ void FindPath(HWND hWnd)
                 F_Tile[nextY][nextX] = newNode->_F;
 
                 openList.push_back(newNode);
+               
                 g_Tile[newNode->_y][newNode->_x] = OPENLIST;
             }
 
@@ -1837,6 +1847,9 @@ bool IsCorner(unsigned int dir, int y, int x)
 {
     if ((dir & LL) == LL)
     {
+        if (y + 1 >= GRID_HEIGHT || y - 1 < 0 || x - 1 < 0)
+            return false;
+
         if (TileMap[y + 1][x] == false && TileMap[y + 1][x - 1] == true ||
             TileMap[y - 1][x] == false && TileMap[y - 1][x - 1] == true)
             return true;
@@ -1845,6 +1858,9 @@ bool IsCorner(unsigned int dir, int y, int x)
     }
     if ((dir & LU) == LU)
     {
+        if (y + 1 >= GRID_HEIGHT || y - 1 < 0 || x - 1 < 0 || x + 1 >= GRID_WIDTH)
+            return false;
+
         if (TileMap[y][x + 1] == false && TileMap[y - 1][x + 1] == true ||
             TileMap[y + 1][x] == false && TileMap[y + 1][x - 1] == true)
             return true;
@@ -1853,6 +1869,9 @@ bool IsCorner(unsigned int dir, int y, int x)
     }
     if ((dir & UU) == UU)
     {
+        if (y - 1 < 0 || x - 1 < 0 || x + 1 >= GRID_WIDTH)
+            return false;
+
         if (TileMap[y][x - 1] == false && TileMap[y - 1][x - 1] == true ||
             TileMap[y][x + 1] == false && TileMap[y - 1][x + 1] == true)
             return true;
@@ -1861,6 +1880,9 @@ bool IsCorner(unsigned int dir, int y, int x)
     }
     if ((dir & RU) == RU)
     {
+        if (y + 1 >= GRID_HEIGHT || y - 1 < 0 || x - 1 < 0 || x + 1 >= GRID_WIDTH)
+            return false;
+
         if (TileMap[y + 1][x] == false && TileMap[y + 1][x + 1] == true ||
             TileMap[y][x - 1] == false && TileMap[y - 1][x - 1] == true)
             return true;
@@ -1869,6 +1891,9 @@ bool IsCorner(unsigned int dir, int y, int x)
     }
     if ((dir & RR) == RR)
     {
+        if (y + 1 >= GRID_HEIGHT || y - 1 < 0 || x + 1 >= GRID_WIDTH)
+            return false;
+
         if (TileMap[y + 1][x] == false && TileMap[y + 1][x + 1] == true ||
             TileMap[y - 1][x] == false && TileMap[y - 1][x + 1] == true)
             return true;
@@ -1877,6 +1902,9 @@ bool IsCorner(unsigned int dir, int y, int x)
     }
     if ((dir & RD) == RD)
     {
+        if (y + 1 >= GRID_HEIGHT || y - 1 < 0 || x - 1 < 0 || x + 1 >= GRID_WIDTH)
+            return false;
+
         if (TileMap[y - 1][x] == false && TileMap[y - 1][x + 1] == true ||
             TileMap[y][x - 1] == false && TileMap[y + 1][x - 1] == true)
             return true;
@@ -1885,6 +1913,9 @@ bool IsCorner(unsigned int dir, int y, int x)
     }
     if ((dir & DD) == DD)
     {
+        if (y + 1 >= GRID_HEIGHT || x - 1 < 0 || x + 1 >= GRID_WIDTH)
+            return false;
+
         if (TileMap[y][x - 1] == false && TileMap[y + 1][x - 1] == true ||
             TileMap[y][x + 1] == false && TileMap[y + 1][x + 1] == true)
             return true;
@@ -1893,6 +1924,9 @@ bool IsCorner(unsigned int dir, int y, int x)
     }
     if ((dir & LD) == LD)
     {
+        if (y + 1 >= GRID_HEIGHT || y - 1 < 0 || x - 1 < 0 || x + 1 >= GRID_WIDTH)
+            return false;
+
         if (TileMap[y - 1][x] == false && TileMap[y - 1][x - 1] == true ||
             TileMap[y][x + 1] == false && TileMap[y + 1][x + 1] == true)
             return true;
