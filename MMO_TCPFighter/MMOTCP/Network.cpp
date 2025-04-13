@@ -16,6 +16,8 @@ SOCKET listenSocket;
 int wsaStartupRet;
 int bindRet;
 int listenRet;
+int setSockOptRet;
+int ioctlRet;
 
 void NetInit()
 {
@@ -48,6 +50,30 @@ void NetInit()
 	{
 		// TODO: 로그남기기
 		printf("Error: bind() %d\n", WSAGetLastError());
+		g_bShutdown = true;
+		return;
+	}
+
+	// 강제종료 옵션 켜기
+	LINGER linger;
+	linger.l_onoff = 1;
+	linger.l_linger = 0;
+	setSockOptRet = setsockopt(listenSocket, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(LINGER));
+	if (setSockOptRet == SOCKET_ERROR)
+	{
+		// TODO: 로그남기기
+		printf("Error: setsockopt() %d\n", WSAGetLastError());
+		g_bShutdown = true;
+		return;
+	}
+
+	// 비동기 소켓 옵션 켜기
+	u_long on = 1;
+	ioctlRet = ioctlsocket(listenSocket, FIONBIO, &on);
+	if (ioctlRet == SOCKET_ERROR)
+	{
+		// TODO: 로그남기기
+		printf("Error: ioctlRet() %d\n", WSAGetLastError());
 		g_bShutdown = true;
 		return;
 	}
