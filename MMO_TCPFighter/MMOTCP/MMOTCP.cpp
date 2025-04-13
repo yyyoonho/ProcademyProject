@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "Network.h"
+#include "Game.h"
 #include "MMOTCP.h"
 
 using namespace std;
@@ -19,6 +20,15 @@ int main()
 	timeBeginPeriod(1);
 
 	NetInit();
+
+	while (g_bShutdown == false)
+	{
+
+
+		GameUpdate();
+
+
+	}
 
 	timeEndPeriod(1);
 }
