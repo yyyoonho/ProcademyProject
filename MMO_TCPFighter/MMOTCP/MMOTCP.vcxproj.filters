@@ -32,6 +32,12 @@
     <ClCompile Include="Game.cpp">
       <Filter>소스 파일\02. Game</Filter>
     </ClCompile>
+    <ClCompile Include="ServerControl.cpp">
+      <Filter>소스 파일\00. Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="Monitor.cpp">
+      <Filter>소스 파일\00. Manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MMOTCP.h">
@@ -45,6 +51,15 @@
     </ClInclude>
     <ClInclude Include="Game.h">
       <Filter>소스 파일\02. Game</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerControl.h">
+      <Filter>소스 파일\00. Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="Monitor.h">
+      <Filter>소스 파일\00. Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="Struct.h">
+      <Filter>소스 파일\99. Headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -3,18 +3,18 @@
 
 using namespace std;
 
-#define DEFAULT_BUFSIZE 50
+#define DEFAULT_BUFSIZE 5000
 
 RingBuffer::RingBuffer()
 {
     _capacity = DEFAULT_BUFSIZE;
-    _buf = new char[50];
+    _buf = new char[_capacity];
 }
 
 RingBuffer::RingBuffer(int bufferSize)
 {
     _capacity = bufferSize;
-    _buf = new char[bufferSize];
+    _buf = new char[_capacity];
 }
 
 RingBuffer::~RingBuffer()

@@ -1,5 +1,7 @@
 ﻿#pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "RingBuffer.lib")
+#pragma comment(lib, "SerializeBuffer.lib")
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -8,6 +10,9 @@
 
 #include "Network.h"
 #include "Game.h"
+#include "ServerControl.h"
+#include "Monitor.h"
+
 #include "MMOTCP.h"
 
 using namespace std;
@@ -23,12 +28,15 @@ int main()
 
 	while (g_bShutdown == false)
 	{
-
+		NetworkUpdate();
 
 		GameUpdate();
 
-
+		ServerControl();
+		Monitor();
 	}
+
+	NetCleanUp();
 
 	timeEndPeriod(1);
 }

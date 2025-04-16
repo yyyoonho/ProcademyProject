@@ -130,13 +130,18 @@
   <ItemGroup>
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="MMOTCP.cpp" />
+    <ClCompile Include="Monitor.cpp" />
     <ClCompile Include="Network.cpp" />
+    <ClCompile Include="ServerControl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Data.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="MMOTCP.h" />
+    <ClInclude Include="Monitor.h" />
     <ClInclude Include="Network.h" />
+    <ClInclude Include="ServerControl.h" />
+    <ClInclude Include="Struct.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
