@@ -4,14 +4,16 @@
 #include <iostream>
 #include <list>
 #include <unordered_map>
+#include <queue>
 
-#include "RingBuffer.h"
 #include "MemoryPool.h"
 #include "SerializeBuffer.h"
 
-#include "Data.h"
-#include "Struct.h"
 #include "MMOTCP.h"
+#include "SectorManager.h"
+#include "CharacterManager.h"
+#include "Protocol.h"
+
 #include "Network.h"
 
 using namespace std;
@@ -20,9 +22,10 @@ using namespace std;
 SOCKET listenSocket;
 procademy::MemoryPool<stSession> sessionMP(0, false);
 unordered_map<SOCKET, stSession* > sessionMap;
+queue<stSession*> waitingQueue;
 
 int totalSession = 0;
-int sessionId = 0;
+int g_id = 0;
 
 /* 함수 리턴용 전역변수 */
 int wsaStartupRet;
@@ -55,7 +58,7 @@ void NetInit()
 	SOCKADDR_IN serverAddr;
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-	serverAddr.sin_port = htons(SERVERPORT);
+	serverAddr.sin_port = htons(dfNETWORK_PORT);
 
 	bindRet = bind(listenSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr));
 	if (bindRet == SOCKET_ERROR)
@@ -110,6 +113,13 @@ void DestroySession()
 
 }
 
+void PushSessionToMap()
+{
+
+	// TODO: 새로운 유저 정보 보내기.
+	// 섹터기반으로 해야할듯.
+}
+
 void AcceptProc()
 {
 	SOCKADDR_IN clientAddr;
@@ -124,17 +134,16 @@ void AcceptProc()
 	}
 
 	stSession* newSession = sessionMP.Alloc();
-	//sessionList.push_front(newSession);
-	/*newSession->_socket = newSocket;
-	newSession->_clientAddr = clientAddr;
-	newSession->_id = g_id++;
-	newSession->_x = RANGE_MOVE_RIGHT / 2;
-	newSession->_y = RANGE_MOVE_BOTTOM / 2;
-	newSession->_hp = 100;
-	newSession->_dX = RANGE_MOVE_RIGHT / 2;
-	newSession->_dY = RANGE_MOVE_BOTTOM / 2;
-	newSession->_action = PACKET_STOP;
-	newSession->_characterDirection = PACKET_MOVE_DIR_LL;*/
+
+	newSession->socket = newSocket;
+	newSession->clientAddr = clientAddr;
+	newSession->dwSessionID = g_id++;
+	newSession->recvQ.Resize(3000);
+	newSession->sendQ.Resize(5000);
+
+	waitingQueue.push(newSession);
+
+	CreateCharacter(newSession, newSession->dwSessionID);
 }
 
 void SelectFunc(FD_SET* pReadSet, FD_SET* pWriteSet)
@@ -214,6 +223,6 @@ void NetworkUpdate()
 		}
 	}
 	
-
+	PushSessionToMap();
 	DestroySession();
 }

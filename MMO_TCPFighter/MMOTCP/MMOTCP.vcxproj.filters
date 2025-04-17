@@ -38,6 +38,12 @@
     <ClCompile Include="Monitor.cpp">
       <Filter>소스 파일\00. Manager</Filter>
     </ClCompile>
+    <ClCompile Include="CharacterManager.cpp">
+      <Filter>소스 파일\00. Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="SectorManager.cpp">
+      <Filter>소스 파일\00. Manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MMOTCP.h">
@@ -45,9 +51,6 @@
     </ClInclude>
     <ClInclude Include="Network.h">
       <Filter>소스 파일\01. Networking</Filter>
-    </ClInclude>
-    <ClInclude Include="Data.h">
-      <Filter>소스 파일\99. Headers</Filter>
     </ClInclude>
     <ClInclude Include="Game.h">
       <Filter>소스 파일\02. Game</Filter>
@@ -58,8 +61,14 @@
     <ClInclude Include="Monitor.h">
       <Filter>소스 파일\00. Manager</Filter>
     </ClInclude>
-    <ClInclude Include="Struct.h">
+    <ClInclude Include="CharacterManager.h">
+      <Filter>소스 파일\00. Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
       <Filter>소스 파일\99. Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SectorManager.h">
+      <Filter>소스 파일\00. Manager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -20,10 +20,16 @@ using namespace std;
 /* 서버 메인 전역변수 */
 bool g_bShutdown = false;
 
+void Init()
+{
+	srand(time(NULL));
+}
+
 int main()
 {
 	timeBeginPeriod(1);
-
+	
+	Init();
 	NetInit();
 
 	while (g_bShutdown == false)
