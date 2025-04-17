@@ -21,13 +21,25 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 {
 	stCharacter* newCharacter = characterMP.Alloc();
 
+	newCharacter->pSession = pSession;
+	newCharacter->dwSessionID = dwSessionID;
+
+	newCharacter->dwAction = dfACTION_STOP;
+	newCharacter->byDirection = dfRANGE_MOVE_LEFT;
+	newCharacter->byMoveDirection = dfRANGE_MOVE_LEFT;
+
 	newCharacter->shX = rand() % (dfRANGE_MOVE_RIGHT - 1);
 	newCharacter->shY = rand() % (dfRANGE_MOVE_BOTTOM - 1);
-	newCharacter->chHP = 100;
+	
 	newCharacter->dX = (double)newCharacter->shX;
 	newCharacter->dY = (double)newCharacter->shY;
-	newCharacter->dwAction = dfRANGE_MOVE_LEFT;
-	newCharacter->byDirection = dfRANGE_MOVE_LEFT;
+	
+	newCharacter->curSector.iY = (int)newCharacter->shY / dfSECTOR_SIZE;
+	newCharacter->curSector.iX = (int)newCharacter->shX / dfSECTOR_SIZE;
+	newCharacter->oldSector.iY = (int)newCharacter->shY / dfSECTOR_SIZE;
+	newCharacter->oldSector.iX = (int)newCharacter->shX / dfSECTOR_SIZE;
+
+	newCharacter->chHP = 100;
 
 	watingQueue.push(newCharacter);
 }

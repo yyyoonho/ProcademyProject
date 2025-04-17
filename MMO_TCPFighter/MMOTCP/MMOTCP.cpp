@@ -1,7 +1,6 @@
 ﻿#pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "RingBuffer.lib")
-#pragma comment(lib, "SerializeBuffer.lib")
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>

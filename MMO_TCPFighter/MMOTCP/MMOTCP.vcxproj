@@ -131,6 +131,7 @@
   <ItemGroup>
     <ClCompile Include="CharacterManager.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="MakePacket.cpp" />
     <ClCompile Include="MMOTCP.cpp" />
     <ClCompile Include="Monitor.cpp" />
     <ClCompile Include="Network.cpp" />
@@ -140,6 +141,7 @@
   <ItemGroup>
     <ClInclude Include="CharacterManager.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="MakePacket.h" />
     <ClInclude Include="MMOTCP.h" />
     <ClInclude Include="Monitor.h" />
     <ClInclude Include="Network.h" />

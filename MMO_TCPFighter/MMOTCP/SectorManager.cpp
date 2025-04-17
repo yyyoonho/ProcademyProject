@@ -1,10 +1,9 @@
 #include <Windows.h>
 #include <list>
-
+#include <queue>
 
 #include "SectorManager.h"
 #include "CharacterManager.h"
-
 
 using namespace std;
 
@@ -33,7 +32,61 @@ void GetSectorAround(int iSectorY, int iSectorX, OUT stSECTOR_AROUND* pSectorAro
 	pSectorAround->iCount = count;
 }
 
-void GetUpdateSectorAround()
+void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemoveSector, OUT stSECTOR_AROUND* pAddSector)
 {
+	stSECTOR_AROUND tmpCur;
+	stSECTOR_AROUND tmpOld;
 
+	GetSectorAround(pCharacter->curSector.iY, pCharacter->curSector.iX, &tmpCur);
+	GetSectorAround(pCharacter->oldSector.iY, pCharacter->oldSector.iX, &tmpOld);
+
+	int count = 0;
+	for (int i = 0; i < tmpCur.iCount; i++)
+	{
+		bool bOverlaped = false;
+
+		for (int j = 0; j < tmpOld.iCount; j++)
+		{
+			if (tmpCur.around[i].iY == tmpOld.around[j].iY && tmpCur.around[i].iX == tmpOld.around[j].iX)
+			{
+				bOverlaped = true;
+				break;
+			}
+		}
+
+		if (bOverlaped == false)
+		{
+			pAddSector->around[count].iY = tmpCur.around[i].iY;
+			pAddSector->around[count].iX = tmpCur.around[i].iX;
+			count++;
+		}
+		else
+			bOverlaped = false;
+	}
+	pAddSector->iCount = count;
+
+	count = 0;
+	for (int i = 0; i < tmpOld.iCount; i++)
+	{
+		bool bOverlaped = false;
+
+		for (int j = 0; j < tmpCur.iCount; j++)
+		{
+			if (tmpCur.around[i].iY == tmpOld.around[j].iY && tmpCur.around[i].iX == tmpOld.around[j].iX)
+			{
+				bOverlaped = true;
+				break;
+			}
+		}
+
+		if (bOverlaped == false)
+		{
+			pRemoveSector->around[count].iY = tmpOld.around[i].iY;
+			pRemoveSector->around[count].iX = tmpOld.around[i].iX;
+			count++;
+		}
+		else
+			bOverlaped = false;
+	}
+	pRemoveSector->iCount = count;
 }

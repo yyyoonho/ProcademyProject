@@ -12,8 +12,6 @@ struct stSession
 	RingBuffer sendQ;		// 송신 링버퍼
 
 	DWORD dwLastRecvTime;	// 메시지 수신 체크를 위한 시간 (타임아웃용)
-
-	bool bDestroy = false;
 };
 
 

@@ -129,6 +129,8 @@ struct st_PACKET_HEADER
 #define dfPACKET_MOVE_DIR_DD					6
 #define dfPACKET_MOVE_DIR_LD					7
 
+#define dfACTION_STOP							8
+
 
 
 

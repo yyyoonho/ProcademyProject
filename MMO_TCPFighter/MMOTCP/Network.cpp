@@ -115,9 +115,13 @@ void DestroySession()
 
 void PushSessionToMap()
 {
+	while (!waitingQueue.empty())
+	{
+		sessionMap.insert({ waitingQueue.front()->socket, waitingQueue.front() });
+		waitingQueue.pop();
+	}
 
-	// TODO: 새로운 유저 정보 보내기.
-	// 섹터기반으로 해야할듯.
+	// TODO: SEND해버리자. 이때 섹터를 기준으로 진행해야지.
 }
 
 void AcceptProc()
@@ -177,6 +181,9 @@ void SelectFunc(FD_SET* pReadSet, FD_SET* pWriteSet)
 				--result;
 				//SendProc(nowSession);
 			}
+
+			if (result <= 0)
+				break;
 		}
 
 	}
