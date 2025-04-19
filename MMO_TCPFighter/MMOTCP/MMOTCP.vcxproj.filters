@@ -47,6 +47,9 @@
     <ClCompile Include="MakePacket.cpp">
       <Filter>소스 파일\01. Networking</Filter>
     </ClCompile>
+    <ClCompile Include="LogManager.cpp">
+      <Filter>소스 파일\00. Manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MMOTCP.h">
@@ -75,6 +78,9 @@
     </ClInclude>
     <ClInclude Include="MakePacket.h">
       <Filter>소스 파일\01. Networking</Filter>
+    </ClInclude>
+    <ClInclude Include="LogManager.h">
+      <Filter>소스 파일\00. Manager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
