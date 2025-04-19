@@ -48,3 +48,12 @@ void DestroyCharacter()
 {
 
 }
+
+void PushCharacterToMap()
+{
+	while (!watingQueue.empty())
+	{
+		characterMap.insert({ watingQueue.front()->dwSessionID, watingQueue.front() });
+		watingQueue.pop();
+	}
+}

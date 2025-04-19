@@ -26,3 +26,4 @@ struct stCharacter
 void CreateCharacter(stSession* pSession, DWORD dwSessionID);
 
 void DestroyCharacter();
+void PushCharacterToMap();
