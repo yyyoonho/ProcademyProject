@@ -25,5 +25,5 @@ struct stCharacter
 
 void CreateCharacter(stSession* pSession, DWORD dwSessionID);
 
-void DestroyCharacter();
+void DestroyCharacter(DWORD sessionId);
 void PushCharacterToMap();

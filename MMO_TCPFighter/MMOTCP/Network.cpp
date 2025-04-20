@@ -22,7 +22,8 @@ using namespace std;
 SOCKET listenSocket;
 procademy::MemoryPool<stSession> sessionMP(0, false);
 unordered_map<SOCKET, stSession* > sessionMap;
-queue<stSession*> waitingQueue;
+queue<stSession*> waitingQ;
+queue<stSession*> destroyQ;
 
 int totalSession = 0;
 int g_id = 0;
@@ -48,6 +49,13 @@ void RecvProc(SOCKET socket);
 void AcceptProc();
 bool PacketProc(stSession* pSession, BYTE byPacketType, SerializePacket* sPacket);
 void SendProc(SOCKET socket);
+
+bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket);
+bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket);
+bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket);
+bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket);
+bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket);
+bool netPacketProc_Echo(stSession* pSession, SerializePacket* sPacket);
 
 void NetInit()
 {
@@ -125,15 +133,34 @@ void NetCleanUp()
 
 void DestroySession()
 {
+	while (!destroyQ.empty())
+	{
+		
+		stSession* tmpSession = destroyQ.front();
+		destroyQ.pop();
 
+		int sessionId = tmpSession->dwSessionID;
+
+		// 캐릭터 삭제
+		DestroyCharacter(sessionId);
+
+		// 세션 삭제
+		SerializePacket sPacket;
+		//mpDeleteCharacter(&sPacket, tmpSession->_id);
+		//SendBroadcast(NULL, &sPacket);
+
+		closesocket(tmpSession->socket);
+		sessionMap.erase(tmpSession->socket);
+		sessionMP.Free(tmpSession);
+	}
 }
 
 void PushSessionToMap()
 {
-	while (!waitingQueue.empty())
+	while (!waitingQ.empty())
 	{
-		sessionMap.insert({ waitingQueue.front()->socket, waitingQueue.front() });
-		waitingQueue.pop();
+		sessionMap.insert({ waitingQ.front()->socket, waitingQ.front() });
+		waitingQ.pop();
 	}
 
 	// TODO: SEND해버리자. 이때 섹터를 기준으로 진행해야지.
@@ -160,7 +187,7 @@ void AcceptProc()
 	newSession->recvQ.Resize(3000);
 	newSession->sendQ.Resize(5000);
 
-	waitingQueue.push(newSession);
+	waitingQ.push(newSession);
 
 	CreateCharacter(newSession, newSession->dwSessionID);
 }
@@ -249,6 +276,7 @@ void NetworkUpdate()
 	
 	PushSessionToMap();
 	PushCharacterToMap();
+
 	DestroySession();
 }
 
@@ -326,7 +354,34 @@ void RecvProc(SOCKET socket)
 
 bool PacketProc(stSession* pSession, BYTE byPacketType, SerializePacket* sPacket)
 {
-	return false;
+	switch (byPacketType)
+	{
+	case dfPACKET_CS_MOVE_START:
+		return netPacketProc_MoveStart(pSession, sPacket);
+		break;
+
+	case dfPACKET_CS_MOVE_STOP:
+		return netPacketProc_MoveStop(pSession, sPacket);
+		break;
+
+	case dfPACKET_CS_ATTACK1:
+		return netPacketProc_Attack1(pSession, sPacket);
+		break;
+
+	case dfPACKET_CS_ATTACK2:
+		return netPacketProc_Attack2(pSession, sPacket);
+		break;
+
+	case dfPACKET_CS_ATTACK3:
+		return netPacketProc_Attack3(pSession, sPacket);
+		break;
+
+	case dfPACKET_CS_ECHO:
+		return netPacketProc_Echo(pSession, sPacket);
+		break;
+	}
+
+	return true;
 }
 
 void SendProc(SOCKET socket)
@@ -348,4 +403,34 @@ void SendProc(SOCKET socket)
 
 	return;
 
+}
+
+bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
+{
+	return false;
+}
+
+bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
+{
+	return false;
+}
+
+bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
+{
+	return false;
+}
+
+bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
+{
+	return false;
+}
+
+bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
+{
+	return false;
+}
+
+bool netPacketProc_Echo(stSession* pSession, SerializePacket* sPacket)
+{
+	return false;
 }

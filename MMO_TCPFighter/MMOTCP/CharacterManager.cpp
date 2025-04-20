@@ -15,7 +15,7 @@ using namespace std;
 
 procademy::MemoryPool<stCharacter> characterMP(0, false);
 unordered_map<DWORD, stCharacter* > characterMap;
-queue<stCharacter*> watingQueue;
+queue<stCharacter*> watingQ;
 
 void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 {
@@ -41,19 +41,22 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 
 	newCharacter->chHP = 100;
 
-	watingQueue.push(newCharacter);
+	watingQ.push(newCharacter);
 }
 
-void DestroyCharacter()
+void DestroyCharacter(DWORD sessionId)
 {
+	stCharacter* tmpCharacter = characterMap.find(sessionId)->second;
+	characterMap.erase(sessionId);
 
+	characterMP.Free(tmpCharacter);
 }
 
 void PushCharacterToMap()
 {
-	while (!watingQueue.empty())
+	while (!watingQ.empty())
 	{
-		characterMap.insert({ watingQueue.front()->dwSessionID, watingQueue.front() });
-		watingQueue.pop();
+		characterMap.insert({ watingQ.front()->dwSessionID, watingQ.front() });
+		watingQ.pop();
 	}
 }

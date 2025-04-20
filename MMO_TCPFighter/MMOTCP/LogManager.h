@@ -3,7 +3,6 @@
 /*	사용법
 *	
 *	로그 레벨은 상황에 맞게 알아서 지정하세요.
-*	_LOG(dfLOG_LEVEL_DEBUG, L"로그 남길 내용");
 *	_LOG(dfLOG_LEVEL_DEBUG, L"%ls %ls\n", L"테스트입니다.", L"리얼입니다.");
 * 
 */

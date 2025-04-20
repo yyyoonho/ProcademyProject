@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <iostream>
+#include <tchar.h>
 
 #include "LogManager.h"
 
@@ -15,6 +16,9 @@ void Log(WCHAR* szString, int iLogLevel)
 
 	FILE* fp;
 	fopen_s(&fp, szFileName, "at, ccs=UTF-16LE");
+
+	if (fp == 0)
+		return;
 
 	fwrite(szString, wcslen(szString) * sizeof(WCHAR), 1, fp);
 
