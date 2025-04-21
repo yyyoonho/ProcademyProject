@@ -136,6 +136,7 @@
     <ClCompile Include="MMOTCP.cpp" />
     <ClCompile Include="Monitor.cpp" />
     <ClCompile Include="Network.cpp" />
+    <ClCompile Include="PacketProc.cpp" />
     <ClCompile Include="SectorManager.cpp" />
     <ClCompile Include="ServerControl.cpp" />
   </ItemGroup>
@@ -147,6 +148,7 @@
     <ClInclude Include="MMOTCP.h" />
     <ClInclude Include="Monitor.h" />
     <ClInclude Include="Network.h" />
+    <ClInclude Include="PacketProc.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="SectorManager.h" />
     <ClInclude Include="ServerControl.h" />
