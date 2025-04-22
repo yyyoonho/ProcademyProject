@@ -138,6 +138,7 @@
     <ClCompile Include="Network.cpp" />
     <ClCompile Include="PacketProc.cpp" />
     <ClCompile Include="SectorManager.cpp" />
+    <ClCompile Include="SendPacket.cpp" />
     <ClCompile Include="ServerControl.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -151,6 +152,7 @@
     <ClInclude Include="PacketProc.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="SectorManager.h" />
+    <ClInclude Include="SendPacket.h" />
     <ClInclude Include="ServerControl.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

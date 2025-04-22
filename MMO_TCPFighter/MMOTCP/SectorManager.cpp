@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <list>
+#include <vector>
 #include <queue>
 
 #include "SectorManager.h"
@@ -18,14 +19,14 @@ void GetSectorAround(int iSectorY, int iSectorX, OUT stSECTOR_AROUND* pSectorAro
 
 	for (int i = 0; i < 9; i++)
 	{
-		int newSectorY = iSectorY + dy[i];
-		int newSectorX = iSectorX + dx[i];
+		int aroundSectorY = iSectorY + dy[i];
+		int aroundSectorX = iSectorX + dx[i];
 
-		if (newSectorY < 0 || newSectorY >= dfSECTOR_MAX_Y || newSectorX < 0 || newSectorX <= dfSECTOR_MAX_X)
+		if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX <= dfSECTOR_MAX_X)
 			continue;
 
-		pSectorAround->around[count].iY = newSectorY;
-		pSectorAround->around[count].iX = newSectorX;
+		pSectorAround->around[count].iY = aroundSectorY;
+		pSectorAround->around[count].iX = aroundSectorX;
 		count++;
 	}
 
@@ -89,4 +90,15 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 			bOverlaped = false;
 	}
 	pRemoveSector->iCount = count;
+}
+
+void GetSessionsFromSector(int sectorY, int sectorX, OUT std::vector<stSession*>& v)
+{
+	list<stCharacter*>::iterator iter;
+	for (iter = g_Sector[sectorY][sectorX].begin(); iter != g_Sector[sectorY][sectorX].end(); ++iter)
+	{
+		v.push_back((*iter)->pSession);
+	}
+
+	return;
 }

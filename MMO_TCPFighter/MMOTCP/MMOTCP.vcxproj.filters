@@ -53,6 +53,9 @@
     <ClCompile Include="PacketProc.cpp">
       <Filter>소스 파일\01. Networking</Filter>
     </ClCompile>
+    <ClCompile Include="SendPacket.cpp">
+      <Filter>소스 파일\01. Networking</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MMOTCP.h">
@@ -86,6 +89,9 @@
       <Filter>소스 파일\00. Manager</Filter>
     </ClInclude>
     <ClInclude Include="PacketProc.h">
+      <Filter>소스 파일\01. Networking</Filter>
+    </ClInclude>
+    <ClInclude Include="SendPacket.h">
       <Filter>소스 파일\01. Networking</Filter>
     </ClInclude>
   </ItemGroup>

@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <iostream>
 #include <list>
+#include <vector>
 #include <unordered_map>
 #include <queue>
 

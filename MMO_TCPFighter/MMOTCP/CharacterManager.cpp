@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <iostream>
 #include <list>
+#include <vector>
 #include <unordered_map>
 #include <queue>
 
@@ -59,4 +60,13 @@ void PushCharacterToMap()
 		characterMap.insert({ watingQ.front()->dwSessionID, watingQ.front() });
 		watingQ.pop();
 	}
+}
+
+void GetCurSectorPos(stSession* pSession, OUT stSECTOR_POS* pSectorPos)
+{
+	stCharacter* tmpCharacter = characterMap.find(pSession->dwSessionID)->second;
+
+	pSectorPos = &(tmpCharacter->curSector);
+
+	return;
 }

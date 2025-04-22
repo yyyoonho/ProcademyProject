@@ -27,3 +27,5 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID);
 
 void DestroyCharacter(DWORD sessionId);
 void PushCharacterToMap();
+
+void GetCurSectorPos(stSession* pSession, OUT stSECTOR_POS* pSectorPos );
