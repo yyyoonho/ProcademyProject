@@ -22,7 +22,7 @@ void GetSectorAround(int iSectorY, int iSectorX, OUT stSECTOR_AROUND* pSectorAro
 		int aroundSectorY = iSectorY + dy[i];
 		int aroundSectorX = iSectorX + dx[i];
 
-		if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX <= dfSECTOR_MAX_X)
+		if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
 			continue;
 
 		pSectorAround->around[count].iY = aroundSectorY;
@@ -99,6 +99,48 @@ void GetSessionsFromSector(int sectorY, int sectorX, OUT std::vector<stSession*>
 	{
 		v.push_back((*iter)->pSession);
 	}
+
+	return;
+}
+
+void GetCharactersFromSector(int sectorY, int sectorX, OUT std::vector<stCharacter*>& v)
+{
+	list<stCharacter*>::iterator iter;
+	for (iter = g_Sector[sectorY][sectorX].begin(); iter != g_Sector[sectorY][sectorX].end(); ++iter)
+	{
+		v.push_back((*iter));
+	}
+
+	return;
+}
+
+void UpdateSector(stCharacter* pCharacter)
+{
+	stSECTOR_POS curSectorPos = pCharacter->curSector;
+	short characterY = pCharacter->shY;
+	short characterX = pCharacter->shX;
+
+	int newSectorY = (int)characterY / dfSECTOR_SIZE;
+	int newSectorX = (int)characterX / dfSECTOR_SIZE;
+
+	if (newSectorY == curSectorPos.iY && newSectorX == curSectorPos.iX)
+		return;
+
+	list<stCharacter*>::iterator iter;
+	for (iter = g_Sector[curSectorPos.iY][curSectorPos.iX].begin(); iter != g_Sector[curSectorPos.iY][curSectorPos.iX].end(); ++iter)
+	{
+		if ((*iter) != pCharacter)
+			continue;
+
+		g_Sector[curSectorPos.iY][curSectorPos.iX].erase(iter);
+		break;
+	}
+
+	g_Sector[newSectorY][newSectorX].push_front(pCharacter);
+
+	pCharacter->oldSector = curSectorPos;
+	pCharacter->curSector.iY = newSectorY;
+	pCharacter->curSector.iX = newSectorX;
 
 	return;
 }

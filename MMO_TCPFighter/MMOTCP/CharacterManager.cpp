@@ -18,20 +18,28 @@ procademy::MemoryPool<stCharacter> characterMP(0, false);
 unordered_map<DWORD, stCharacter* > characterMap;
 queue<stCharacter*> watingQ;
 
-void CreateCharacter(stSession* pSession, DWORD dwSessionID)
+void CreateCharacter(stSession* pSession, DWORD dwSessionID, OUT stCharacter** ppNewCharacter)
 {
 	stCharacter* newCharacter = characterMP.Alloc();
 
 	newCharacter->pSession = pSession;
 	newCharacter->dwSessionID = dwSessionID;
 
-	newCharacter->dwAction = dfACTION_STOP;
+	newCharacter->dwAction = dfMOVE_STOP;
 	newCharacter->byDirection = dfRANGE_MOVE_LEFT;
 	newCharacter->byMoveDirection = dfRANGE_MOVE_LEFT;
 
-	newCharacter->shX = rand() % (dfRANGE_MOVE_RIGHT - 1);
-	newCharacter->shY = rand() % (dfRANGE_MOVE_BOTTOM - 1);
+	//newCharacter->shX = rand() % (dfRANGE_MOVE_RIGHT - 1);
+	//newCharacter->shY = rand() % (dfRANGE_MOVE_BOTTOM - 1);
 	
+	// TODO: 테스트코드
+	static short shX = 20;
+	static short shY = 20;
+	newCharacter->shX = shX;
+	newCharacter->shY = shY;
+	shX += 20;
+	shY += 20;
+
 	newCharacter->dX = (double)newCharacter->shX;
 	newCharacter->dY = (double)newCharacter->shY;
 	
@@ -40,9 +48,15 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 	newCharacter->oldSector.iY = (int)newCharacter->shY / dfSECTOR_SIZE;
 	newCharacter->oldSector.iX = (int)newCharacter->shX / dfSECTOR_SIZE;
 
+	//UpdateSector(newCharacter);
+
 	newCharacter->chHP = 100;
 
 	watingQ.push(newCharacter);
+
+	*ppNewCharacter = newCharacter;
+
+	return;
 }
 
 void DestroyCharacter(DWORD sessionId)
@@ -58,15 +72,23 @@ void PushCharacterToMap()
 	while (!watingQ.empty())
 	{
 		characterMap.insert({ watingQ.front()->dwSessionID, watingQ.front() });
+		UpdateSector(watingQ.front());
 		watingQ.pop();
 	}
 }
 
 void GetCurSectorPos(stSession* pSession, OUT stSECTOR_POS* pSectorPos)
 {
-	stCharacter* tmpCharacter = characterMap.find(pSession->dwSessionID)->second;
+	stCharacter* tmpCharacter = NULL;
+	unordered_map<DWORD, stCharacter* >::iterator iter = characterMap.find(pSession->dwSessionID);
+	if (iter == characterMap.end())
+	{
+		int a = 3;
+	}
 
-	pSectorPos = &(tmpCharacter->curSector);
+	tmpCharacter = (*iter).second;
 
+	pSectorPos->iY = tmpCharacter->curSector.iY; // tmpCharacter 가 NULLPTR 에러발생
+	pSectorPos->iX = tmpCharacter->curSector.iX;
 	return;
 }

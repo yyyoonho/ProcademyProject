@@ -15,6 +15,8 @@
 #include "CharacterManager.h"
 #include "Protocol.h"
 #include "PacketProc.h"
+#include "MakePacket.h"
+#include "SendPacket.h"
 
 #include "Network.h"
 
@@ -24,7 +26,7 @@ using namespace std;
 SOCKET listenSocket;
 procademy::MemoryPool<stSession> sessionMP(0, false);
 unordered_map<SOCKET, stSession* > sessionMap;
-queue<stSession*> waitingQ;
+queue<pair<stSession*, stCharacter*> > waitingQ;
 queue<stSession*> destroyQ;
 
 int totalSession = 0;
@@ -154,11 +156,81 @@ void PushSessionToMap()
 {
 	while (!waitingQ.empty())
 	{
-		sessionMap.insert({ waitingQ.front()->socket, waitingQ.front() });
+		stSession* newSession = waitingQ.front().first;
+		stCharacter* newCharacter = waitingQ.front().second;
 		waitingQ.pop();
+		sessionMap.insert({ newSession->socket, newSession });
+
+		// new에게 자신의 생성 메시지 보내기.
+		{
+			SerializePacket sPacket;
+
+			mpCreateMyCharacter(&sPacket, newCharacter->dwSessionID, newCharacter->byDirection, newCharacter->shX, newCharacter->shY);
+			SendPacket_Unicast(newSession, &sPacket);
+
+			printf("New <- mpCreateMyCharacter Send\n");
+		}
+
+		// new에게 기존 멤버들 생성 메시지 보내기.
+		{
+			stSECTOR_AROUND sectorAround;
+			GetSectorAround(newCharacter->curSector.iY, newCharacter->curSector.iX, &sectorAround);
+
+			vector<stCharacter*> v;
+			for (int i = 0; i < sectorAround.iCount; i++)
+			{
+				GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
+
+				for (int j = 0; j < v.size(); j++)
+				{
+					SerializePacket sPacket;
+					mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
+					SendPacket_Unicast(newSession, &sPacket);
+				}
+
+				v.clear();
+			}
+
+			printf("New <- mpCreateOtherCharacter Send\n");
+		}
+
+		// new에게 기존 멤버들 액션 메시지 보내기.
+		{
+			stSECTOR_AROUND sectorAround;
+			GetSectorAround(newCharacter->curSector.iY, newCharacter->curSector.iX, &sectorAround);
+
+			vector<stCharacter*> v;
+			for (int i = 0; i < sectorAround.iCount; i++)
+			{
+				GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
+
+				for (int j = 0; j < v.size(); j++)
+				{
+					if (v[j]->byMoveDirection == dfMOVE_STOP)
+						continue;
+
+					SerializePacket sPacket;
+					mpMoveStart(&sPacket, v[j]->dwSessionID, v[j]->byMoveDirection, v[j]->shX, v[j]->shY);
+					SendPacket_Unicast(newSession, &sPacket);
+				}
+
+				v.clear();
+			}
+
+			printf("New <- mpMoveStart Send\n");
+		}
+
+		// 기존 멤버들에게 new 생성 메시지 보내기.
+		{
+			SerializePacket sPacket;
+			mpCreateOtherCharacter(&sPacket, newSession->dwSessionID, newCharacter->byDirection, newCharacter->shX, newCharacter->shY, newCharacter->chHP);
+		
+			SendPacket_Around(newSession, &sPacket, false);
+			printf("Other <- mpCreateOtherCharacter Send\n");
+		}
 	}
 
-	// TODO: SEND해버리자. 이때 섹터를 기준으로 진행해야지.
+	
 }
 
 void AcceptProc()
@@ -179,12 +251,12 @@ void AcceptProc()
 	newSession->socket = newSocket;
 	newSession->clientAddr = clientAddr;
 	newSession->dwSessionID = g_id++;
-	newSession->recvQ.Resize(3000);
-	newSession->sendQ.Resize(5000);
+	newSession->recvQ.Resize(5000);
+	newSession->sendQ.Resize(10000);
 
-	waitingQ.push(newSession);
-
-	CreateCharacter(newSession, newSession->dwSessionID);
+	stCharacter* pNewCharacter = NULL;
+	CreateCharacter(newSession, newSession->dwSessionID, &pNewCharacter);
+	waitingQ.push({ newSession, pNewCharacter });
 }
 
 void SelectFunc(FD_SET* pReadSet, FD_SET* pWriteSet)
@@ -268,9 +340,12 @@ void NetworkUpdate()
 			setCount = 0;
 		}
 	}
+
+	if (setCount > 0)
+		SelectFunc(&readSet, &writeSet);
 	
-	PushSessionToMap();
 	PushCharacterToMap();
+	PushSessionToMap();
 
 	DestroySession();
 }
@@ -285,30 +360,30 @@ void RecvProc(SOCKET socket)
 		if (WSAGetLastError() == 10054)
 		{
 			// TODO: 
-			/*
-			printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->_id);
+			
+			printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
 			destroyQ.push(pSession);
 			return;
-			*/
+			
 		}
 
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
 			// TODO: 
-			/*
+			
 			printf("ERROR: recv() %d\n", WSAGetLastError());
 			return;
-			*/
+			
 		}
 	}
 	if (recvRet == 0)
 	{
 		// TODO: 종료처리 (상대 FIN보낸거지)
-		/*
-		printf("[상대방의 정상 연결 종료] id : %d\n", pSession->_id);
+		
+		printf("[상대방의 정상 연결 종료] id : %d\n", pSession->dwSessionID);
 		destroyQ.push(pSession);
 		return;
-		*/
+		
 	}
 
 	pSession->recvQ.MoveRear(recvRet);
@@ -358,8 +433,8 @@ void SendProc(SOCKET socket)
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
 			// TODO:
-			/*printf("ERROR: send() %d\n", WSAGetLastError());
-			return;*/
+			printf("ERROR: send() %d\n", WSAGetLastError());
+			return;
 		}
 	}
 

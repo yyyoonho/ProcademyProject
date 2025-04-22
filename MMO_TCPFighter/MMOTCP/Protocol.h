@@ -1,6 +1,6 @@
 #pragma once
 
-#define dfNETWORK_PORT		20000
+#define dfNETWORK_PORT		20010
 
 struct st_PACKET_HEADER
 {
@@ -129,7 +129,7 @@ struct st_PACKET_HEADER
 #define dfPACKET_MOVE_DIR_DD					6
 #define dfPACKET_MOVE_DIR_LD					7
 
-#define dfACTION_STOP							8
+#define dfMOVE_STOP							8
 
 
 

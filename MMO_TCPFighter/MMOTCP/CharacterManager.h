@@ -23,7 +23,7 @@ struct stCharacter
 	char chHP;
 };
 
-void CreateCharacter(stSession* pSession, DWORD dwSessionID);
+void CreateCharacter(stSession* pSession, DWORD dwSessionID, OUT stCharacter** ppNewCharacter);
 
 void DestroyCharacter(DWORD sessionId);
 void PushCharacterToMap();

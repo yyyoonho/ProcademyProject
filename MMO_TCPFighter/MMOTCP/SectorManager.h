@@ -26,3 +26,6 @@ void GetSectorAround(int iSectorY, int iSectorX, OUT stSECTOR_AROUND* pSectorAro
 void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemoveSector, OUT stSECTOR_AROUND* pAddSector);
 
 void GetSessionsFromSector(int sectorY, int sectorX, OUT std::vector<stSession*>& v);
+void GetCharactersFromSector(int sectorY, int sectorX, OUT std::vector<stCharacter*>& v);
+
+void UpdateSector(stCharacter* pCharacter);

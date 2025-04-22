@@ -30,7 +30,7 @@ void SendPacket_SectorOne(int iSectorY, int isectorX, SerializePacket* sPacket, 
 
 void SendPacket_Unicast(stSession* pTargetSession, SerializePacket* sPacket)
 {
-	pTargetSession->recvQ.Enqueue(sPacket->GetBufferPtr(), sPacket->GetDataSize());
+	pTargetSession->sendQ.Enqueue(sPacket->GetBufferPtr(), sPacket->GetDataSize());
 
 	return;
 }
@@ -43,7 +43,7 @@ void SendPacket_Around(stSession* pMySession, SerializePacket* sPacket, bool bSe
 	stSECTOR_AROUND sectorAround;
 	GetSectorAround(curSectorPos.iY, curSectorPos.iX, &sectorAround);
 
-	for (int i = 0; i < sectorAround.iCount; i++)
+	for (int i = 0; i < sectorAround.iCount; i++) // 여기서 자꾸 icount가 0 이 나온다...
 	{
 		int sectorY = sectorAround.around[i].iY;
 		int sectorX = sectorAround.around[i].iX;

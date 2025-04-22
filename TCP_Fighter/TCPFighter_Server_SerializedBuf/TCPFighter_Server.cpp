@@ -298,7 +298,6 @@ void AcceptProc()
         SendBroadcast(newSession, &sPacket);
     }
 
-    
 }
 
 void RecvProc(Session* pSession)
