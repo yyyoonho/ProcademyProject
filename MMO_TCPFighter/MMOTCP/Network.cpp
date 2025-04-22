@@ -183,6 +183,9 @@ void PushSessionToMap()
 
 				for (int j = 0; j < v.size(); j++)
 				{
+					if (v[j] == newCharacter)
+						continue;
+
 					SerializePacket sPacket;
 					mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
 					SendPacket_Unicast(newSession, &sPacket);
@@ -206,7 +209,7 @@ void PushSessionToMap()
 
 				for (int j = 0; j < v.size(); j++)
 				{
-					if (v[j]->byMoveDirection == dfMOVE_STOP)
+					if (v[j]->dwAction == dfMOVE_STOP)
 						continue;
 
 					SerializePacket sPacket;

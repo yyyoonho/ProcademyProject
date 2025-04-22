@@ -114,6 +114,25 @@ void GetCharactersFromSector(int sectorY, int sectorX, OUT std::vector<stCharact
 	return;
 }
 
+void SetSector(stCharacter* pCharacter)
+{
+	stSECTOR_POS curSectorPos = pCharacter->curSector;
+	short characterY = pCharacter->shY;
+	short characterX = pCharacter->shX;
+
+	int newSectorY = (int)characterY / dfSECTOR_SIZE;
+	int newSectorX = (int)characterX / dfSECTOR_SIZE;
+
+	g_Sector[newSectorY][newSectorX].push_front(pCharacter);
+	
+	pCharacter->curSector.iY = newSectorY;
+	pCharacter->curSector.iX = newSectorX;
+	pCharacter->oldSector.iY = newSectorY;
+	pCharacter->oldSector.iX = newSectorX;
+
+	return;
+}
+
 void UpdateSector(stCharacter* pCharacter)
 {
 	stSECTOR_POS curSectorPos = pCharacter->curSector;
@@ -133,7 +152,7 @@ void UpdateSector(stCharacter* pCharacter)
 			continue;
 
 		g_Sector[curSectorPos.iY][curSectorPos.iX].erase(iter);
-		break;
+		//break;
 	}
 
 	g_Sector[newSectorY][newSectorX].push_front(pCharacter);

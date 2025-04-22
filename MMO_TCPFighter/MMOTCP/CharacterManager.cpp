@@ -16,7 +16,7 @@ using namespace std;
 
 procademy::MemoryPool<stCharacter> characterMP(0, false);
 unordered_map<DWORD, stCharacter* > characterMap;
-queue<stCharacter*> watingQ;
+queue<stCharacter*> waitingQ;
 
 void CreateCharacter(stSession* pSession, DWORD dwSessionID, OUT stCharacter** ppNewCharacter)
 {
@@ -43,16 +43,14 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID, OUT stCharacter** p
 	newCharacter->dX = (double)newCharacter->shX;
 	newCharacter->dY = (double)newCharacter->shY;
 	
-	newCharacter->curSector.iY = (int)newCharacter->shY / dfSECTOR_SIZE;
-	newCharacter->curSector.iX = (int)newCharacter->shX / dfSECTOR_SIZE;
-	newCharacter->oldSector.iY = (int)newCharacter->shY / dfSECTOR_SIZE;
-	newCharacter->oldSector.iX = (int)newCharacter->shX / dfSECTOR_SIZE;
-
-	//UpdateSector(newCharacter);
+	newCharacter->curSector.iY = -1;
+	newCharacter->curSector.iX = -1;
+	newCharacter->oldSector.iY = -1;
+	newCharacter->oldSector.iX = -1;
 
 	newCharacter->chHP = 100;
 
-	watingQ.push(newCharacter);
+	waitingQ.push(newCharacter);
 
 	*ppNewCharacter = newCharacter;
 
@@ -69,11 +67,11 @@ void DestroyCharacter(DWORD sessionId)
 
 void PushCharacterToMap()
 {
-	while (!watingQ.empty())
+	while (!waitingQ.empty())
 	{
-		characterMap.insert({ watingQ.front()->dwSessionID, watingQ.front() });
-		UpdateSector(watingQ.front());
-		watingQ.pop();
+		characterMap.insert({ waitingQ.front()->dwSessionID, waitingQ.front() });
+		SetSector(waitingQ.front());
+		waitingQ.pop();
 	}
 }
 
