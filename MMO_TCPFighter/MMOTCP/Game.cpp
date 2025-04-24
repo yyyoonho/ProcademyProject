@@ -76,9 +76,12 @@ void GameUpdate()
 		}
 
 		// 일정시간동안 수신이 없으면 종료처리.
-		if (GetTickCount() - pCharacter->pSession->dwLastRecvTime)
+		if (GetTickCount() - pCharacter->pSession->dwLastRecvTime > dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
 			PushSessionToDestroyQ(pCharacter->pSession);
+
+			_LOG(dfLOG_LEVEL_DEBUG, L"# Heartbeat TIMEOUT... # SessionID:%d\n", pCharacter->dwSessionID);
+
 			continue;
 		}
 

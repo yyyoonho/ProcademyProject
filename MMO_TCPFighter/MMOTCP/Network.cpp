@@ -246,6 +246,7 @@ void AcceptProc()
 	newSession->dwSessionID = g_id++;
 	newSession->recvQ.Resize(5000);
 	newSession->sendQ.Resize(10000);
+	newSession->dwLastRecvTime = GetTickCount();
 
 	stCharacter* pNewCharacter = NULL;
 	CreateCharacter(newSession, newSession->dwSessionID, &pNewCharacter);
