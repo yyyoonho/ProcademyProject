@@ -1,10 +1,6 @@
-#include <Windows.h>
-#include <iostream>	
-#include <vector>
-#include <unordered_map>
+#include "pch.h"
 
 #include "Protocol.h"
-#include "SerializeBuffer.h"
 #include "Network.h"
 #include "SectorManager.h"
 #include "CharacterManager.h"
@@ -119,6 +115,8 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 	mpMoveStart(sPacket, pSession->dwSessionID, byDirection, shX, shY);
 	SendPacket_Around(pSession, sPacket, false);
 
+	pSession->dwLastRecvTime = GetTickCount();
+
 	return true;
 }
 
@@ -157,6 +155,8 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	pCharacter->shX = shX;
 	pCharacter->shY = shY;
 	pCharacter->byDirection = byDirection;
+
+	pCharacter->dwAction = dfMOVE_STOP;
 	pCharacter->byMoveDirection = dfMOVE_STOP;
 
 	if (UpdateSector(pCharacter))
@@ -169,100 +169,35 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	mpMoveStop(sPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY);
 	SendPacket_Around(pCharacter->pSession, sPacket, false);
 
+	pSession->dwLastRecvTime = GetTickCount();
+
 	return true;
 }
 
 bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
 {
+
+	pSession->dwLastRecvTime = GetTickCount();
 	return false;
 }
 
 bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
 {
+
+	pSession->dwLastRecvTime = GetTickCount();
 	return false;
 }
 
 bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
 {
+
+	pSession->dwLastRecvTime = GetTickCount();
 	return false;
 }
 
 bool netPacketProc_Echo(stSession* pSession, SerializePacket* sPacket)
 {
+
+	pSession->dwLastRecvTime = GetTickCount();
 	return false;
-}
-
-void CharacterSectorUpdatePacket(stCharacter* pCharacter)
-{
-	stSECTOR_AROUND removeSectors;
-	stSECTOR_AROUND addSectors;
-	GetUpdateSectorAround(pCharacter, &removeSectors, &addSectors);
-
-	SerializePacket sPacket;
-	// remove에 delete보내기.
-	{
-		mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
-		for (int i = 0; i < removeSectors.iCount; i++)
-		{
-			vector<stSession*> v;
-			GetSessionsFromSector(removeSectors.around[i].iY, removeSectors.around[i].iX, v);
-
-			for (int j = 0; j < v.size(); j++)
-			{
-				SendPacket_Unicast(v[j], &sPacket);
-			}
-		}
-	}
-	sPacket.Clear();
-
-	// add에 new(섹터에 진입한) 존재 알리기.
-	{
-		mpCreateOtherCharacter(&sPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY, pCharacter->chHP);
-		for (int i = 0; i < addSectors.iCount; i++)
-		{
-			vector<stSession*> v;
-			GetSessionsFromSector(addSectors.around[i].iY, addSectors.around[i].iX, v);
-
-			for (int j = 0; j < v.size(); j++)
-			{
-				SendPacket_Unicast(v[j], &sPacket);
-			}
-		}
-	}
-	sPacket.Clear();
-
-	// new에 add에 있던 플레이어들 존재 알리기.
-	{
-		for (int i = 0; i < addSectors.iCount; i++)
-		{
-			vector<stCharacter*> v;
-			GetCharactersFromSector(addSectors.around[i].iY, addSectors.around[i].iX, v);
-
-			for (int j = 0; j < v.size(); j++)
-			{
-				mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
-				SendPacket_Unicast(pCharacter->pSession, &sPacket);
-				sPacket.Clear();
-			}
-		}
-	}
-	
-	// new에 add에 있던 플레이어의 행동 알리기.
-	{
-		for (int i = 0; i < addSectors.iCount; i++)
-		{
-			vector<stCharacter*> v;
-			GetCharactersFromSector(addSectors.around[i].iY, addSectors.around[i].iX, v);
-
-			for (int j = 0; j < v.size(); j++)
-			{
-				if (v[j]->byMoveDirection == dfMOVE_STOP)
-					continue;
-
-				mpMoveStart(&sPacket, v[j]->dwSessionID, v[j]->byMoveDirection, v[j]->shX, v[j]->shY);
-				SendPacket_Unicast(pCharacter->pSession, &sPacket);
-				sPacket.Clear();
-			}
-		}
-	}
 }

@@ -1,6 +1,4 @@
-#include <Windows.h>
-#include <iostream>
-#include <tchar.h>
+#include "pch.h"
 
 #include "LogManager.h"
 

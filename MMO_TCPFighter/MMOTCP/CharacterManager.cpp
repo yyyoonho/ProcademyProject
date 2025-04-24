@@ -1,11 +1,5 @@
-#include <Windows.h>
-#include <iostream>
-#include <list>
-#include <vector>
-#include <unordered_map>
-#include <queue>
+#include "pch.h"
 
-#include "MemoryPool.h"
 #include "Protocol.h"
 #include "Network.h"
 #include "SectorManager.h"

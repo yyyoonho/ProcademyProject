@@ -23,6 +23,8 @@ struct stCharacter
 	char chHP;
 };
 
+extern std::unordered_map<DWORD, stCharacter* > characterMap;
+
 void CreateCharacter(stSession* pSession, DWORD dwSessionID, OUT stCharacter** ppNewCharacter);
 
 void DestroyCharacter(DWORD sessionId);

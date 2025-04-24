@@ -1,14 +1,4 @@
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <Windows.h>
-#include <iostream>
-#include <list>
-#include <vector>
-#include <unordered_map>
-#include <queue>
-
-#include "MemoryPool.h"
-#include "SerializeBuffer.h"
+#include "pch.h"
 
 #include "MMOTCP.h"
 #include "SectorManager.h"
@@ -353,6 +343,11 @@ void NetworkUpdate()
 	DestroySession();
 }
 
+void PushSessionToDestroyQ(stSession* pSession)
+{
+	destroyQ.push(pSession);
+}
+
 void RecvProc(SOCKET socket)
 {
 	stSession* pSession = sessionMap.find(socket)->second;
@@ -365,7 +360,8 @@ void RecvProc(SOCKET socket)
 			// TODO: 
 			
 			printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
-			destroyQ.push(pSession);
+			//destroyQ.push(pSession);
+			PushSessionToDestroyQ(pSession);
 			return;
 			
 		}
@@ -384,7 +380,8 @@ void RecvProc(SOCKET socket)
 		// TODO: 종료처리 (상대 FIN보낸거지)
 		
 		printf("[상대방의 정상 연결 종료] id : %d\n", pSession->dwSessionID);
-		destroyQ.push(pSession);
+		//destroyQ.push(pSession);
+		PushSessionToDestroyQ(pSession);
 		return;
 		
 	}

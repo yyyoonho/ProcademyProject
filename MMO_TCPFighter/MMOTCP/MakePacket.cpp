@@ -1,7 +1,8 @@
+#include "pch.h"
+
 #pragma comment(lib, "SerializeBuffer.lib")
 
 #include "Windows.h"
-#include "SerializeBuffer.h"
 #include "Protocol.h"
 
 #include "MakePacket.h"

@@ -18,7 +18,7 @@
     <Filter Include="소스 파일\01. Networking">
       <UniqueIdentifier>{f26202c1-999e-4929-a935-7407cfddbb2f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="소스 파일\00. Manager">
+    <Filter Include="소스 파일\00.Manager">
       <UniqueIdentifier>{ef5b6861-d49f-489c-a9f9-4f5515eaf2fd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -33,28 +33,31 @@
       <Filter>소스 파일\02. Game</Filter>
     </ClCompile>
     <ClCompile Include="ServerControl.cpp">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClCompile>
     <ClCompile Include="Monitor.cpp">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClCompile>
     <ClCompile Include="CharacterManager.cpp">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClCompile>
     <ClCompile Include="SectorManager.cpp">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClCompile>
     <ClCompile Include="MakePacket.cpp">
       <Filter>소스 파일\01. Networking</Filter>
     </ClCompile>
     <ClCompile Include="LogManager.cpp">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClCompile>
     <ClCompile Include="PacketProc.cpp">
       <Filter>소스 파일\01. Networking</Filter>
     </ClCompile>
     <ClCompile Include="SendPacket.cpp">
       <Filter>소스 파일\01. Networking</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -68,31 +71,34 @@
       <Filter>소스 파일\02. Game</Filter>
     </ClInclude>
     <ClInclude Include="ServerControl.h">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClInclude>
     <ClInclude Include="Monitor.h">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClInclude>
     <ClInclude Include="CharacterManager.h">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClInclude>
     <ClInclude Include="Protocol.h">
       <Filter>소스 파일\99. Headers</Filter>
     </ClInclude>
     <ClInclude Include="SectorManager.h">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClInclude>
     <ClInclude Include="MakePacket.h">
       <Filter>소스 파일\01. Networking</Filter>
     </ClInclude>
     <ClInclude Include="LogManager.h">
-      <Filter>소스 파일\00. Manager</Filter>
+      <Filter>소스 파일\00.Manager</Filter>
     </ClInclude>
     <ClInclude Include="PacketProc.h">
       <Filter>소스 파일\01. Networking</Filter>
     </ClInclude>
     <ClInclude Include="SendPacket.h">
       <Filter>소스 파일\01. Networking</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>소스 파일</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
