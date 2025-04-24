@@ -2,6 +2,7 @@
 #include <list>
 #include <vector>
 #include <queue>
+#include <unordered_map>
 
 #include "SectorManager.h"
 #include "CharacterManager.h"
@@ -133,7 +134,7 @@ void SetSector(stCharacter* pCharacter)
 	return;
 }
 
-void UpdateSector(stCharacter* pCharacter)
+bool UpdateSector(stCharacter* pCharacter)
 {
 	stSECTOR_POS curSectorPos = pCharacter->curSector;
 	short characterY = pCharacter->shY;
@@ -143,7 +144,9 @@ void UpdateSector(stCharacter* pCharacter)
 	int newSectorX = (int)characterX / dfSECTOR_SIZE;
 
 	if (newSectorY == curSectorPos.iY && newSectorX == curSectorPos.iX)
-		return;
+	{
+		return false;
+	}
 
 	list<stCharacter*>::iterator iter;
 	for (iter = g_Sector[curSectorPos.iY][curSectorPos.iX].begin(); iter != g_Sector[curSectorPos.iY][curSectorPos.iX].end(); ++iter)
@@ -152,7 +155,7 @@ void UpdateSector(stCharacter* pCharacter)
 			continue;
 
 		g_Sector[curSectorPos.iY][curSectorPos.iX].erase(iter);
-		//break;
+		break;
 	}
 
 	g_Sector[newSectorY][newSectorX].push_front(pCharacter);
@@ -161,5 +164,5 @@ void UpdateSector(stCharacter* pCharacter)
 	pCharacter->curSector.iY = newSectorY;
 	pCharacter->curSector.iX = newSectorX;
 
-	return;
+	return true;
 }

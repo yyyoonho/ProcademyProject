@@ -90,3 +90,14 @@ void GetCurSectorPos(stSession* pSession, OUT stSECTOR_POS* pSectorPos)
 	pSectorPos->iX = tmpCharacter->curSector.iX;
 	return;
 }
+
+stCharacter* FindCharacter(BYTE sessionID)
+{
+	unordered_map<DWORD, stCharacter* >::iterator iter = characterMap.find(sessionID);
+	if (iter == characterMap.end())
+	{
+		return NULL;
+	}
+
+	return (*iter).second;
+}

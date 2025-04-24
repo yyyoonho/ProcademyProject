@@ -14,6 +14,6 @@ void mpAttack3(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y);
 
 void mpDamage(SerializePacket* sPacket, DWORD attackId, DWORD damageId, char damageHp);
 
-void mpSync(SerializePacket* sPacket, short x, short y);
+void mpSync(SerializePacket* sPacket, DWORD id, short x, short y);
 
 void mpEcho(SerializePacket* sPacket, DWORD time);

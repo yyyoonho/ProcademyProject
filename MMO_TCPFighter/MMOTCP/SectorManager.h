@@ -29,4 +29,4 @@ void GetSessionsFromSector(int sectorY, int sectorX, OUT std::vector<stSession*>
 void GetCharactersFromSector(int sectorY, int sectorX, OUT std::vector<stCharacter*>& v);
 
 void SetSector(stCharacter* pCharacter);
-void UpdateSector(stCharacter* pCharacter);
+bool UpdateSector(stCharacter* pCharacter);

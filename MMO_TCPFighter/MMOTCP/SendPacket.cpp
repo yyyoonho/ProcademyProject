@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <list>
 #include <vector>
+#include <unordered_map>
 
 #include "RingBuffer.h"
 #include "SerializeBuffer.h"
@@ -43,7 +44,7 @@ void SendPacket_Around(stSession* pMySession, SerializePacket* sPacket, bool bSe
 	stSECTOR_AROUND sectorAround;
 	GetSectorAround(curSectorPos.iY, curSectorPos.iX, &sectorAround);
 
-	for (int i = 0; i < sectorAround.iCount; i++) // 여기서 자꾸 icount가 0 이 나온다...
+	for (int i = 0; i < sectorAround.iCount; i++)
 	{
 		int sectorY = sectorAround.around[i].iY;
 		int sectorX = sectorAround.around[i].iX;

@@ -53,11 +53,6 @@ struct st_PACKET_HEADER
 //-----------------------------------------------------------------
 #define dfERROR_RANGE		50
 
-
-
-
-
-
 #define	dfPACKET_SC_CREATE_MY_CHARACTER			0
 //---------------------------------------------------------------
 // 클라이언트 자신의 캐릭터 할당		Server -> Client
