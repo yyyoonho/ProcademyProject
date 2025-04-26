@@ -26,3 +26,4 @@ do{													\
 
 void Log(WCHAR * szString, int iLogLevel);
 
+void InitLog();

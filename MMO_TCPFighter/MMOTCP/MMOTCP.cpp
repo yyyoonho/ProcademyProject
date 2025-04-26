@@ -8,6 +8,7 @@
 #include "Game.h"
 #include "ServerControl.h"
 #include "Monitor.h"
+#include "LogManager.h"
 
 #include "MMOTCP.h"
 
@@ -20,6 +21,7 @@ bool g_bShutdown = false;
 void Init()
 {
 	srand(time(NULL));
+	InitLog();
 }
 
 

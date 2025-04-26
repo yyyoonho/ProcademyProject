@@ -6,11 +6,22 @@ using namespace std;
 
 int g_iLogLevel;
 WCHAR g_szLogBuff[1024];
+time_t now;
 
 void Log(WCHAR* szString, int iLogLevel)
 {
 	char szFileName[32]; 
-	sprintf_s(szFileName, "%s.txt", __DATE__);
+	struct tm date;
+	localtime_s(&date, &now);
+
+	sprintf_s(szFileName, 100, "LOG_%d%02d%02d_%02d%02d%02d.txt",
+		date.tm_year + 1900,
+		date.tm_mon + 1,
+		date.tm_mday,
+		date.tm_hour,
+		date.tm_min,
+		date.tm_sec
+	);
 
 	FILE* fp;
 	fopen_s(&fp, szFileName, "at, ccs=UTF-16LE");
@@ -21,6 +32,11 @@ void Log(WCHAR* szString, int iLogLevel)
 	fwrite(szString, wcslen(szString) * sizeof(WCHAR), 1, fp);
 
 	fclose(fp);
+}
+
+void InitLog()
+{
+	now = time(NULL);
 }
 
 //https://www.kernelpanic.kr/50
