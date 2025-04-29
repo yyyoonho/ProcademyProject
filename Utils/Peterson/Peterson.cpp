@@ -28,6 +28,9 @@ UINT FuncA(LPVOID lpThreadParameter)
 
         while (1)
         {
+            if (g_turn == 99)   // load turn
+                int tmp = 3;
+
             cap_A = g_flag[1];  // load flag[1]
                                 // store cap_A
 
@@ -75,6 +78,9 @@ UINT FuncB(LPVOID lpThreadParameter)
 
         while (1)
         {
+            if (g_turn == 99)
+                int tmp = 3;
+
             cap_C = g_flag[0];
             cap_D = g_turn;
 
