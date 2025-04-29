@@ -9,6 +9,11 @@ using namespace std;
 LONG g_flag[2];
 LONG g_turn;
 
+LONG cap_A;
+LONG cap_B;
+LONG cap_C;
+LONG cap_D;
+
 int a = 0;
 
 LONG lock = 0;
@@ -18,16 +23,21 @@ UINT FuncA(LPVOID lpThreadParameter)
     int count = 0;
     while (count++ < 10000000)
     {
-        g_flag[0] = true;
-
-        g_turn = 0;
+        g_flag[0] = true;   // store flag[0]
+        g_turn = 0;         // store turn 
 
         while (1)
         {
-            if (g_flag[1] == false)
-                break;
+            cap_A = g_flag[1];  // load flag[1]
+                                // store cap_A
 
-            if (g_turn != 0)
+            cap_B = g_turn;     // load turn
+                                // store cap_B
+
+            if (cap_A == false) // load cap_A     
+                break;         
+
+            if (cap_B != 0)     // load cap_B
                 break;
 
         }
@@ -61,14 +71,16 @@ UINT FuncB(LPVOID lpThreadParameter)
     while (count++ < 10000000)
     {
         g_flag[1] = true;
-        
         g_turn = 1;
 
         while (1)
         {
-            if (g_flag[0] == false)
+            cap_C = g_flag[0];
+            cap_D = g_turn;
+
+            if (cap_C == false)
                 break;
-            if (g_turn != 1)
+            if (cap_D != 1)
                 break;
         }
 
@@ -81,7 +93,7 @@ UINT FuncB(LPVOID lpThreadParameter)
 
         a++;
 
-        ret2 = _InterlockedExchange(&lock, 0);
+        ret2 = InterlockedExchange(&lock, 0);
         if (ret2 != 2)
         {
             DebugBreak();
