@@ -9,14 +9,9 @@ using namespace std;
 LONG g_flag[2];
 LONG g_turn;
 
-LONG flagInterlocked_0 = 4;
-LONG flagInterlocked_1 = 4;
-LONG turnInterlocked_0 = 4;
-LONG turnInterlocked_1 = 4;
+int a = 0;
 
-bool enterZone[2];
-
-LONG a = 0;
+LONG lock = 0;
 
 UINT FuncA(LPVOID lpThreadParameter)
 {
@@ -29,25 +24,29 @@ UINT FuncA(LPVOID lpThreadParameter)
 
         while (1)
         {
-            if ((flagInterlocked_1 = InterlockedCompareExchange(&g_flag[1], 0, 0)) == false)
+            if (g_flag[1] == false)
                 break;
-                
-            if ((turnInterlocked_0 = InterlockedCompareExchange(&g_turn, 0, 0)) != 0)
+
+            if (g_turn != 0)
                 break;
-                
+
         }
 
         // 임 계 영 역
-        enterZone[0] = true;
-
-        if (enterZone[1] == true && enterZone[0] == true)
+        LONG ret1 = InterlockedExchange(&lock, 1);
+        if (ret1 != 0)
         {
             DebugBreak();
         }
 
         a++;
 
-        enterZone[0] = false;
+
+        ret1 = InterlockedExchange(&lock, 0);
+        if (ret1 != 1)
+        {
+            DebugBreak();
+        }
         // 임 계 영 역
 
         g_flag[0] = false;
@@ -69,18 +68,24 @@ UINT FuncB(LPVOID lpThreadParameter)
         {
             if (g_flag[0] == false)
                 break;
-            if ((turnInterlocked_1 = InterlockedCompareExchange(&g_turn, 0, 0)) != 1)
+            if (g_turn != 1)
                 break;
         }
 
         // 임 계 영 역
-        enterZone[1] = true;
+        LONG ret2 = InterlockedExchange(&lock, 2);
+        if (ret2 != 0)
+        {
+            DebugBreak();
+        }
 
         a++;
 
-        Sleep(3);
-
-        enterZone[1] = false;
+        ret2 = _InterlockedExchange(&lock, 0);
+        if (ret2 != 2)
+        {
+            DebugBreak();
+        }
         // 임 계 영 역
 
         g_flag[1] = false;
