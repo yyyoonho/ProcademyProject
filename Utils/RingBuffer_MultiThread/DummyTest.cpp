@@ -7,11 +7,13 @@ using namespace std;
 
 const char* str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 char Buf[200];
-RingBuffer serverRingBuffer(50);
-RingBuffer clientRingBuffer(50);
+RingBuffer serverRingBuffer(500);
+RingBuffer clientRingBuffer(500);
 
 int serverIdx = 0;
 int clientIdx = 0;
+
+CRITICAL_SECTION cs;
 
 void PrintRingBuffer()
 {
@@ -32,9 +34,11 @@ void PrintRingBuffer()
 
 void EnqueueThread()
 {
+	srand(time(NULL));
+
 	while (1)
 	{
-		cout << "Enqueue 시작" << endl;
+		//cout << "Enqueue 시작" << endl;
 		int cntNum = (rand() % 3) + 1;
 
 		for (int i = 0; i < cntNum; i++)
@@ -43,21 +47,27 @@ void EnqueueThread()
 
 			if (serverIdx + cutOffNum > strlen(str))
 				cutOffNum = strlen(str) - serverIdx;
+
 			int ret = serverRingBuffer.Enqueue(str + serverIdx, cutOffNum);
+
 			serverIdx = (serverIdx + ret) % strlen(str);
 
-			PrintRingBuffer();
+			//PrintRingBuffer();
 
 		}
-		cout << "Enqueue 끝" << endl << endl;
+		//cout << "Enqueue 끝" << endl << endl;
 	}
 }
 
 void DequeueThread()
 {
+	srand(time(NULL));
+
+	int cnt = 0;
+
 	while (1)
 	{
-		cout << "Dequeue 시작" << endl;
+		//cout << "Dequeue 시작" << endl;
 		int cntNum2 = (rand() % 3) + 1;
 
 		for (int i = 0; i < cntNum2; i++)
@@ -65,27 +75,30 @@ void DequeueThread()
 			int cutOffNum2 = rand() % 20;
 
 			int ret = serverRingBuffer.Dequeue(Buf, cutOffNum2);
-			PrintRingBuffer();
 
-			cout << "Buf : "<< Buf << endl;
+			//PrintRingBuffer();
+			//cout << "Buf : "<< Buf << endl;
 
-			char tmp1[70];
-			char tmp2[70];
+			
+			cout << Buf;
+
+			char tmp1[700];
+			char tmp2[700];
 			if (clientIdx + ret > strlen(str))
 			{
-				memset(tmp1, 0, 70);
-				memset(tmp2, 0, 70);
+				memset(tmp1, 0, 700);
+				memset(tmp2, 0, 700);
 
 				int oneStep = strlen(str) - clientIdx;
 				int twoStep = ret - oneStep;
 
-				memcpy_s(tmp1, 70, str + clientIdx, oneStep);
-				memcpy_s(tmp2, 70, str, twoStep);
+				memcpy_s(tmp1, 700, str + clientIdx, oneStep);
+				memcpy_s(tmp2, 700, str, twoStep);
 				strcat_s(tmp1, tmp2);
 			}
 			else
 			{
-				memcpy_s(tmp1, 70, str + clientIdx, ret);
+				memcpy_s(tmp1, 700, str + clientIdx, ret);
 			}
 
 			if (strncmp(Buf, tmp1, ret) != 0)
@@ -98,13 +111,13 @@ void DequeueThread()
 			memset(Buf, 0, 200);
 		}
 
-		cout << "Dequeue 끝" << endl << endl;
+		//cout << "Dequeue 끝" << endl << endl;
 	}
 }
 
 int main()
 {
-	srand(time(NULL));
+	InitializeCriticalSection(&cs);
 
 	HANDLE threadHandles[2];
 

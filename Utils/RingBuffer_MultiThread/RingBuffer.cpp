@@ -62,10 +62,12 @@ int RingBuffer::GetFreeSize()
 int RingBuffer::Enqueue(const char* data, int size)
 {
     int freeSize = GetFreeSize();
+
     if (freeSize == 0 || size == 0)
         return 0;
 
     int writeSize = size;
+
     if (writeSize > freeSize)
     {
         writeSize = freeSize;
