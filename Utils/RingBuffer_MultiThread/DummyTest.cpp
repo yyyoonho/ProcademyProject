@@ -84,7 +84,7 @@ void DequeueThread()
 			//cout << "Buf : "<< Buf << endl;
 
 			
-			cout << Buf;
+			//cout << Buf;
 
 			char tmp1[50];
 			char tmp2[50];

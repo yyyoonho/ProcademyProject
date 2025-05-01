@@ -101,10 +101,10 @@ int RingBuffer::Enqueue(const char* data, int size)
         memcpy_s(&_buf[_rear], writeSize, data, writeSize);
     }
 
-    //_rear = (_rear + writeSize) % _capacity;
-    int tmp = _rear;
+    _rear = (_rear + writeSize) % _capacity;
+    /*int tmp = _rear;
     tmp = (tmp + writeSize) % _capacity;
-    _rear = tmp;
+    _rear = tmp;*/
 
     return writeSize;
 }
@@ -134,10 +134,10 @@ int RingBuffer::Dequeue(char* dest, int size)
     }
 
     
-    //_front = (_front + readSize) % _capacity;
-    int tmp = _front;
+    _front = (_front + readSize) % _capacity;
+    /*int tmp = _front;
     tmp = (tmp + readSize) % _capacity;
-    _front = tmp;
+    _front = tmp;*/
 
     return readSize;
 }
