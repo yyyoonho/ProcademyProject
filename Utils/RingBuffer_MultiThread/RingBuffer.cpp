@@ -1,5 +1,6 @@
 ﻿#include "RingBuffer.h"
 #include <iostream>
+#include <Windows.h>
 
 using namespace std;
 
@@ -41,7 +42,7 @@ int RingBuffer::GetBufferSize()
 
 int RingBuffer::GetUseSize()
 {
-    if (_front == _rear)
+    /*if (_front == _rear)
         return 0;
 
     if (_front > _rear)
@@ -51,6 +52,21 @@ int RingBuffer::GetUseSize()
     else
     {
         return _rear - _front;
+    }*/
+
+    int a = _front;
+    int b = _rear;
+
+    if (a == b)
+        return 0;
+
+    if (a > b)
+    {
+        return _capacity - (a - b);
+    }
+    else
+    {
+        return b - a;
     }
 }
 
@@ -85,7 +101,10 @@ int RingBuffer::Enqueue(const char* data, int size)
         memcpy_s(&_buf[_rear], writeSize, data, writeSize);
     }
 
-    _rear = (_rear + writeSize) % _capacity;
+    //_rear = (_rear + writeSize) % _capacity;
+    int tmp = _rear;
+    tmp = (tmp + writeSize) % _capacity;
+    _rear = tmp;
 
     return writeSize;
 }
@@ -114,7 +133,11 @@ int RingBuffer::Dequeue(char* dest, int size)
         memcpy_s(dest, readSize, &_buf[_front], readSize);
     }
 
-    _front = (_front + readSize) % _capacity;
+    
+    //_front = (_front + readSize) % _capacity;
+    int tmp = _front;
+    tmp = (tmp + readSize) % _capacity;
+    _front = tmp;
 
     return readSize;
 }
