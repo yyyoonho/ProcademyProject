@@ -32,3 +32,5 @@ void SetSector(stCharacter* pCharacter);
 bool UpdateSector(stCharacter* pCharacter);
 
 void CharacterSectorUpdatePacket(stCharacter* pCharacter);
+
+void DeleteCharacter(stCharacter* tmpCharacter);

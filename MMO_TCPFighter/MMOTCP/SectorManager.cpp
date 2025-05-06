@@ -261,3 +261,22 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 		}
 	}
 }
+
+void DeleteCharacter(stCharacter* tmpCharacter)
+{
+	int nowSectorY = tmpCharacter->curSector.iY;
+	int nowSectorX = tmpCharacter->curSector.iX;
+
+	list<stCharacter*>::iterator iter;
+	for (iter = g_Sector[nowSectorY][nowSectorX].begin(); iter != g_Sector[nowSectorY][nowSectorX].end(); ++iter)
+	{
+		if ((*iter) == tmpCharacter)
+		{
+			g_Sector[nowSectorY][nowSectorX].erase(iter);
+
+			return;
+		}
+	}
+
+	return;
+}

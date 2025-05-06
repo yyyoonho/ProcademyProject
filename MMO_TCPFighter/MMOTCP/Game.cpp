@@ -274,12 +274,7 @@ void GameUpdate()
 				CharacterSectorUpdatePacket(pCharacter);
 			}
 		}
-
-		
-
 	}
-
-
 
 	oldTime = GetTickCount();
 }

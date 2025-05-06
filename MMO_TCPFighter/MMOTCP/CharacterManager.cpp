@@ -54,8 +54,10 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID, OUT stCharacter** p
 void DestroyCharacter(DWORD sessionId)
 {
 	stCharacter* tmpCharacter = characterMap.find(sessionId)->second;
-	characterMap.erase(sessionId);
 
+	DeleteCharacter(tmpCharacter);
+
+	characterMap.erase(sessionId);
 	characterMP.Free(tmpCharacter);
 }
 

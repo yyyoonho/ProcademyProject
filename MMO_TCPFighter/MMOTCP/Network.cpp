@@ -122,20 +122,18 @@ void DestroySession()
 {
 	while (!destroyQ.empty())
 	{
-		
 		stSession* tmpSession = destroyQ.front();
 		destroyQ.pop();
 
-		int sessionId = tmpSession->dwSessionID;
+		SerializePacket sPacket;
+		mpDeleteCharacter(&sPacket, tmpSession->dwSessionID);
+		SendPacket_Around(tmpSession, &sPacket, false);
 
-		// 캐릭터 삭제
-		DestroyCharacter(sessionId);
+
+		// 캐릭터 삭제 + (내부에서 섹터삭제도 같이 진행)
+		DestroyCharacter(tmpSession->dwSessionID);
 
 		// 세션 삭제
-		SerializePacket sPacket;
-		//mpDeleteCharacter(&sPacket, tmpSession->_id);
-		//SendBroadcast(NULL, &sPacket);
-
 		closesocket(tmpSession->socket);
 		sessionMap.erase(tmpSession->socket);
 		sessionMP.Free(tmpSession);
