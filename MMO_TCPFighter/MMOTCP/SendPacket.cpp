@@ -16,7 +16,7 @@ void SendPacket_SectorOne(int iSectorY, int isectorX, SerializePacket* sPacket, 
 
 	for (int j = 0; j < v.size(); j++)
 	{
-		if (pExceptSeesion == v[j] && pExceptSeesion != NULL)
+		if (pExceptSeesion == v[j])
 			continue;
 
 		v[j]->sendQ.Enqueue(sPacket->GetBufferPtr(), sPacket->GetDataSize());

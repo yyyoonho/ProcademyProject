@@ -63,8 +63,6 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 			pAddSector->around[count].iX = tmpCur.around[i].iX;
 			count++;
 		}
-		else
-			bOverlaped = false;
 	}
 	pAddSector->iCount = count;
 
@@ -75,7 +73,7 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 
 		for (int j = 0; j < tmpCur.iCount; j++)
 		{
-			if (tmpCur.around[i].iY == tmpOld.around[j].iY && tmpCur.around[i].iX == tmpOld.around[j].iX)
+			if (tmpCur.around[j].iY == tmpOld.around[i].iY && tmpCur.around[j].iX == tmpOld.around[i].iX)
 			{
 				bOverlaped = true;
 				break;
@@ -88,10 +86,24 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 			pRemoveSector->around[count].iX = tmpOld.around[i].iX;
 			count++;
 		}
-		else
-			bOverlaped = false;
 	}
 	pRemoveSector->iCount = count;
+
+
+
+	// CMD LOG: 섹터 로그 남기기
+	/*{
+		for (int q = 0; q < pAddSector->iCount; q++)
+		{
+			printf("#tmpCur ID:%d  sector: (y:%d, x:%d)\n", pCharacter->dwSessionID, pAddSector->around[q].iY, pAddSector->around[q].iX);
+		}
+
+		for (int q = 0; q < pRemoveSector->iCount; q++)
+		{
+			printf("#pRemoveSector ID:%d  sector: (y:%d, x:%d)\n", pCharacter->dwSessionID, pRemoveSector->around[q].iY, pRemoveSector->around[q].iX);
+		}
+	}*/
+
 }
 
 void GetSessionsFromSector(int sectorY, int sectorX, OUT std::vector<stSession*>& v)
@@ -165,6 +177,8 @@ bool UpdateSector(stCharacter* pCharacter)
 	pCharacter->curSector.iY = newSectorY;
 	pCharacter->curSector.iX = newSectorX;
 
+
+
 	return true;
 }
 
@@ -182,13 +196,7 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 		mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
 		for (int i = 0; i < removeSectors.iCount; i++)
 		{
-			vector<stSession*> v;
-			GetSessionsFromSector(removeSectors.around[i].iY, removeSectors.around[i].iX, v);
-
-			for (int j = 0; j < v.size(); j++)
-			{
-				SendPacket_Unicast(v[j], &sPacket);
-			}
+			SendPacket_SectorOne(removeSectors.around[i].iY, removeSectors.around[i].iX, &sPacket, pCharacter->pSession);
 		}
 	}
 	sPacket.Clear();
@@ -196,14 +204,23 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 	// add에 new(섹터에 진입한) 존재 알리기.
 	{
 		mpCreateOtherCharacter(&sPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY, pCharacter->chHP);
+		
 		for (int i = 0; i < addSectors.iCount; i++)
 		{
-			vector<stSession*> v;
-			GetSessionsFromSector(addSectors.around[i].iY, addSectors.around[i].iX, v);
+			SendPacket_SectorOne(addSectors.around[i].iY, addSectors.around[i].iX, &sPacket, pCharacter->pSession);
+		}
+	}
+	sPacket.Clear();
 
-			for (int j = 0; j < v.size(); j++)
+	// add에 new(섹터에 진입한) 액션 알리기.
+	{
+		if (pCharacter->dwAction != dfMOVE_STOP)
+		{
+			mpMoveStart(&sPacket, pCharacter->dwSessionID, pCharacter->byMoveDirection, pCharacter->shX, pCharacter->shY);
+
+			for (int i = 0; i < addSectors.iCount; i++)
 			{
-				SendPacket_Unicast(v[j], &sPacket);
+				SendPacket_SectorOne(addSectors.around[i].iY, addSectors.around[i].iX, &sPacket, pCharacter->pSession);
 			}
 		}
 	}
@@ -225,7 +242,7 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 		}
 	}
 
-	// new에 add에 있던 플레이어의 행동 알리기.
+	// new에 add에 있던 플레이어들 액션 알리기.
 	{
 		for (int i = 0; i < addSectors.iCount; i++)
 		{
