@@ -106,7 +106,7 @@ void NewSession(DWORD dwSessionID)
 	pPlayer->SessionID = dwSessionID;
 	
 
-	/* FIX_2 */
+	/* FIX_2 @ */
 	/*
 	* 힙 자체 영역을 침범 -> delete시, 에러발생
 	*/
@@ -135,9 +135,10 @@ void DeleteSession(DWORD dwSessionID)
 	}
 	UnlockSession();
 
-	/* FIX_3 */
+	/* FIX_3 @ */
 	/*
 	* 여기서 리턴하는 바람에, 데드락 발생.
+	* 
 	* lockPlayer 
 	*/
 	LockPlayer();
@@ -160,10 +161,12 @@ bool FindSessionList(DWORD dwSessionID)
 {
 	LockSession();
 	
-	/* FIX_8 */
+	/* FIX_8 @*/
 	/*
 	* return을 unlock전에 하는 바람에 데드락에 빠질 위험있음.
 	* 현재는 같은 쓰레드 안이라서 중첩으로 들어갈 수 있어서 문제는 발생하지 않는듯.
+	* 
+	* 아예 락을 없애버리는게 근본적인 해결책
 	*/
 
 	bool flag = false;
@@ -398,7 +401,7 @@ unsigned int WINAPI UpdateThread(LPVOID lpParam)
 				{
 					// 컨텐츠 업데이트 - Content 배열마다 + 1 후 출력
 
-					/* FIX_1 */
+					/* FIX_1 @*/
 					/*
 					* 인덱스를 초과하는 에러 발생.
 					*/
@@ -443,7 +446,7 @@ void Initial()
 	// 모든 스레드를 종료 시킬 이벤트
 	//------------------------------------------------
 
-	/* FIX_7 */
+	/* FIX_7 @*/
 	/*
 	* 종료 이벤트를 오토리셋이벤트로 만드는 바람에, 하나만 종료이벤트를 받음.
 	*/
@@ -468,7 +471,7 @@ void Release()
 	g_ActionPacketList.clear();
 	g_DisconnectPacketList.clear();
 
-	/* FIX_4 */
+	/* FIX_4 @*/
 	/*
 	* erase후 다음 iter를 받아주지않아서, 같은걸 delete시키는 에러 발생
 	*/
@@ -480,7 +483,7 @@ void Release()
 		SessionIter = g_SessionList.erase(SessionIter);
 	}
 
-	/* FIX_5 */
+	/* FIX_5 @*/
 	/*
 	* erase후 다음 iter를 받아주지않아서, 같은걸 delete시키는 에러 발생
 	*/
@@ -552,12 +555,17 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	HANDLE hThread[3] = {hAcceptThread, hIOThread, hUpdateThread};
 
-	/* FIX_9 */
+	/* FIX_9 @*/
 	/*
 	* 기다리는 핸들 수를 잘못 입력함. 3개로 수정.
-	* 
+	* ERROR_INVALID_HANDLE 에러 발생
 	*/
-	//WaitForMultipleObjects(dfTHREAD_NUM, hThread, TRUE, INFINITE);
+	/*DWORD ret = WaitForMultipleObjects(dfTHREAD_NUM, hThread, TRUE, INFINITE);
+	if (ret == WAIT_FAILED)
+	{
+		DWORD err = GetLastError();
+		int a = 3;
+	}*/
 	WaitForMultipleObjects(3, hThread, TRUE, INFINITE);
 
 	Release();
