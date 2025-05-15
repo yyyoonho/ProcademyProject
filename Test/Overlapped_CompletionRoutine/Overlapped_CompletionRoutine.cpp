@@ -47,6 +47,15 @@ int main()
         return 0;
     }
 
+    // TEST
+    int optVal = 0;
+    setsockopt(listen_socket, SOL_SOCKET, SO_SNDBUF, (char*) & optVal, sizeof(optVal));
+    int retVal = 10;
+    int retLen = 10;
+    getsockopt(listen_socket, SOL_SOCKET, SO_SNDBUF, (char*) & retVal, &retLen);
+
+    cout << retVal << endl;
+
     SOCKADDR_IN serverAddr;
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
@@ -95,6 +104,13 @@ int main()
             printf("ERROR: accept() %d\n", GetLastError());
             return 0;
         }
+
+        // TEST
+        int retVal2 = 10;
+        int retLen2 = 10;
+        getsockopt(client_sock, SOL_SOCKET, SO_SNDBUF, (char*) & retVal2, &retLen2);
+
+        cout << retVal2 << endl;
 
         SetEvent(hWriteEvent);
     }
