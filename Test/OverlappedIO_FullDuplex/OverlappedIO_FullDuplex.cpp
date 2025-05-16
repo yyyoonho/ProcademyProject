@@ -142,19 +142,7 @@ int main()
             return 0;
         }
 
-        Session* newSession = new Session;
-        newSession->sock = client_sock;
-        newSession->clientAddr = clientAddr;
-
-        newSession->myOverlapped[0] = new MyOverlapped;
-        memset(&newSession->myOverlapped[0]->overlapped, 0, sizeof(OVERLAPPED));
-        newSession->myOverlapped[0]->pSession = newSession;
-        newSession->myOverlapped[0]->type = RECV;
-
-        newSession->myOverlapped[1] = new MyOverlapped;
-        memset(&newSession->myOverlapped[1]->overlapped, 0, sizeof(OVERLAPPED));
-        newSession->myOverlapped[1]->pSession = newSession;
-        newSession->myOverlapped[1]->type = SEND;
+        
 
         socketQ.push(client_sock);
         sessionList.push_front(newSession);
@@ -169,17 +157,20 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 {
     while (1)
     {
-        DWORD result = WaitForSingleObject(hQuitEvent, NULL);
-        if (result == WAIT_OBJECT_0)
-            break;
+        //
+        Session* newSession = new Session;
+        newSession->sock = client_sock;
+        newSession->clientAddr = clientAddr;
 
-        FD_SET fd_read;
-        FD_ZERO(&fd_read);
-        list<Session*>::iterator iter;
-        for (iter = sessionList.begin(); iter != sessionList.end(); ++iter)
-        {
+        newSession->myOverlapped[0] = new MyOverlapped;
+        memset(&newSession->myOverlapped[0]->overlapped, 0, sizeof(OVERLAPPED));
+        newSession->myOverlapped[0]->pSession = newSession;
+        newSession->myOverlapped[0]->type = RECV;
 
-        }
+        newSession->myOverlapped[1] = new MyOverlapped;
+        memset(&newSession->myOverlapped[1]->overlapped, 0, sizeof(OVERLAPPED));
+        newSession->myOverlapped[1]->pSession = newSession;
+        newSession->myOverlapped[1]->type = SEND;
 
 
     }
