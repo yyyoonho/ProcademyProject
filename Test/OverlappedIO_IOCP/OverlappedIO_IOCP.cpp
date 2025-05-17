@@ -214,13 +214,14 @@ DWORD WINAPI WorkerThread(LPVOID arg)
 
         SOCKADDR_IN clientAddr;
         int addrLen = sizeof(clientAddr);
+        WCHAR addrBuf[40];
 
         int retVal = GetQueuedCompletionStatus(hIOCP, &cbTransferred, (PULONG_PTR)&pSession, (LPWSAOVERLAPPED*)&pMyOverlapped, INFINITE);
         if (retVal == FALSE || cbTransferred == 0)
         {
             getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
-            WCHAR addrBuf[40];
             InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
+
             printf("\n[TCP 서버] 클라이언트 종료: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
 
             closesocket(pSession->sock);
@@ -234,7 +235,7 @@ DWORD WINAPI WorkerThread(LPVOID arg)
         {
             pSession->recvBuf[cbTransferred] = '\0';
 
-            WCHAR addrBuf[40];
+            getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
             InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
             printf("[TCP/%ls: %d] %s\n", addrBuf, ntohs(clientAddr.sin_port), pSession->recvBuf);
 
