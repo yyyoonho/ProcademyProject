@@ -77,6 +77,9 @@ int main()
     serverAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
     serverAddr.sin_port = htons(SERVERPORT);
 
+    u_long opt = 1;
+    ioctlsocket(listen_socket, FIONBIO, &opt);
+
     int optVal = 0;
     setSockOptRet = setsockopt(listen_socket, SOL_SOCKET, SO_SNDBUF, (char*) & optVal, sizeof(optVal));
     if (setSockOptRet == SOCKET_ERROR)
@@ -133,6 +136,11 @@ int main()
         SOCKET client_sock = accept(listen_socket, (SOCKADDR*)&clientAddr, &addrLen);
         if (client_sock == INVALID_SOCKET)
         {
+            if (GetLastError() == WSAEWOULDBLOCK)
+            {
+                continue;
+            } 
+
             printf("ERROR: accept() %d\n", GetLastError());
             return 0;
         }
