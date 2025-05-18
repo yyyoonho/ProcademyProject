@@ -89,21 +89,6 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 	}
 	pRemoveSector->iCount = count;
 
-
-
-	// CMD LOG: 섹터 로그 남기기
-	/*{
-		for (int q = 0; q < pAddSector->iCount; q++)
-		{
-			printf("#tmpCur ID:%d  sector: (y:%d, x:%d)\n", pCharacter->dwSessionID, pAddSector->around[q].iY, pAddSector->around[q].iX);
-		}
-
-		for (int q = 0; q < pRemoveSector->iCount; q++)
-		{
-			printf("#pRemoveSector ID:%d  sector: (y:%d, x:%d)\n", pCharacter->dwSessionID, pRemoveSector->around[q].iY, pRemoveSector->around[q].iX);
-		}
-	}*/
-
 }
 
 void GetSessionsFromSector(int sectorY, int sectorX, OUT std::vector<stSession*>& v)
@@ -173,11 +158,11 @@ bool UpdateSector(stCharacter* pCharacter)
 
 	g_Sector[newSectorY][newSectorX].push_front(pCharacter);
 
-	pCharacter->oldSector = curSectorPos;
+	pCharacter->oldSector.iY = curSectorPos.iY;
+	pCharacter->oldSector.iX = curSectorPos.iX;
+
 	pCharacter->curSector.iY = newSectorY;
 	pCharacter->curSector.iX = newSectorX;
-
-
 
 	return true;
 }
@@ -201,13 +186,31 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 	}
 	sPacket.Clear();
 
+	// new에 remove할 캐릭터 알리기.
+	{
+		for (int i = 0; i < removeSectors.iCount; i++)
+		{
+			vector<stCharacter*> v;
+			GetCharactersFromSector(removeSectors.around[i].iY, removeSectors.around[i].iX, v);
+
+			for (int j = 0; j < v.size(); j++)
+			{
+				mpDeleteCharacter(&sPacket, v[j]->dwSessionID);
+				SendPacket_Unicast(pCharacter->pSession, &sPacket);
+				sPacket.Clear();
+			}
+		}
+	}
+	sPacket.Clear();
+
 	// add에 new(섹터에 진입한) 존재 알리기.
 	{
 		mpCreateOtherCharacter(&sPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY, pCharacter->chHP);
-		
+
 		for (int i = 0; i < addSectors.iCount; i++)
 		{
 			SendPacket_SectorOne(addSectors.around[i].iY, addSectors.around[i].iX, &sPacket, pCharacter->pSession);
+			printf("3\n");
 		}
 	}
 	sPacket.Clear();
@@ -236,6 +239,7 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 			for (int j = 0; j < v.size(); j++)
 			{
 				mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
+				printf("4\n");
 				SendPacket_Unicast(pCharacter->pSession, &sPacket);
 				sPacket.Clear();
 			}

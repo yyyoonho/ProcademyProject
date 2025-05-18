@@ -108,7 +108,7 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 	if (UpdateSector(pCharacter))
 	{
 		// TODO: 클라들에게 패킷전송
-		CharacterSectorUpdatePacket(pCharacter);
+		//CharacterSectorUpdatePacket(pCharacter);
 	}
 
 	sPacket->Clear();
@@ -162,7 +162,7 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	if (UpdateSector(pCharacter))
 	{
 		// TODO: 클라들에게 패킷전송
-		CharacterSectorUpdatePacket(pCharacter);
+		//CharacterSectorUpdatePacket(pCharacter);
 	}
 	
 	sPacket->Clear();

@@ -176,6 +176,7 @@ void PushSessionToMap()
 
 					SerializePacket sPacket;
 					mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
+					printf("1\n");
 					SendPacket_Unicast(newSession, &sPacket);
 				}
 
@@ -215,7 +216,7 @@ void PushSessionToMap()
 		{
 			SerializePacket sPacket;
 			mpCreateOtherCharacter(&sPacket, newSession->dwSessionID, newCharacter->byDirection, newCharacter->shX, newCharacter->shY, newCharacter->chHP);
-		
+			printf("2\n");
 			SendPacket_Around(newSession, &sPacket, false);
 			printf("Other <- mpCreateOtherCharacter Send\n");
 		}

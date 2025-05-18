@@ -13,6 +13,8 @@ using namespace std;
 #define FRAME 50
 #define MSPERFRAME (1000/FRAME)
 
+
+
 bool FrameControl()
 {
 	static int oldTime = timeGetTime();
@@ -55,6 +57,34 @@ bool CanGo(int y, int x)
 	return true;
 }
 
+void Move(DWORD deltaTime, stCharacter* pCharacter, BYTE dir)
+{
+	int dy[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
+	int dx[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
+
+	double deltaTimeSec = (double)deltaTime / 1000;
+
+	double tmpX = (double(dfSPEED_PLAYER_X * 25) * deltaTimeSec) * dx[dir];
+	double tmpY = (double(dfSPEED_PLAYER_Y * 25) * deltaTimeSec) * dy[dir];
+
+	short nextX = pCharacter->dX + tmpX;
+	short nextY = pCharacter->dY + tmpY;
+
+	if (!CanGo(nextY, nextX))
+		return;
+
+	pCharacter->dX = pCharacter->dX + tmpX;
+	pCharacter->dY = pCharacter->dY + tmpY;
+
+	pCharacter->shX = nextX;
+	pCharacter->shY = nextY;
+
+	_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
+		pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
+
+	return;
+}
+
 void GameUpdate()
 {
 	if (!FrameControl())
@@ -86,182 +116,31 @@ void GameUpdate()
 		}
 
 		double deltaTimeSec = (double)deltaTime / 1000;
-		switch (pCharacter->dwAction)
+		switch (pCharacter->byMoveDirection)
 		{
 		case dfPACKET_MOVE_DIR_LL:
-		{
-			double dNextY = pCharacter->dY;
-			double dNextX = pCharacter->dX + ((dfSPEED_PLAYER_X * 25) * deltaTimeSec) * -1;
-
-			short shNextY = (short)(dNextY);
-			short shNextX = (short)(dNextX);
-
-			if (!CanGo(shNextY, shNextX))
-				break;
-
-			pCharacter->dY = dNextY;
-			pCharacter->dX = dNextX;
-
-			pCharacter->shY = shNextY;
-			pCharacter->shX = shNextX;
-
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-				pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
-		}
+			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
 			break;
-
 		case dfPACKET_MOVE_DIR_LU:
-		{
-			double dNextY = pCharacter->dY + ((dfSPEED_PLAYER_Y * 25) * deltaTimeSec) * -1;
-			double dNextX = pCharacter->dX + ((dfSPEED_PLAYER_X * 25) * deltaTimeSec) * -1;
-
-			short shNextY = (short)(dNextY);
-			short shNextX = (short)(dNextX);
-
-			if (!CanGo(shNextY, shNextX))
-				break;
-
-			pCharacter->dY = dNextY;
-			pCharacter->dX = dNextX;
-
-			pCharacter->shY = shNextY;
-			pCharacter->shX = shNextX;
-
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-				pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
-		}
+			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
 			break;
-
 		case dfPACKET_MOVE_DIR_UU:
-		{
-			double dNextY = pCharacter->dY + ((dfSPEED_PLAYER_Y * 25) * deltaTimeSec) * -1;
-			double dNextX = pCharacter->dX;
-
-			short shNextY = (short)(dNextY);
-			short shNextX = (short)(dNextX);
-
-			if (!CanGo(shNextY, shNextX))
-				break;
-
-			pCharacter->dY = dNextY;
-			pCharacter->dX = dNextX;
-
-			pCharacter->shY = shNextY;
-			pCharacter->shX = shNextX;
-
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-				pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
-		}
+			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
 			break;
-
 		case dfPACKET_MOVE_DIR_RU:
-		{
-			double dNextY = pCharacter->dY + ((dfSPEED_PLAYER_Y * 25) * deltaTimeSec) * -1;
-			double dNextX = pCharacter->dX + ((dfSPEED_PLAYER_X * 25) * deltaTimeSec) * 1;
-
-			short shNextY = (short)(dNextY);
-			short shNextX = (short)(dNextX);
-
-			if (!CanGo(shNextY, shNextX))
-				break;
-
-			pCharacter->dY = dNextY;
-			pCharacter->dX = dNextX;
-
-			pCharacter->shY = shNextY;
-			pCharacter->shX = shNextX;
-
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-				pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
-		}
+			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
 			break;
-
 		case dfPACKET_MOVE_DIR_RR:
-		{
-			double dNextY = pCharacter->dY;
-			double dNextX = pCharacter->dX + ((dfSPEED_PLAYER_X * 25) * deltaTimeSec) * 1;
-
-			short shNextY = (short)(dNextY);
-			short shNextX = (short)(dNextX);
-
-			if (!CanGo(shNextY, shNextX))
-				break;
-
-			pCharacter->dY = dNextY;
-			pCharacter->dX = dNextX;
-
-			pCharacter->shY = shNextY;
-			pCharacter->shX = shNextX;
-
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-				pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
-		}
+			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
 			break;
-
 		case dfPACKET_MOVE_DIR_RD:
-		{
-			double dNextY = pCharacter->dY + ((dfSPEED_PLAYER_Y * 25) * deltaTimeSec) * 1;
-			double dNextX = pCharacter->dX + ((dfSPEED_PLAYER_X * 25) * deltaTimeSec) * 1;
-
-			short shNextY = (short)(dNextY);
-			short shNextX = (short)(dNextX);
-
-			if (!CanGo(shNextY, shNextX))
-				break;
-
-			pCharacter->dY = dNextY;
-			pCharacter->dX = dNextX;
-
-			pCharacter->shY = shNextY;
-			pCharacter->shX = shNextX;
-
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-				pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
-		}
+			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
 			break;
-
 		case dfPACKET_MOVE_DIR_DD:
-		{
-			double dNextY = pCharacter->dY + ((dfSPEED_PLAYER_Y * 25) * deltaTimeSec) * 1;
-			double dNextX = pCharacter->dX;
-
-			short shNextY = (short)(dNextY);
-			short shNextX = (short)(dNextX);
-
-			if (!CanGo(shNextY, shNextX))
-				break;
-
-			pCharacter->dY = dNextY;
-			pCharacter->dX = dNextX;
-
-			pCharacter->shY = shNextY;
-			pCharacter->shX = shNextX;
-
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-				pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
-		}
+			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
 			break;
-
 		case dfPACKET_MOVE_DIR_LD:
-		{
-			double dNextY = pCharacter->dY = ((dfSPEED_PLAYER_Y * 25) * deltaTimeSec) * 1;
-			double dNextX = pCharacter->dX + ((dfSPEED_PLAYER_X * 25) * deltaTimeSec) * -1;
-
-			short shNextY = (short)(dNextY);
-			short shNextX = (short)(dNextX);
-
-			if (!CanGo(shNextY, shNextX))
-				break;
-
-			pCharacter->dY = dNextY;
-			pCharacter->dX = dNextX;
-
-			pCharacter->shY = shNextY;
-			pCharacter->shX = shNextX;
-
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-				pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
-		}
+			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
 			break;
 		}
 

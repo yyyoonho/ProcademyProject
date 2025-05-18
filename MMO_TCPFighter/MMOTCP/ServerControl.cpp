@@ -26,11 +26,13 @@ void ServerControl()
 
 		if (L'U' == ControlKey || L'u' == ControlKey)
 		{
+			printf("컨트롤 Unlock\n");
 			bControlMode = true;
 		}
 
 		if (L'L' == ControlKey || L'l' == ControlKey)
 		{
+			printf("컨트롤 Lock\n");
 			bControlMode = false;
 		}
 
@@ -48,10 +50,12 @@ void ServerControl()
 		
 		if ((L'1' == ControlKey) && bControlMode)
 		{
+			printf("로그레벨: 1\n");
 			g_iLogLevel = 1;
 		}
 		if ((L'2' == ControlKey) && bControlMode)
 		{
+			printf("로그레벨: 2\n");
 			g_iLogLevel = 2;
 		}
 	}
