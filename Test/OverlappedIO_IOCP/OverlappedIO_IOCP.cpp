@@ -275,6 +275,8 @@ DWORD WINAPI WorkerThread(LPVOID arg)
                     return 0;
                 }
             }
+
+
         }
 
         if (pMyOverlapped->type == SEND)
