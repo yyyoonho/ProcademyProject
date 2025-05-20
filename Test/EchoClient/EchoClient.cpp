@@ -7,6 +7,7 @@
 #include <WS2tcpip.h>
 #include <windows.h>
 #include <thread>
+#include <conio.h>
 
 #define SERVERPORT 9000
 #define SERVERIP L"127.0.0.1"
@@ -17,17 +18,49 @@ SOCKET sock;
 
 HANDLE hSendThread;
 
+char str[2000] = "Look if you had one shot or one opportunityTo seize everything you ever wantedIn one momentWould you capture it or just let it slip ?Yo his palms are sweaty knees weakArms are heavyThere's vomit on his sweater alreadyMom's spaghettiHe's nervous but on the surfaceHe looks calm and readyTo drop bombs but he keeps on forgettingWhat he wrote downThe whole crowd goes so loudHe opens his mouthBut the words won't come outHe's choking how?Everybody's joking nowThe clock's run outTime's up over blaowSnap back to realityOpe there goes gravity opeThere goes rabbit he chokedHe's so mad but he won'tGive up that easy noHe won't have it he knowsHis whole back's to these ropesIt don't matter he's dopeHe knows that but he's brokeHe's so stagnant he knowsWhen he goes back to this mobile homeThat's when it'sBack to the lab again yo this whole rhapsodyBetter go capture this momentAnd hope it don't pass him andYou better lose yourself in the musicThe moment you own itYou better never let it go";
+
 void SendThread()
 {
+	bool autoFlag = true;
+
+	int idx = 0;
+
 	while (1)
 	{
-		char buf[100];
-		fgets(buf, 100, stdin);
+		if (autoFlag == false)
+		{
+			char buf[200];
+			fgets(buf, 200, stdin);
 
-		if (buf[strlen(buf) - 1] == '\n')
-			buf[strlen(buf) - 1] = '\0';
+			if (buf[strlen(buf) - 1] == '\n')
+				buf[strlen(buf) - 1] = '\0';
 
-		send(sock, buf, strlen(buf) + 1, 0);
+			send(sock, buf, strlen(buf) + 1, 0);
+		}
+		else if (autoFlag == true)
+		{
+			char input = _getch();
+
+			for (int i = 0; i < 10; i++)
+			{
+				int len = 50;
+
+				int sendRet = send(sock, str + idx, len, 0);
+				if (sendRet == SOCKET_ERROR)
+				{
+					if (GetLastError() != WSAEWOULDBLOCK)
+					{
+						printf("ERROR: send() %d\n", WSAGetLastError());
+						return;
+					}
+				}
+
+				idx += len;
+				if (idx + len > strlen(str))
+					idx = 0;
+			}
+		}
 	}
 
 	return;
@@ -87,10 +120,19 @@ int main()
 			if (FD_ISSET(sock, &fd_read))
 			{
 				//TODO: 읽기처리
-				char recvbuf[500 + 1];
-				int ret = recv(sock, recvbuf, 500, 0);
+				char recvbuf[10000 + 1];
+				int ret = recv(sock, recvbuf, 10000, 0);
+				if (ret == SOCKET_ERROR)
+				{
+					if (WSAGetLastError() != WSAEWOULDBLOCK)
+					{
+						printf("ERROR: recv() %d\n", WSAGetLastError());
+						return 0;
+					}
+				}
+				recvbuf[ret] = '\0';
 
-				printf("%s\n", recvbuf);
+				printf("#RECV [ 받은 바이트수: %d ]\n %s\n\n", ret, recvbuf);
 			}
 		}
 	}

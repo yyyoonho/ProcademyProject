@@ -129,8 +129,8 @@ int main()
 
         newSession->sock = clientSocket;
 
-        newSession->recvQ.Resize(10000);
-        newSession->sendQ.Resize(10000);
+        newSession->recvQ.Resize(20000);
+        newSession->sendQ.Resize(20000);
 
         memset(&newSession->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
         newSession->recvOverlapped.pSession = newSession;
@@ -250,8 +250,8 @@ void WorkerThread()
         {
             pSession->recvQ.MoveRear(cbTransferred);
 
-            char buf[500];
-            memset(buf, 0, 500);
+            char buf[5000];
+            memset(buf, 0, 5000);
             pSession->recvQ.Dequeue(buf, cbTransferred);
             buf[cbTransferred] = '\0';
 
