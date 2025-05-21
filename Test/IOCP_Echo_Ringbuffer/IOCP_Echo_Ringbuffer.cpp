@@ -43,7 +43,7 @@ struct Session
     MyOverlapped recvOverlapped;
     MyOverlapped sendOverlapped;
 
-    bool sendFlag;
+    LONG sendFlag;
 };
 
 // 리턴 체크용 전역변수
@@ -259,7 +259,7 @@ void WorkerThread()
 
             // WSASend
             pSession->sendQ.Enqueue(buf, cbTransferred);
-            if (pSession->sendFlag == true)
+            if(InterlockedExchange(&pSession->sendFlag, true) == true)
             {
                 DWORD sendBytes;
 
@@ -277,7 +277,7 @@ void WorkerThread()
                     }
                 }
 
-                pSession->sendFlag = false;
+                InterlockedExchange(&pSession->sendFlag, false);
             }
 
             // WSARecv
@@ -304,7 +304,8 @@ void WorkerThread()
 
             pSession->sendQ.MoveFront(cbTransferred);
 
-            pSession->sendFlag = true;
+            //pSession->sendFlag = true;
+            InterlockedExchange(&pSession->sendFlag, true);
 
             if (pSession->recvQ.GetUseSize() > 0)
             {
@@ -324,7 +325,8 @@ void WorkerThread()
                     }
                 }
 
-                pSession->sendFlag = false;
+                //pSession->sendFlag = false;
+                InterlockedExchange(&pSession->sendFlag, false);
             }
         }
     }
