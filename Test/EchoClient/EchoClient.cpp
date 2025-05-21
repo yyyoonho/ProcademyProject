@@ -113,7 +113,7 @@ int main()
 		timev.tv_sec = 0;
 		timev.tv_usec = 0;
 
-		int selectRet = select(0, &fd_read, NULL, NULL, &timev);
+		int selectRet = select(0, &fd_read, NULL, NULL, NULL);
 
 		if (selectRet > 0)
 		{
