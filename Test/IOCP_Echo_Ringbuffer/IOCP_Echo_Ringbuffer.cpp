@@ -18,8 +18,14 @@ using namespace std;
 
 #define SERVERPORT 6000
 #define BUFSIZE 512
+#define HEADERSIZE 2
 
 struct Session;
+
+struct stHeader
+{
+    short len;
+};
 
 enum
 {
@@ -56,10 +62,14 @@ int setSockOptRet;
 int wsaRecvRet;
 int wsaSendRet;
 
+int acceptTotal;
+
 // 함수 전방선언
 void NetInit();
 void WorkerThread();
 void AcceptThread();
+bool RequestWSARecv(Session* pSession);
+bool RequestWSASend(Session* pSession);
 
 // 핸들
 HANDLE hIOCP;
@@ -84,7 +94,7 @@ int main()
     hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&AcceptThread, NULL, NULL, NULL);
 
     // IOCP 생성
-    hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+    hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 6);
     if (hIOCP == NULL)
     {
         printf("ERROR: CreateIoCompletionPort() %d\n", WSAGetLastError());
@@ -200,82 +210,62 @@ void WorkerThread()
         {
             pSession->recvQ.MoveRear(cbTransferred);
 
-            char buf[5000];
-            memset(buf, 0, 5000);
-            pSession->recvQ.Dequeue(buf, cbTransferred);
-            buf[cbTransferred] = '\0';
+            if (pSession->recvQ.GetUseSize() < HEADERSIZE)
+            {
+                // WSARecv
+                bool ret = RequestWSARecv(pSession);
+                if (ret == false) return;
 
-            printf("#RECV [TCP/%ls: %d] %s\n", addrBuf, ntohs(clientAddr.sin_port), buf);
+                continue;
+            }
+
+            char headerBuf[100 + 1];
+            char payloadBuf[100 + 1];
+
+            pSession->recvQ.Peek(headerBuf, HEADERSIZE);
+            short payLoadLen = ((stHeader*)headerBuf)->len;
+            if (pSession->recvQ.GetUseSize() < HEADERSIZE + payLoadLen)
+            {
+                // WSARecv
+                bool ret = RequestWSARecv(pSession);
+                if (ret == false) return;
+                    
+                continue;
+            }
+
+            pSession->recvQ.Dequeue(headerBuf, HEADERSIZE);
+            pSession->recvQ.Dequeue(payloadBuf, payLoadLen);
 
             // WSASend
-            pSession->sendQ.Enqueue(buf, cbTransferred);
+            pSession->sendQ.Enqueue(headerBuf, HEADERSIZE);
+            pSession->sendQ.Enqueue(payloadBuf, payLoadLen);
             if(InterlockedExchange(&pSession->sendFlag, true) == true)
             {
-                DWORD sendBytes;
-
-                WSABUF wsaBuf;
-                wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
-                wsaBuf.len = pSession->sendQ.DirectDequeueSize();
-
-                wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendOverlapped, NULL);
-                if (wsaSendRet == SOCKET_ERROR)
-                {
-                    if (WSAGetLastError() != WSA_IO_PENDING)
-                    {
-                        printf("ERROR: WSASend() %d\n", WSAGetLastError());
-                        return;
-                    }
-                }
+                bool ret = RequestWSASend(pSession);
+                if (ret == false)
+                    return;
 
                 InterlockedExchange(&pSession->sendFlag, false);
             }
 
             // WSARecv
-            DWORD recvBytes;
-            DWORD flags = 0;
+            bool ret = RequestWSARecv(pSession);
+            if (ret == false) return;
 
-            WSABUF wsaBuf2;
-            wsaBuf2.buf = pSession->recvQ.GetRearBufferPtr();
-            wsaBuf2.len = pSession->recvQ.DirectEnqueueSize();
-
-            wsaRecvRet = WSARecv(pSession->sock, &wsaBuf2, 1, &recvBytes, &flags, (LPWSAOVERLAPPED)&pSession->recvOverlapped, NULL);
-            if (wsaRecvRet == SOCKET_ERROR)
-            {
-                if (WSAGetLastError() != WSA_IO_PENDING)
-                {
-                    printf("ERROR: WSARecv() %d\n", WSAGetLastError());
-                    return;
-                }
-            }
+            continue;
         }
         else if (((MyOverlapped*)pOverlapped)->type == SEND)
         {
-            //TODO: 보낸메시지 출력
-
             pSession->sendQ.MoveFront(cbTransferred);
 
-            //pSession->sendFlag = true;
             InterlockedExchange(&pSession->sendFlag, true);
 
-            if (pSession->recvQ.GetUseSize() > 0)
+            if (pSession->sendQ.GetUseSize() > 0)
             {
-                DWORD sendBytes;
+                bool ret = RequestWSASend(pSession);
+                if (ret == false)
+                    return;
 
-                WSABUF wsaBuf;
-                wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
-                wsaBuf.len = pSession->sendQ.DirectDequeueSize();
-
-                wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendOverlapped, NULL);
-                if (wsaSendRet == SOCKET_ERROR)
-                {
-                    if (WSAGetLastError() != WSA_IO_PENDING)
-                    {
-                        printf("ERROR: WSASend() %d\n", WSAGetLastError());
-                        return;
-                    }
-                }
-
-                //pSession->sendFlag = false;
                 InterlockedExchange(&pSession->sendFlag, false);
             }
         }
@@ -291,17 +281,16 @@ void AcceptThread()
         SOCKADDR_IN clientAddr;
         memset(&clientAddr, 0, sizeof(clientAddr));
         int addrLen = sizeof(clientAddr);
+
         SOCKET clientSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &addrLen);
         if (clientSocket == INVALID_SOCKET)
         {
-            if (GetLastError() == WSAEWOULDBLOCK)
-            {
-                continue;
-            }
-
             printf("Error: accept() %d\n", WSAGetLastError());
             return;
         }
+
+        acceptTotal++;
+        printf("AcceptTotal: %d\n", acceptTotal);
 
         getpeername(clientSocket, (SOCKADDR*)&clientAddr, &addrLen);
         WCHAR addrBuf[40];
@@ -313,9 +302,6 @@ void AcceptThread()
 
         newSession->sock = clientSocket;
         newSession->sessionId = g_SessionId++;
-
-        newSession->recvQ.Resize(20000);
-        newSession->sendQ.Resize(20000);
 
         memset(&newSession->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
         newSession->recvOverlapped.pSession = newSession;
@@ -334,22 +320,52 @@ void AcceptThread()
         // 소켓 - IOCP 연결
         CreateIoCompletionPort((HANDLE)clientSocket, hIOCP, (ULONG_PTR)newSession, 0);
 
-        // 비동기 RECV 걸어버리기
-        DWORD recvBytes;
-        DWORD flags = 0;
+        // 비동기 Recv 걸어버리기
+        bool ret = RequestWSARecv(newSession);
+        if (ret == false)
+            return;
+    }
+}
 
-        WSABUF wsaBuf;
-        wsaBuf.buf = newSession->recvQ.GetRearBufferPtr();
-        wsaBuf.len = newSession->recvQ.DirectEnqueueSize();
+bool RequestWSARecv(Session* pSession)
+{
+    DWORD recvBytes;
+    DWORD flags = 0;
 
-        wsaRecvRet = WSARecv(clientSocket, &wsaBuf, 1, &recvBytes, &flags, (LPWSAOVERLAPPED)&newSession->recvOverlapped, NULL);
-        if (wsaRecvRet == SOCKET_ERROR)
+    WSABUF wsaBuf;
+    wsaBuf.buf = pSession->recvQ.GetRearBufferPtr();
+    wsaBuf.len = pSession->recvQ.DirectEnqueueSize();
+
+    wsaRecvRet = WSARecv(pSession->sock, &wsaBuf, 1, &recvBytes, &flags, (LPWSAOVERLAPPED)&pSession->recvOverlapped, NULL);
+    if (wsaRecvRet == SOCKET_ERROR)
+    {
+        if (WSAGetLastError() != WSA_IO_PENDING)
         {
-            if (WSAGetLastError() != ERROR_IO_PENDING)
-            {
-                printf("Error: WSARecv() %d\n", WSAGetLastError());
-                return;
-            }
+            printf("ERROR: WSARecv() %d\n", WSAGetLastError());
+            return false;
         }
     }
+
+    return true;
+}
+
+bool RequestWSASend(Session* pSession)
+{
+    DWORD sendBytes;
+
+    WSABUF wsaBuf;
+    wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
+    wsaBuf.len = pSession->sendQ.DirectDequeueSize();
+
+    wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendOverlapped, NULL);
+    if (wsaSendRet == SOCKET_ERROR)
+    {
+        if (WSAGetLastError() != WSA_IO_PENDING)
+        {
+            printf("ERROR: WSASend() %d\n", WSAGetLastError());
+            return false;
+        }
+    }
+
+    return true;
 }
