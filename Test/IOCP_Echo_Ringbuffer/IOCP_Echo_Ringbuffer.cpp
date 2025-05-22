@@ -51,7 +51,7 @@ struct Session
     MyOverlapped recvOverlapped;
     MyOverlapped sendOverlapped;
 
-    LONG sendFlag;
+    LONG sendFlag;  // true -> 획득가능, false -> 획득불가능
 };
 
 // 리턴 체크용 전역변수
@@ -224,6 +224,7 @@ void WorkerThread()
 
             pSession->recvQ.Peek(headerBuf, HEADERSIZE);
             short payLoadLen = ((stHeader*)headerBuf)->len;
+
             if (pSession->recvQ.GetUseSize() < HEADERSIZE + payLoadLen)
             {
                 // WSARecv
@@ -239,13 +240,13 @@ void WorkerThread()
             // WSASend
             pSession->sendQ.Enqueue(headerBuf, HEADERSIZE);
             pSession->sendQ.Enqueue(payloadBuf, payLoadLen);
-            if(InterlockedExchange(&pSession->sendFlag, true) == true)
+            if(InterlockedExchange(&pSession->sendFlag, false) == true)
             {
                 bool ret = RequestWSASend(pSession);
                 if (ret == false)
                     return;
 
-                InterlockedExchange(&pSession->sendFlag, false);
+                InterlockedExchange(&pSession->sendFlag, true);
             }
 
             // WSARecv
@@ -258,15 +259,16 @@ void WorkerThread()
         {
             pSession->sendQ.MoveFront(cbTransferred);
 
-            InterlockedExchange(&pSession->sendFlag, true);
-
             if (pSession->sendQ.GetUseSize() > 0)
             {
-                bool ret = RequestWSASend(pSession);
-                if (ret == false)
-                    return;
+                if (InterlockedExchange(&pSession->sendFlag, false) == true)
+                {
+                    bool ret = RequestWSASend(pSession);
+                    if (ret == false)
+                        return;
 
-                InterlockedExchange(&pSession->sendFlag, false);
+                    InterlockedExchange(&pSession->sendFlag, true);
+                }
             }
         }
     }
@@ -302,6 +304,9 @@ void AcceptThread()
 
         newSession->sock = clientSocket;
         newSession->sessionId = g_SessionId++;
+
+        newSession->recvQ.Resize(10000);
+        newSession->sendQ.Resize(10000);
 
         memset(&newSession->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
         newSession->recvOverlapped.pSession = newSession;
