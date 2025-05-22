@@ -127,12 +127,9 @@ DWORD WINAPI WorkerThread(LPVOID arg)
         while (1)
         {
             // Alertable wait
-            //DWORD result = WaitForSingleObjectEx(hWriteEvent, INFINITE, true);
-            DWORD result = WaitForSingleObjectEx(hWriteEvent, 0, true);
+            DWORD result = WaitForSingleObjectEx(hWriteEvent, INFINITE, true);
             if (result == WAIT_OBJECT_0)
                 break;
-            if (result == WAIT_TIMEOUT)
-                continue;
             if (result != WAIT_IO_COMPLETION)
                 return 1;
         }
