@@ -102,9 +102,6 @@ int RingBuffer::Enqueue(const char* data, int size)
     }
 
     _rear = (_rear + writeSize) % _capacity;
-    /*int tmp = _rear;
-    tmp = (tmp + writeSize) % _capacity;
-    _rear = tmp;*/
 
     return writeSize;
 }
@@ -135,17 +132,12 @@ int RingBuffer::Dequeue(char* dest, int size)
 
     
     _front = (_front + readSize) % _capacity;
-    /*int tmp = _front;
-    tmp = (tmp + readSize) % _capacity;
-    _front = tmp;*/
 
     return readSize;
 }
 
 int RingBuffer::Peek(char* dest, int size)
 {
-    // TODO: TEST
-
     int useSize = GetUseSize();
     if (useSize == 0 || size == 0)
         return 0;
@@ -181,8 +173,26 @@ void RingBuffer::ClearBuffer()
 
 int RingBuffer::DirectEnqueueSize()
 {
-    // TODO: TEST
-    if (_front > _rear)
+    int a = _front;
+    int b = _rear;
+
+    if (a > b)
+    {
+        return GetFreeSize();
+    }
+    else
+    {
+        if (a == 0)
+        {
+            return (_capacity - b) - 1;
+        }
+        else
+        {
+            return (_capacity - b);
+        }
+    }
+    
+    /*if (_front > _rear)
     {
         return GetFreeSize();
     }
@@ -196,13 +206,29 @@ int RingBuffer::DirectEnqueueSize()
         {
             return (_capacity - _rear);
         }
-    }
+    }*/
 }
 
 int RingBuffer::DirectDequeueSize()
 {
-    // TODO: TEST
-    if (_front == _rear)
+    int a = _front;
+    int b = _rear;
+
+    if (a == b)
+    {
+        return 0;
+    }
+
+    if (a > b)
+    {
+        return _capacity - a;
+    }
+    else
+    {
+        return b - a;
+    }
+    
+    /*if (_front == _rear)
     {
         return 0;
     }
@@ -214,7 +240,7 @@ int RingBuffer::DirectDequeueSize()
     else
     {
         return _rear - _front;
-    }
+    }*/
 }
 
 int RingBuffer::MoveRear(int size)
