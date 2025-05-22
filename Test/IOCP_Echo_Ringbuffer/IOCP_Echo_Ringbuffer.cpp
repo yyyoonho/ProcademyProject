@@ -10,12 +10,13 @@
 #include <conio.h>
 #include <vector>
 #include <list>
+#include <unordered_map>
 
 #include "RingBuffer.h"
 
 using namespace std;
 
-#define SERVERPORT 9000
+#define SERVERPORT 6000
 #define BUFSIZE 512
 
 struct Session;
@@ -36,6 +37,7 @@ struct MyOverlapped
 struct Session
 {
     SOCKET sock;
+    DWORD64 sessionId;
 
     RingBuffer recvQ;
     RingBuffer sendQ;
@@ -57,19 +59,29 @@ int wsaSendRet;
 // 함수 전방선언
 void NetInit();
 void WorkerThread();
+void AcceptThread();
 
 // 핸들
 HANDLE hIOCP;
 vector<HANDLE> hWorkerThreads;
 SOCKET listenSocket;
+SRWLOCK srwLock;
+HANDLE hAcceptThread;
 
-list<Session*> sessionList;
+// 세션MAP
+unordered_map<DWORD64, Session*> sessionMap;
+DWORD64 g_SessionId;
 
 int main()
 {
     timeBeginPeriod(1);
 
+    InitializeSRWLock(&srwLock);
+
     NetInit();
+
+    // Accept 쓰레드 생성
+    hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&AcceptThread, NULL, NULL, NULL);
 
     // IOCP 생성
     hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
@@ -102,70 +114,9 @@ int main()
                 break;
             }
         }
-
-        // accept
-        SOCKADDR_IN clientAddr;
-        memset(&clientAddr, 0, sizeof(clientAddr));
-        int addrLen = sizeof(clientAddr);
-        SOCKET clientSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &addrLen);
-        if (clientSocket == INVALID_SOCKET)
-        {
-            if (GetLastError() == WSAEWOULDBLOCK)
-            {
-                continue;
-            }
-
-            printf("Error: accept() %d\n", WSAGetLastError());
-            return 0;
-        }
-
-        getpeername(clientSocket, (SOCKADDR*)&clientAddr, &addrLen);
-        WCHAR addrBuf[40];
-        InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
-        printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
-        
-        // 세션 생성
-        Session* newSession = new Session;
-
-        newSession->sock = clientSocket;
-
-        newSession->recvQ.Resize(20000);
-        newSession->sendQ.Resize(20000);
-
-        memset(&newSession->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
-        newSession->recvOverlapped.pSession = newSession;
-        newSession->recvOverlapped.type = RECV;
-
-        memset(&newSession->sendOverlapped.overlapped, 0, sizeof(OVERLAPPED));
-        newSession->sendOverlapped.pSession = newSession;
-        newSession->sendOverlapped.type = SEND;
-
-        newSession->sendFlag = true;
-
-        sessionList.push_front(newSession);
-
-        // 소켓 - IOCP 연결
-        CreateIoCompletionPort((HANDLE)clientSocket, hIOCP, (ULONG_PTR)newSession, 0);
-
-        // 비동기 RECV 걸어버리기
-        DWORD recvBytes;
-        DWORD flags = 0;
-
-        WSABUF wsaBuf;
-        wsaBuf.buf = newSession->recvQ.GetRearBufferPtr();
-        wsaBuf.len = newSession->recvQ.DirectEnqueueSize();
-
-        wsaRecvRet = WSARecv(clientSocket, &wsaBuf, 1, &recvBytes, &flags, (LPWSAOVERLAPPED)&newSession->recvOverlapped, NULL);
-        if (wsaRecvRet == SOCKET_ERROR)
-        {
-            if (WSAGetLastError() != ERROR_IO_PENDING)
-            {
-                printf("Error: WSARecv() %d\n", WSAGetLastError());
-                return 0;
-            }
-        }
     }
 
+    // TODO: accpet쓰레드 종료 감시
     WaitForMultipleObjects(hWorkerThreads.size(), hWorkerThreads.data(), TRUE, INFINITE);
     WSACleanup();
 }
@@ -191,9 +142,6 @@ void NetInit()
         printf("ERROR: setsockopt() %d\n", GetLastError());
         return ;
     }
-
-    u_long optVal2 = 1;
-    ioctlsocket(listenSocket, FIONBIO, &optVal2);
 
     // bind
     SOCKADDR_IN serverAddr;
@@ -241,7 +189,9 @@ void WorkerThread()
 
             closesocket(pSession->sock);
 
-            sessionList.erase(find(sessionList.begin(), sessionList.end(), pSession));
+            AcquireSRWLockExclusive(&srwLock);
+            sessionMap.erase(pSession->sessionId);
+            ReleaseSRWLockExclusive(&srwLock);
 
             continue;
         }
@@ -331,4 +281,75 @@ void WorkerThread()
         }
     }
 
+}
+
+void AcceptThread()
+{
+    while (1)
+    {
+        // accept
+        SOCKADDR_IN clientAddr;
+        memset(&clientAddr, 0, sizeof(clientAddr));
+        int addrLen = sizeof(clientAddr);
+        SOCKET clientSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &addrLen);
+        if (clientSocket == INVALID_SOCKET)
+        {
+            if (GetLastError() == WSAEWOULDBLOCK)
+            {
+                continue;
+            }
+
+            printf("Error: accept() %d\n", WSAGetLastError());
+            return;
+        }
+
+        getpeername(clientSocket, (SOCKADDR*)&clientAddr, &addrLen);
+        WCHAR addrBuf[40];
+        InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
+        printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
+
+        // 세션 생성
+        Session* newSession = new Session;
+
+        newSession->sock = clientSocket;
+        newSession->sessionId = g_SessionId++;
+
+        newSession->recvQ.Resize(20000);
+        newSession->sendQ.Resize(20000);
+
+        memset(&newSession->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
+        newSession->recvOverlapped.pSession = newSession;
+        newSession->recvOverlapped.type = RECV;
+
+        memset(&newSession->sendOverlapped.overlapped, 0, sizeof(OVERLAPPED));
+        newSession->sendOverlapped.pSession = newSession;
+        newSession->sendOverlapped.type = SEND;
+
+        newSession->sendFlag = true;
+
+        AcquireSRWLockExclusive(&srwLock);
+        sessionMap.insert({ newSession->sessionId, newSession });
+        ReleaseSRWLockExclusive(&srwLock);
+
+        // 소켓 - IOCP 연결
+        CreateIoCompletionPort((HANDLE)clientSocket, hIOCP, (ULONG_PTR)newSession, 0);
+
+        // 비동기 RECV 걸어버리기
+        DWORD recvBytes;
+        DWORD flags = 0;
+
+        WSABUF wsaBuf;
+        wsaBuf.buf = newSession->recvQ.GetRearBufferPtr();
+        wsaBuf.len = newSession->recvQ.DirectEnqueueSize();
+
+        wsaRecvRet = WSARecv(clientSocket, &wsaBuf, 1, &recvBytes, &flags, (LPWSAOVERLAPPED)&newSession->recvOverlapped, NULL);
+        if (wsaRecvRet == SOCKET_ERROR)
+        {
+            if (WSAGetLastError() != ERROR_IO_PENDING)
+            {
+                printf("Error: WSARecv() %d\n", WSAGetLastError());
+                return;
+            }
+        }
+    }
 }
