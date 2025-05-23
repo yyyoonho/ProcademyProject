@@ -245,8 +245,6 @@ void WorkerThread()
                 bool ret = RequestWSASend(pSession);
                 if (ret == false)
                     return;
-
-                InterlockedExchange(&pSession->sendFlag, true);
             }
 
             // WSARecv
@@ -261,14 +259,13 @@ void WorkerThread()
 
             if (pSession->sendQ.GetUseSize() > 0)
             {
-                if (InterlockedExchange(&pSession->sendFlag, false) == true)
-                {
-                    bool ret = RequestWSASend(pSession);
-                    if (ret == false)
-                        return;
-
-                    InterlockedExchange(&pSession->sendFlag, true);
-                }
+                bool ret = RequestWSASend(pSession);
+                if (ret == false)
+                    return;
+            }
+            else
+            {
+                InterlockedExchange(&pSession->sendFlag, true);
             }
         }
     }
