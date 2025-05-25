@@ -97,6 +97,11 @@ int main()
 
     // Accept 쓰레드 생성
     hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&AcceptThread, NULL, NULL, NULL);
+    if (hAcceptThread == NULL)
+    {
+        printf("ERROR: hAcceptThread %d\n", WSAGetLastError());
+        return 0;
+    }
 
     // IOCP 생성
     hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 6);
@@ -142,7 +147,7 @@ int main()
 void NetInit()
 {
     WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    int wsaDataRet = WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     // listen socket 생성
     listenSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -224,52 +229,53 @@ void WorkerThread()
         
         if (((MyOverlapped*)pOverlapped)->type == RECV)
         {
+            bool flag = true;
             pSession->recvQ.MoveRear(cbTransferred);
 
-            if (pSession->recvQ.GetUseSize() < HEADERSIZE)
+            while (1)
             {
-                // WSARecv
-                bool ret = RequestWSARecv(pSession);
-                if (ret == false) return;
+                if (pSession->recvQ.GetUseSize() < HEADERSIZE)
+                {
+                    // WSARecv
+                    RequestWSARecv(pSession);
+                    flag = false;
+                    break;
+                }
 
-                continue;
-            }
+                char headerBuf[100 + 1];
+                char payloadBuf[100 + 1];
 
-            char headerBuf[100 + 1];
-            char payloadBuf[100 + 1];
+                pSession->recvQ.Peek(headerBuf, HEADERSIZE);
+                short payLoadLen = ((stHeader*)headerBuf)->len;
 
-            pSession->recvQ.Peek(headerBuf, HEADERSIZE);
-            short payLoadLen = ((stHeader*)headerBuf)->len;
+                if (pSession->recvQ.GetUseSize() < HEADERSIZE + payLoadLen)
+                {
+                    // WSARecv
+                    RequestWSARecv(pSession);
+                    flag = false;
+                    break;
+                }
 
-            if (pSession->recvQ.GetUseSize() < HEADERSIZE + payLoadLen)
-            {
-                // WSARecv
-                bool ret = RequestWSARecv(pSession);
-                if (ret == false) return;
-                    
-                continue;
-            }
+                pSession->recvQ.Dequeue(headerBuf, HEADERSIZE);
+                pSession->recvQ.Dequeue(payloadBuf, payLoadLen);
 
-            pSession->recvQ.Dequeue(headerBuf, HEADERSIZE);
-            pSession->recvQ.Dequeue(payloadBuf, payLoadLen);
+                // 디버깅용
+                //printf("#Recv payload:%llu\n", ((stPayload*)payloadBuf)->data);
 
-            printf("\n#Recv header:%d, payload:%llu\n", payLoadLen, ((stPayload*)payloadBuf)->data);
+                // WSASend
+                pSession->sendQ.Enqueue(headerBuf, HEADERSIZE);
+                pSession->sendQ.Enqueue(payloadBuf, payLoadLen);
+                if (InterlockedExchange(&pSession->sendFlag, false) == true)
+                {
+                    RequestWSASend(pSession);
+                }
 
-            // WSASend
-            pSession->sendQ.Enqueue(headerBuf, HEADERSIZE);
-            pSession->sendQ.Enqueue(payloadBuf, payLoadLen);
-            if(InterlockedExchange(&pSession->sendFlag, false) == true)
-            {
-                bool ret = RequestWSASend(pSession);
-                if (ret == false)
-                    return;
             }
 
             // WSARecv
-            bool ret = RequestWSARecv(pSession);
-            if (ret == false) return;
+            if(flag)
+                RequestWSARecv(pSession);
 
-            continue;
         }
         else if (((MyOverlapped*)pOverlapped)->type == SEND)
         {
@@ -277,9 +283,7 @@ void WorkerThread()
 
             if (pSession->sendQ.GetUseSize() > 0)
             {
-                bool ret = RequestWSASend(pSession);
-                if (ret == false)
-                    return;
+                RequestWSASend(pSession);
             }
             else
             {
@@ -312,7 +316,7 @@ void AcceptThread()
         getpeername(clientSocket, (SOCKADDR*)&clientAddr, &addrLen);
         WCHAR addrBuf[40];
         InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
-        printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
+        //printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
 
         // 세션 생성
         Session* newSession = new Session;
@@ -362,6 +366,7 @@ bool RequestWSARecv(Session* pSession)
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
             printf("ERROR: WSARecv() %d\n", WSAGetLastError());
+            closesocket(pSession->sock);
             return false;
         }
     }
@@ -383,6 +388,7 @@ bool RequestWSASend(Session* pSession)
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
             printf("ERROR: WSASend() %d\n", WSAGetLastError());
+            closesocket(pSession->sock);
             return false;
         }
     }
