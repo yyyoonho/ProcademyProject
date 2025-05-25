@@ -27,6 +27,11 @@ struct stHeader
     short len;
 };
 
+struct stPayload
+{
+    long long data;
+};
+
 enum
 {
     RECV,
@@ -120,13 +125,16 @@ int main()
             char inputKey = _getch();
             if (inputKey == 'Q' || inputKey == 'q')
             {
-                // TODO: 종료메시지 던지기
+                closesocket(listenSocket);
+                
+                PostQueuedCompletionStatus(hIOCP, -99, NULL, NULL);
+
                 break;
             }
         }
     }
 
-    // TODO: accpet쓰레드 종료 감시
+    WaitForSingleObject(hAcceptThread, INFINITE);
     WaitForMultipleObjects(hWorkerThreads.size(), hWorkerThreads.data(), TRUE, INFINITE);
     WSACleanup();
 }
@@ -191,10 +199,12 @@ void WorkerThread()
 
         // GQCS()
         int retVal = GetQueuedCompletionStatus(hIOCP, &cbTransferred, (PULONG_PTR)&pSession, &pOverlapped, INFINITE);
-        getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
-        InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
+
         if (retVal == FALSE || cbTransferred == 0)
         {
+            getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
+            InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
+
             printf("\n[TCP 서버] 클라이언트 종료: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
 
             closesocket(pSession->sock);
@@ -204,6 +214,12 @@ void WorkerThread()
             ReleaseSRWLockExclusive(&srwLock);
 
             continue;
+        }
+        else if (cbTransferred == -99)
+        {
+            printf("\n[TCP 서버] IOCP 워커쓰레드 종료...\n");
+            PostQueuedCompletionStatus(hIOCP, -99, NULL, NULL);
+            return;
         }
         
         if (((MyOverlapped*)pOverlapped)->type == RECV)
@@ -236,6 +252,8 @@ void WorkerThread()
 
             pSession->recvQ.Dequeue(headerBuf, HEADERSIZE);
             pSession->recvQ.Dequeue(payloadBuf, payLoadLen);
+
+            printf("\n#Recv header:%d, payload:%llu\n", payLoadLen, ((stPayload*)payloadBuf)->data);
 
             // WSASend
             pSession->sendQ.Enqueue(headerBuf, HEADERSIZE);
