@@ -16,4 +16,4 @@ void NetInit();
 void NetCleanUp();
 
 void NetworkUpdate();
-//void PushSessionToDestroyQ(stSession* pSession);
+void PushQuitQ(stSession* pSession);

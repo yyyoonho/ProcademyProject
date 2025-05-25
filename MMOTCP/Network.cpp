@@ -4,6 +4,7 @@
 #include "LogManager.h"
 #include "SectorManager.h"
 #include "CharacterManager.h"
+#include "PacketProc.h"
 
 #include "Network.h"
 
@@ -148,6 +149,7 @@ void NetworkUpdate()
 			stSession* nowSession = iter->second;
 
 			FD_SET(nowSession->socket, &readSet);
+
 			if (nowSession->sendQ.GetUseSize() > 0)
 			{
 				FD_SET(nowSession->socket, &writeSet);
@@ -174,6 +176,11 @@ void NetworkUpdate()
 
 	// TODO: 세션&캐릭터 파괴하기
 	DestroySessionNCharacter();
+}
+
+void PushQuitQ(stSession* pSession)
+{
+	quitQ.push(pSession);
 }
 
 void SelectFunc(FD_SET* pReadSet, FD_SET* pWriteSet)
@@ -240,10 +247,86 @@ void AcceptProc()
 
 void RecvProc(SOCKET socket)
 {
+	stSession* pSession = sessionMap.find(socket)->second;
+
+	recvRet = recv(pSession->socket, pSession->recvQ.GetRearBufferPtr(), pSession->recvQ.DirectEnqueueSize(), 0);
+	if (recvRet == SOCKET_ERROR)
+	{
+		if (WSAGetLastError() == 10054)
+		{
+			printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
+			quitQ.push(pSession);
+			return;
+
+		}
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			printf("ERROR: recv() %d\n", WSAGetLastError());
+			return;
+		}
+	}
+	if (recvRet == 0)
+	{
+		// TODO: 종료처리 (상대 FIN보낸거지)
+
+		printf("[상대방의 정상 연결 종료] id : %d\n", pSession->dwSessionID);
+		quitQ.push(pSession);
+		return;
+	}
+
+	pSession->recvQ.MoveRear(recvRet);
+
+	while (1)
+	{
+		if (pSession->recvQ.GetUseSize() < sizeof(st_PACKET_HEADER))
+			break;
+
+		// TODO: 직렬화 버퍼도 메모리풀로 관리해도 될지도?
+		SerializePacket sPacket;
+
+		// 헤더 뽑기
+		int headerPeekSize = pSession->recvQ.Peek(sPacket.GetBufferPtr(), sizeof(st_PACKET_HEADER));
+		sPacket.MoveWritePos(headerPeekSize);
+
+		st_PACKET_HEADER header;
+		sPacket.GetData((char*)&header, sizeof(st_PACKET_HEADER));
+
+		BYTE payloadLen = header.bySize;
+
+		// 페이로드 뽑기
+		if (pSession->recvQ.GetUseSize() < sizeof(st_PACKET_HEADER) + payloadLen)
+			break;
+
+		pSession->recvQ.MoveFront(headerPeekSize);
+
+		sPacket.Clear();
+
+		int payloadPeekSize = pSession->recvQ.Peek(sPacket.GetBufferPtr(), payloadLen);
+		sPacket.MoveWritePos(payloadPeekSize);
+
+		pSession->recvQ.MoveFront(payloadPeekSize);
+
+		PacketProc(pSession, header.byType, &sPacket);
+	}
 }
 
 void SendProc(SOCKET socket)
 {
+	stSession* pSession = sessionMap.find(socket)->second;
+
+	sendRet = send(pSession->socket, pSession->sendQ.GetFrontBufferPtr(), pSession->sendQ.DirectDequeueSize(), 0);
+	if (sendRet == SOCKET_ERROR)
+	{
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			printf("ERROR: send() %d\n", WSAGetLastError());
+			return;
+		}
+	}
+
+	pSession->sendQ.MoveFront(sendRet);
+
+	return;
 }
 
 void CreateSessionNCharacter()

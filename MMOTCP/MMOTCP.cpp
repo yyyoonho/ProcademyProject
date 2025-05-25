@@ -3,8 +3,10 @@
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "RingBuffer.lib")
+#pragma comment(lib, "SerializeBuffer.lib")
 
 #include "LogManager.h"
+#include "Game.h"
 #include "Network.h"
 
 using namespace std;
@@ -26,7 +28,7 @@ int main()
     {
         NetworkUpdate();
 
-        //GameUpdate();
+        GameUpdate();
 
         //ServerControl();
         //Monitor();

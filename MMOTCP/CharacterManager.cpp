@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include "MMOTCP.h"
 #include "Network.h"
 #include "SectorManager.h"
 #include "LogManager.h"
@@ -12,6 +13,8 @@ using namespace std;
 
 procademy::MemoryPool<stCharacter> characterMP(0, false);
 unordered_map<DWORD, stCharacter* > characterMap;
+
+bool EnterWorld(stCharacter* pNewCharacter);
 
 void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 {
@@ -35,14 +38,15 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 	newCharacter->dX = (double)newCharacter->shX;
 	newCharacter->dY = (double)newCharacter->shY;
 
-	newCharacter->curSector.iY = -1;
-	newCharacter->curSector.iX = -1;
+	SetSector(newCharacter);
 	newCharacter->oldSector.iY = -1;
 	newCharacter->oldSector.iX = -1;
 
 	newCharacter->chHP = 100;
 
 	characterMap.insert({ dwSessionID, newCharacter });
+
+	EnterWorld(newCharacter);
 
 	return;
 }
@@ -137,4 +141,41 @@ void DestroyCharacter(DWORD sessionId)
 	{
 		_LOG(dfLOG_LEVEL_SYSTEM, L"Error: characterMP.Free\n");
 	}
+}
+
+void GetCurSector(stSession* pSession, OUT stSECTOR_POS* pSectorPos)
+{
+	stCharacter* tmpCharacter = NULL;
+	unordered_map<DWORD, stCharacter* >::iterator iter = characterMap.find(pSession->dwSessionID);
+	if (iter == characterMap.end())
+	{
+		_LOG(dfLOG_LEVEL_DEBUG, L"ERROR: GetCurSector() 캐릭터가 없습니다.\n");
+
+		g_bShutdown = true;
+		return;
+	}
+
+	tmpCharacter = (*iter).second;
+	if (tmpCharacter == NULL)
+	{
+		_LOG(dfLOG_LEVEL_DEBUG, L"ERROR: GetCurSector() tmpCharacter == NULL\n");
+
+		g_bShutdown = true;
+		return;
+	}
+
+	pSectorPos->iY = tmpCharacter->curSector.iY;
+	pSectorPos->iX = tmpCharacter->curSector.iX;
+	return;
+}
+
+stCharacter* FindCharacter(BYTE sessionID)
+{
+	unordered_map<DWORD, stCharacter* >::iterator iter = characterMap.find(sessionID);
+	if (iter == characterMap.end())
+	{
+		return NULL;
+	}
+
+	return (*iter).second;
 }

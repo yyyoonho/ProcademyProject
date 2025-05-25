@@ -130,10 +130,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CharacterManager.cpp" />
+    <ClCompile Include="Game.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="MakePacket.cpp" />
     <ClCompile Include="MMOTCP.cpp" />
     <ClCompile Include="Network.cpp" />
+    <ClCompile Include="PacketProc.cpp" />
     <ClCompile Include="SectorManager.cpp" />
     <ClCompile Include="SendPacket.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -142,10 +144,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CharacterManager.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="MakePacket.h" />
     <ClInclude Include="MMOTCP.h" />
     <ClInclude Include="Network.h" />
+    <ClInclude Include="PacketProc.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="SectorManager.h" />
     <ClInclude Include="SendPacket.h" />

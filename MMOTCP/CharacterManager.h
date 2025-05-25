@@ -28,3 +28,7 @@ extern std::unordered_map<DWORD, stCharacter* > characterMap;
 void CreateCharacter(stSession* pSession, DWORD dwSessionID);
 
 void DestroyCharacter(DWORD sessionId);
+
+void GetCurSector(stSession* pSession, OUT stSECTOR_POS* pSectorPos);
+
+stCharacter* FindCharacter(BYTE sessionID);
