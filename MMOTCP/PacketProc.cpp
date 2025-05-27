@@ -110,7 +110,8 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 	{
 		int a = 3;
 		// TODO: 클라들에게 패킷전송
-		//CharacterSectorUpdatePacket(pCharacter);
+		printf("2\n");
+		CharacterSectorUpdatePacket(pCharacter);
 	}
 
 	sPacket->Clear();
@@ -166,7 +167,8 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	{
 		int a = 3;
 		// TODO: 클라들에게 패킷전송
-		//CharacterSectorUpdatePacket(pCharacter);
+		printf("3\n");
+		CharacterSectorUpdatePacket(pCharacter);
 	}
 
 	sPacket->Clear();

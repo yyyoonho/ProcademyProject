@@ -28,3 +28,6 @@ void GetCharactersFromSector(int sectorY, int sectorX, OUT std::vector<stCharact
 void SetSector(stCharacter* pCharacter);
 
 bool UpdateSector(stCharacter* pCharacter);
+
+void CharacterSectorUpdatePacket(stCharacter* pCharacter);
+void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemoveSector, OUT stSECTOR_AROUND* pAddSector);

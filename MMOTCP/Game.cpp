@@ -10,7 +10,7 @@
 
 using namespace std;
 
-#define FRAME 50
+#define FRAME 25
 #define MSPERFRAME (1000/FRAME)
 
 
@@ -62,10 +62,10 @@ void Move(DWORD deltaTime, stCharacter* pCharacter, BYTE dir)
 	int dy[8] = { 0, -1, -1, -1, 0, 1, 1, 1 };
 	int dx[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
 
-	double deltaTimeSec = (double)deltaTime / 1000;
+	double deltaTimeSec = (double)deltaTime / 1000.f;
 
-	double tmpX = (double(dfSPEED_PLAYER_X * 25) * deltaTimeSec) * dx[dir];
-	double tmpY = (double(dfSPEED_PLAYER_Y * 25) * deltaTimeSec) * dy[dir];
+	double tmpX = (double(dfSPEED_PLAYER_X * FRAME) * deltaTimeSec) * dx[dir];
+	double tmpY = (double(dfSPEED_PLAYER_Y * FRAME) * deltaTimeSec) * dy[dir];
 
 	short nextX = pCharacter->dX + tmpX;
 	short nextY = pCharacter->dY + tmpY;
@@ -115,7 +115,6 @@ void GameUpdate()
 			continue;
 		}
 
-		double deltaTimeSec = (double)deltaTime / 1000;
 		switch (pCharacter->byMoveDirection)
 		{
 		case dfPACKET_MOVE_DIR_LL:
@@ -150,8 +149,8 @@ void GameUpdate()
 		{
 			if (UpdateSector(pCharacter))
 			{
-				int a = 3;
-				//CharacterSectorUpdatePacket(pCharacter);
+				printf("1\n");
+				CharacterSectorUpdatePacket(pCharacter);
 			}
 		}
 	}

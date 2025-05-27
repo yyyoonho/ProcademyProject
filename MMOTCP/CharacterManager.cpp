@@ -25,7 +25,7 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 
 	newCharacter->dwAction = dfMOVE_STOP;
 	newCharacter->byDirection = dfRANGE_MOVE_LEFT;
-	newCharacter->byMoveDirection = dfRANGE_MOVE_LEFT;
+	newCharacter->byMoveDirection = dfMOVE_STOP;
 
 	// TODO: 테스트코드
 	static short shX = 20;
