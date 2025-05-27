@@ -59,7 +59,7 @@ struct Session
 
     LONG sendFlag;  // true -> 획득가능, false -> 획득불가능
 
-    LONG IO_Count = 0;
+    LONG IOCount = 0;
 };
 
 // 리턴 체크용 전역변수
@@ -120,7 +120,7 @@ int main()
 
     // 워커쓰레드 생성
     HANDLE hThread;
-    //for (int i = 0; i < (int)si.dwNumberOfProcessors * 2; i++)
+    for (int i = 0; i < (int)si.dwNumberOfProcessors; i++)
     {
         hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&WorkerThread, NULL, NULL, NULL);
         hWorkerThreads.push_back(hThread);
@@ -207,17 +207,16 @@ void WorkerThread()
 
         // GQCS()
         int retVal = GetQueuedCompletionStatus(hIOCP, &cbTransferred, (PULONG_PTR)&pSession, &pOverlapped, INFINITE);
-        InterlockedDecrement(&pSession->IO_Count);
+        InterlockedDecrement(&pSession->IOCount);
 
         if (retVal == FALSE || cbTransferred == 0)
         {
-            getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
-            InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
-
-            printf("\n[TCP 서버] 클라이언트 종료: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
-
-            if (pSession->IO_Count == 0)
+            if (pSession->IOCount == 0)
             {
+                getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
+                InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
+                printf("\n[TCP 서버] 클라이언트 종료: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
+
                 AcquireSRWLockExclusive(&srwLock);
                 sessionMap.erase(pSession->sessionId);
                 ReleaseSRWLockExclusive(&srwLock);
@@ -225,8 +224,8 @@ void WorkerThread()
                 closesocket(pSession->sock);
                 delete pSession;
             }
-            continue;
 
+            continue;
         }
         else if (cbTransferred == -99)
         {
@@ -260,6 +259,7 @@ void WorkerThread()
                 {
                     // WSARecv
                     RequestWSARecv(pSession);
+                        
                     flag = false;
                     break;
                 }
@@ -319,7 +319,7 @@ void AcceptThread()
         }
 
         acceptTotal++;
-        printf("AcceptTotal: %d\n", acceptTotal);
+        //printf("AcceptTotal: %d\n", acceptTotal);
 
         getpeername(clientSocket, (SOCKADDR*)&clientAddr, &addrLen);
         WCHAR addrBuf[40];
@@ -375,21 +375,11 @@ bool RequestWSARecv(Session* pSession)
         {
             printf("ERROR: WSARecv() %d\n", WSAGetLastError());
 
-            if (pSession->IO_Count == 0)
-            {
-                AcquireSRWLockExclusive(&srwLock);
-                sessionMap.erase(pSession->sessionId);
-                ReleaseSRWLockExclusive(&srwLock);
-
-                closesocket(pSession->sock);
-                delete pSession;
-            }
-
             return false;
         }
     }
 
-    InterlockedIncrement(&pSession->IO_Count);
+    InterlockedIncrement(&pSession->IOCount);
 
     return true;
 }
@@ -409,21 +399,11 @@ bool RequestWSASend(Session* pSession)
         {
             printf("ERROR: WSASend() %d\n", WSAGetLastError());
 
-            if (pSession->IO_Count==0)
-            {
-                AcquireSRWLockExclusive(&srwLock);
-                sessionMap.erase(pSession->sessionId);
-                ReleaseSRWLockExclusive(&srwLock);
-
-                closesocket(pSession->sock);
-                delete pSession;
-            }
-
             return false;
         }
     }
 
-    InterlockedIncrement(&pSession->IO_Count);
+    InterlockedIncrement(&pSession->IOCount);
 
     return true;
 }
