@@ -11,6 +11,7 @@
 #include <vector>
 #include <list>
 #include <unordered_map>
+#include <algorithm>
 
 #include "RingBuffer.h"
 
@@ -57,6 +58,8 @@ struct Session
     MyOverlapped sendOverlapped;
 
     LONG sendFlag;  // true -> 획득가능, false -> 획득불가능
+
+    LONG IO_Count = 0;
 };
 
 // 리턴 체크용 전역변수
@@ -117,7 +120,7 @@ int main()
 
     // 워커쓰레드 생성
     HANDLE hThread;
-    for (int i = 0; i < (int)si.dwNumberOfProcessors * 2; i++)
+    //for (int i = 0; i < (int)si.dwNumberOfProcessors * 2; i++)
     {
         hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&WorkerThread, NULL, NULL, NULL);
         hWorkerThreads.push_back(hThread);
@@ -204,6 +207,7 @@ void WorkerThread()
 
         // GQCS()
         int retVal = GetQueuedCompletionStatus(hIOCP, &cbTransferred, (PULONG_PTR)&pSession, &pOverlapped, INFINITE);
+        InterlockedDecrement(&pSession->IO_Count);
 
         if (retVal == FALSE || cbTransferred == 0)
         {
@@ -212,13 +216,17 @@ void WorkerThread()
 
             printf("\n[TCP 서버] 클라이언트 종료: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
 
-            closesocket(pSession->sock);
+            if (pSession->IO_Count == 0)
+            {
+                AcquireSRWLockExclusive(&srwLock);
+                sessionMap.erase(pSession->sessionId);
+                ReleaseSRWLockExclusive(&srwLock);
 
-            AcquireSRWLockExclusive(&srwLock);
-            sessionMap.erase(pSession->sessionId);
-            ReleaseSRWLockExclusive(&srwLock);
-
+                closesocket(pSession->sock);
+                delete pSession;
+            }
             continue;
+
         }
         else if (cbTransferred == -99)
         {
@@ -366,10 +374,22 @@ bool RequestWSARecv(Session* pSession)
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
             printf("ERROR: WSARecv() %d\n", WSAGetLastError());
-            closesocket(pSession->sock);
+
+            if (pSession->IO_Count == 0)
+            {
+                AcquireSRWLockExclusive(&srwLock);
+                sessionMap.erase(pSession->sessionId);
+                ReleaseSRWLockExclusive(&srwLock);
+
+                closesocket(pSession->sock);
+                delete pSession;
+            }
+
             return false;
         }
     }
+
+    InterlockedIncrement(&pSession->IO_Count);
 
     return true;
 }
@@ -388,10 +408,22 @@ bool RequestWSASend(Session* pSession)
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
             printf("ERROR: WSASend() %d\n", WSAGetLastError());
-            closesocket(pSession->sock);
+
+            if (pSession->IO_Count==0)
+            {
+                AcquireSRWLockExclusive(&srwLock);
+                sessionMap.erase(pSession->sessionId);
+                ReleaseSRWLockExclusive(&srwLock);
+
+                closesocket(pSession->sock);
+                delete pSession;
+            }
+
             return false;
         }
     }
+
+    InterlockedIncrement(&pSession->IO_Count);
 
     return true;
 }
