@@ -207,11 +207,12 @@ void WorkerThread()
 
         // GQCS()
         int retVal = GetQueuedCompletionStatus(hIOCP, &cbTransferred, (PULONG_PTR)&pSession, &pOverlapped, INFINITE);
-        InterlockedDecrement(&pSession->IOCount);
+        LONG a = InterlockedDecrement(&pSession->IOCount);
 
         if (retVal == FALSE || cbTransferred == 0)
         {
-            if (pSession->IOCount == 0)
+            //if (pSession->IOCount == 0)
+            if (a == 0)
             {
                 getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
                 InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
