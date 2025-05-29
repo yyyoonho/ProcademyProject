@@ -217,9 +217,8 @@ void WorkerThread()
 
         }
 
-        else if (((MyOverlapped*)pOverlapped)->type == RECV)
+        if (((MyOverlapped*)pOverlapped)->type == RECV)
         {
-            bool flag = true;
             pSession->recvQ.MoveRear(cbTransferred);
 
             while (1)
@@ -228,7 +227,6 @@ void WorkerThread()
                 {
                     // WSARecv
                     RequestWSARecv(pSession);
-                    flag = false;
                     break;
                 }
 
@@ -242,8 +240,6 @@ void WorkerThread()
                 {
                     // WSARecv
                     RequestWSARecv(pSession);
-                        
-                    flag = false;
                     break;
                 }
 
@@ -257,19 +253,6 @@ void WorkerThread()
                 {
                     RequestWSASend(pSession);
                 }
-
-            }
-
-            // WSARecv
-            if (flag == true)
-            {
-                RequestWSARecv(pSession);
-            }
-
-            // ********
-            if (InterlockedDecrement(&pSession->IOCount) == 0)
-            {
-                DestroySession(pSession);
             }
 
         }
@@ -280,17 +263,16 @@ void WorkerThread()
             if (pSession->sendQ.GetUseSize() > 0)
             {
                 RequestWSASend(pSession);
-
-                // ********
-                if (InterlockedDecrement(&pSession->IOCount) == 0)
-                {
-                    DestroySession(pSession);
-                }
             }
             else
             {
                 InterlockedExchange(&pSession->sendFlag, true);
             }
+        }
+
+        if (InterlockedDecrement(&pSession->IOCount) == 0)
+        {
+            DestroySession(pSession);
         }
 
     }
@@ -371,19 +353,24 @@ bool RequestWSARecv(Session* pSession)
     wsaBuf.buf = pSession->recvQ.GetRearBufferPtr();
     wsaBuf.len = pSession->recvQ.DirectEnqueueSize();
 
+    InterlockedIncrement(&pSession->IOCount);
     wsaRecvRet = WSARecv(pSession->sock, &wsaBuf, 1, &recvBytes, &flags, (LPWSAOVERLAPPED)&pSession->recvOverlapped, NULL);
     if (wsaRecvRet == SOCKET_ERROR)
     {
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
-            printf("ERROR: WSARecv() %d\n", WSAGetLastError());
+            if (WSAGetLastError() != 10054)
+            {
+                printf("ERROR: WSARecv() %d\n", WSAGetLastError());
+            }
+            
             // TODO: 연결종료를 위한 something
+            InterlockedDecrement(&pSession->IOCount);
 
             return false;
         }
     }
-
-    InterlockedIncrement(&pSession->IOCount);
+    
     return true;
 }
 
@@ -395,19 +382,23 @@ bool RequestWSASend(Session* pSession)
     wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
     wsaBuf.len = pSession->sendQ.DirectDequeueSize();
 
+    InterlockedIncrement(&pSession->IOCount);
     wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendOverlapped, NULL);
     if (wsaSendRet == SOCKET_ERROR)
     {
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
-            printf("ERROR: WSASend() %d\n", WSAGetLastError());
+            if (WSAGetLastError() != 10054)
+            {
+                printf("ERROR: WSASend() %d\n", WSAGetLastError());
+            }
             // TODO: 연결종료를 위한 something
 
+            InterlockedDecrement(&pSession->IOCount);
             return false;
         }
     }
 
-    InterlockedIncrement(&pSession->IOCount);
     return true;
 }
 
