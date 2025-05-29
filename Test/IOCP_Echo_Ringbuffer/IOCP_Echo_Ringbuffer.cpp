@@ -78,6 +78,7 @@ void WorkerThread();
 void AcceptThread();
 bool RequestWSARecv(Session* pSession);
 bool RequestWSASend(Session* pSession);
+void DestroySession(Session* pSession);
 
 // 핸들
 HANDLE hIOCP;
@@ -121,6 +122,7 @@ int main()
     // 워커쓰레드 생성
     HANDLE hThread;
     for (int i = 0; i < (int)si.dwNumberOfProcessors; i++)
+    //for (int i = 0; i < 1; i++)
     {
         hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&WorkerThread, NULL, NULL, NULL);
         hWorkerThreads.push_back(hThread);
@@ -135,7 +137,7 @@ int main()
             {
                 closesocket(listenSocket);
                 
-                PostQueuedCompletionStatus(hIOCP, -99, NULL, NULL);
+                PostQueuedCompletionStatus(hIOCP, NULL, NULL, NULL);
 
                 break;
             }
@@ -196,46 +198,26 @@ void WorkerThread()
 {
     while (1)
     {
-        // 비동기IO 완료통지 기다리기
-        DWORD cbTransferred;
-        Session* pSession;
+        // GQCS() OUT파라메터 초기화
+        DWORD cbTransferred = 0;
+        Session* pSession = NULL;
         OVERLAPPED* pOverlapped;
-
-        SOCKADDR_IN clientAddr;
-        int addrLen = sizeof(clientAddr);
-        WCHAR addrBuf[40];
 
         // GQCS()
         int retVal = GetQueuedCompletionStatus(hIOCP, &cbTransferred, (PULONG_PTR)&pSession, &pOverlapped, INFINITE);
-        LONG a = InterlockedDecrement(&pSession->IOCount);
-
-        if (retVal == FALSE || cbTransferred == 0)
-        {
-            //if (pSession->IOCount == 0)
-            if (a == 0)
-            {
-                getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
-                InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
-                printf("\n[TCP 서버] 클라이언트 종료: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
-
-                AcquireSRWLockExclusive(&srwLock);
-                sessionMap.erase(pSession->sessionId);
-                ReleaseSRWLockExclusive(&srwLock);
-
-                closesocket(pSession->sock);
-                delete pSession;
-            }
-
-            continue;
-        }
-        else if (cbTransferred == -99)
+        if (cbTransferred == NULL && pSession == NULL && pOverlapped == NULL)
         {
             printf("\n[TCP 서버] IOCP 워커쓰레드 종료...\n");
-            PostQueuedCompletionStatus(hIOCP, -99, NULL, NULL);
+            PostQueuedCompletionStatus(hIOCP, NULL, NULL, NULL);
             return;
         }
-        
-        if (((MyOverlapped*)pOverlapped)->type == RECV)
+        if (cbTransferred == 0)
+        {
+            // TODO: 연결종료를 위한 something
+
+        }
+
+        else if (((MyOverlapped*)pOverlapped)->type == RECV)
         {
             bool flag = true;
             pSession->recvQ.MoveRear(cbTransferred);
@@ -268,9 +250,6 @@ void WorkerThread()
                 pSession->recvQ.Dequeue(headerBuf, HEADERSIZE);
                 pSession->recvQ.Dequeue(payloadBuf, payLoadLen);
 
-                // 디버깅용
-                //printf("#Recv payload:%llu\n", ((stPayload*)payloadBuf)->data);
-
                 // WSASend
                 pSession->sendQ.Enqueue(headerBuf, HEADERSIZE);
                 pSession->sendQ.Enqueue(payloadBuf, payLoadLen);
@@ -282,8 +261,16 @@ void WorkerThread()
             }
 
             // WSARecv
-            if(flag)
+            if (flag == true)
+            {
                 RequestWSARecv(pSession);
+            }
+
+            // ********
+            if (InterlockedDecrement(&pSession->IOCount) == 0)
+            {
+                DestroySession(pSession);
+            }
 
         }
         else if (((MyOverlapped*)pOverlapped)->type == SEND)
@@ -293,14 +280,22 @@ void WorkerThread()
             if (pSession->sendQ.GetUseSize() > 0)
             {
                 RequestWSASend(pSession);
+
+                // ********
+                if (InterlockedDecrement(&pSession->IOCount) == 0)
+                {
+                    DestroySession(pSession);
+                }
             }
             else
             {
                 InterlockedExchange(&pSession->sendFlag, true);
             }
         }
+
     }
 
+    return;
 }
 
 void AcceptThread()
@@ -315,8 +310,16 @@ void AcceptThread()
         SOCKET clientSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &addrLen);
         if (clientSocket == INVALID_SOCKET)
         {
-            printf("Error: accept() %d\n", WSAGetLastError());
-            return;
+            if (WSAGetLastError() == WSAEINTR)
+            {
+                printf("Accept Thread 종료...\n");
+                return;
+            }
+            else
+            {
+                printf("Error: accept() %d\n", WSAGetLastError());
+                return;
+            }
         }
 
         acceptTotal++;
@@ -375,13 +378,13 @@ bool RequestWSARecv(Session* pSession)
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
             printf("ERROR: WSARecv() %d\n", WSAGetLastError());
+            // TODO: 연결종료를 위한 something
 
             return false;
         }
     }
 
     InterlockedIncrement(&pSession->IOCount);
-
     return true;
 }
 
@@ -399,12 +402,25 @@ bool RequestWSASend(Session* pSession)
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
             printf("ERROR: WSASend() %d\n", WSAGetLastError());
+            // TODO: 연결종료를 위한 something
 
             return false;
         }
     }
 
     InterlockedIncrement(&pSession->IOCount);
-
     return true;
+}
+
+void DestroySession(Session* pSession)
+{
+    AcquireSRWLockExclusive(&srwLock);
+    sessionMap.erase(pSession->sessionId);
+    ReleaseSRWLockExclusive(&srwLock);
+
+    closesocket(pSession->sock);
+
+    delete pSession;
+
+    return;
 }
