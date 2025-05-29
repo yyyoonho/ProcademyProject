@@ -357,10 +357,9 @@ void AcceptThread()
         CreateIoCompletionPort((HANDLE)clientSocket, hIOCP, (ULONG_PTR)newSession, 0);
 
         // 비동기 Recv 걸어버리기
-        bool ret = RequestWSARecv(newSession);
-        if (ret == false)
-            return;
+        RequestWSARecv(newSession);
     }
+
 }
 
 bool RequestWSARecv(Session* pSession)
