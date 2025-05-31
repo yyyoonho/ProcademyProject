@@ -18,7 +18,6 @@
 using namespace std;
 
 #define SERVERPORT 6000
-#define BUFSIZE 512
 #define HEADERSIZE 2
 
 struct Session;
@@ -359,13 +358,12 @@ bool RequestWSARecv(Session* pSession)
     {
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
-            if (WSAGetLastError() != 10054)
+            if (WSAGetLastError() != 10054 && WSAGetLastError() != 0)
             {
                 printf("ERROR: WSARecv() %d\n", WSAGetLastError());
+                InterlockedDecrement(&pSession->IOCount);
             }
-            
             // TODO: 연결종료를 위한 something
-            InterlockedDecrement(&pSession->IOCount);
 
             return false;
         }
