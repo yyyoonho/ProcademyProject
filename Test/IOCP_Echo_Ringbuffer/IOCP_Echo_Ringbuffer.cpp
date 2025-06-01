@@ -47,6 +47,9 @@ struct MyOverlapped
 
 struct Session
 {
+    // Debug
+    DWORD useCount = 0;
+
     SOCKET sock;
     DWORD64 sessionId;
 
@@ -59,6 +62,8 @@ struct Session
     LONG sendFlag;  // true -> 획득가능, false -> 획득불가능
 
     LONG IOCount = 0;
+
+    CRITICAL_SECTION cs;
 };
 
 // 리턴 체크용 전역변수
@@ -218,6 +223,8 @@ void WorkerThread()
 
         if (((MyOverlapped*)pOverlapped)->type == RECV)
         {
+            EnterCriticalSection(&pSession->cs);
+
             pSession->recvQ.MoveRear(cbTransferred);
 
             while (1)
@@ -254,11 +261,17 @@ void WorkerThread()
                 }
             }
 
+            LeaveCriticalSection(&pSession->cs);
+
         }
         else if (((MyOverlapped*)pOverlapped)->type == SEND)
         {
+            EnterCriticalSection(&pSession->cs);
+
             pSession->sendQ.MoveFront(cbTransferred);
 
+            // Debug:
+            pSession->useCount = pSession->sendQ.GetUseSize();
             if (pSession->sendQ.GetUseSize() > 0)
             {
                 RequestWSASend(pSession);
@@ -267,6 +280,8 @@ void WorkerThread()
             {
                 InterlockedExchange(&pSession->sendFlag, true);
             }
+
+            LeaveCriticalSection(&pSession->cs);
         }
 
         if (InterlockedDecrement(&pSession->IOCount) == 0)
@@ -330,15 +345,21 @@ void AcceptThread()
 
         newSession->sendFlag = true;
 
+        InitializeCriticalSection(&newSession->cs);
+
         AcquireSRWLockExclusive(&srwLock);
         sessionMap.insert({ newSession->sessionId, newSession });
         ReleaseSRWLockExclusive(&srwLock);
+
+        EnterCriticalSection(&newSession->cs);
 
         // 소켓 - IOCP 연결
         CreateIoCompletionPort((HANDLE)clientSocket, hIOCP, (ULONG_PTR)newSession, 0);
 
         // 비동기 Recv 걸어버리기
         RequestWSARecv(newSession);
+
+        LeaveCriticalSection(&newSession->cs);
     }
 
 }
@@ -358,11 +379,14 @@ bool RequestWSARecv(Session* pSession)
     {
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
-            if (WSAGetLastError() != 10054 && WSAGetLastError() != 0)
+            if (WSAGetLastError() != 0)
             {
-                printf("ERROR: WSARecv() %d\n", WSAGetLastError());
                 InterlockedDecrement(&pSession->IOCount);
             }
+            
+            if(WSAGetLastError() != WSAECONNRESET)
+                printf("ERROR: WSARecv() %d\n", WSAGetLastError());
+
             // TODO: 연결종료를 위한 something
 
             return false;
@@ -386,13 +410,14 @@ bool RequestWSASend(Session* pSession)
     {
         if (WSAGetLastError() != WSA_IO_PENDING)
         {
-            if (WSAGetLastError() != 10054)
+            if (WSAGetLastError() != WSAECONNRESET)
             {
                 printf("ERROR: WSASend() %d\n", WSAGetLastError());
             }
-            // TODO: 연결종료를 위한 something
 
             InterlockedDecrement(&pSession->IOCount);
+            
+
             return false;
         }
     }
@@ -404,6 +429,10 @@ void DestroySession(Session* pSession)
 {
     AcquireSRWLockExclusive(&srwLock);
     sessionMap.erase(pSession->sessionId);
+
+    EnterCriticalSection(&pSession->cs);
+    LeaveCriticalSection(&pSession->cs);
+
     ReleaseSRWLockExclusive(&srwLock);
 
     closesocket(pSession->sock);
