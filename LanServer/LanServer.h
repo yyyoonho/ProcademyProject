@@ -1,5 +1,39 @@
 #pragma once
 
+using namespace std;
+
+enum
+{
+	RECV,
+	SEND,
+};
+
+struct Session;
+
+struct MyOverlapped
+{
+	OVERLAPPED overlapped;
+	int type;
+	Session* pSession;
+};
+
+struct Session
+{
+	SOCKET sock;
+	DWORD64 sessionID;
+
+	RingBuffer recvQ;
+	RingBuffer sendQ;
+
+	MyOverlapped recvOverlapped;
+	MyOverlapped sendOverlapped;
+
+	LONG sendFlag = true;
+	LONG IOCount = 0;
+
+	CRITICAL_SECTION cs;
+};
+
 class LanServer
 {
 public:
@@ -16,18 +50,62 @@ public:
 	bool SendPacket(DWORD64 sessionID, SerializePacket* sPacket);
 
 	// 이벤트 함수
-	virtual bool OnConnectionRequest() = 0;
+	virtual bool OnConnectionRequest(in_addr ipAddress, USHORT port) = 0;
 
-	virtual void OnAccept() = 0;
-	virtual void OnRelease() = 0;
+	virtual void OnAccept(in_addr ipAddress, USHORT port, DWORD64 sessionID) = 0;
+	virtual void OnRelease(DWORD64 sessionID) = 0;
 
-	virtual void OnMessage() = 0;
+	virtual void OnMessage(DWORD64 sessionID, SerializePacket* sPacket) = 0;
 
-	virtual void OnError() = 0;
+	virtual void OnError(int errorcode, WCHAR*) = 0;
 
 	// 모니터링 함수
 	int GetAcceptTPS();
 	int GetRecvMessageTPS();
 	int GetSendMessageTPS();
 
+private:
+	HANDLE hIOCP;
+	vector<HANDLE> hWorkerThreads;
+	HANDLE hAcceptThread;
+	HANDLE hMonitorThread;
+	SOCKET listenSocket;
+
+	DWORD64 g_SessionId = 0;
+	DWORD64 totalSessionCount = 0;
+	
+	SRWLOCK sessionMapLock;
+
+	unordered_map<DWORD64, Session*> sessionMap;
+	procademy::MemoryPool<Session> sessionPool;
+
+	// 리턴 체크용 전역변수
+	int bindRet;
+	int listenRet;
+	int ioctlRet;
+	int setSockOptRet;
+	int wsaRecvRet;
+	int wsaSendRet;
+
+	// TPS
+	int acceptTPS = 0;
+	int recvMessageTPS = 0;
+	int sendMessageTPS = 0;
+
+private:
+	void NetInit();
+	void CreateAcceptThread();
+	void CreateIOCPWorkerThread();
+	void CreateMonitorThread();
+
+	static void WorkerThreadRun(LPVOID* lParam);
+	void WorkerThread();
+	static void AcceptThreadRun(LPVOID* lParam);
+	void AcceptThread();
+	static void MonitorThreadRun(LPVOID* lParam);
+	void MonitorThread();
+
+	bool RequestWSARecv(Session* pSession);
+	bool RequestWSASend(Session* pSession);
+	void DestroySession(Session* pSession);
 };

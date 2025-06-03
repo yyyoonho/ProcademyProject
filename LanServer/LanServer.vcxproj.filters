@@ -34,5 +34,8 @@
     <ClInclude Include="LanServer.h">
       <Filter>소스 파일\LanServer</Filter>
     </ClInclude>
+    <ClInclude Include="LanServerProtocol.h">
+      <Filter>소스 파일\LanServer</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
