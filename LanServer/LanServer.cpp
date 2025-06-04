@@ -54,8 +54,12 @@ bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 	unordered_map<DWORD64, Session*>::iterator iter = sessionMap.find(sessionID);
 	ReleaseSRWLockExclusive(&sessionMapLock);
 
-	if(iter == sessionMap.end())
+	if (iter == sessionMap.end())
+	{
+		printf("Error: No targetSession in sessionMap");
 		return false;
+	}
+		
 
 	Session* targetSession = iter->second;
 	
@@ -255,10 +259,6 @@ void LanServer::WorkerThread()
 					sPacket.GetData((char*)&tmpHeader, sizeof(stHeader));
 					sPacket >> tmpPayload;
 
-					cout << tmpHeader.len << endl;
-					cout << tmpPayload << endl;
-					cout << endl;
-
 					sPacket2 << tmpPayload;
 						
 					SendPacket(pSession->sessionID, &sPacket2);
@@ -369,9 +369,9 @@ void LanServer::AcceptThread()
 		OnAccept(clientAddr.sin_addr, clientAddr.sin_port, newSession->sessionID);
 
 		// 비동기 RECV 걸어버리기
-		EnterCriticalSection(&newSession->cs);
+		//EnterCriticalSection(&newSession->cs);
 		RequestWSARecv(newSession);
-		LeaveCriticalSection(&newSession->cs);
+		//LeaveCriticalSection(&newSession->cs);
 	}
 
 	return;
