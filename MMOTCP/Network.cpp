@@ -281,7 +281,6 @@ void RecvProc(SOCKET socket)
 		if (pSession->recvQ.GetUseSize() < sizeof(st_PACKET_HEADER))
 			break;
 
-		// TODO: 직렬화 버퍼도 메모리풀로 관리해도 될지도?
 		SerializePacket sPacket;
 
 		// 헤더 뽑기

@@ -80,7 +80,7 @@ void Move(DWORD deltaTime, stCharacter* pCharacter, BYTE dir)
 	pCharacter->shY = nextY;
 
 	_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-		pCharacter->dwSessionID, pCharacter->dwAction, pCharacter->shX, pCharacter->shY);
+		pCharacter->dwSessionID, pCharacter->byMoveDirection, pCharacter->shX, pCharacter->shY);
 
 	return;
 }

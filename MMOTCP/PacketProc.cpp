@@ -165,7 +165,6 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 
 	if (UpdateSector(pCharacter))
 	{
-		int a = 3;
 		// TODO: 클라들에게 패킷전송
 		printf("3\n");
 		CharacterSectorUpdatePacket(pCharacter);

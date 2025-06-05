@@ -133,9 +133,63 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 		}
 	}
 
-	//
+	// AddSector에 있는 캐릭터들 얻기
+	vector<stCharacter*> v;
+	for (int i = 0; i < addSectors.iCount; i++)
+	{
+		GetCharactersFromSector(addSectors.around[i].iY, addSectors.around[i].iX, v);
+	}
 
+	// 나에게 AddSector에 위치한 클라이언트들의 생성정보를 보낸다.
+	{
+		for (int j = 0; j < v.size(); j++)
+		{
+			SerializePacket sPacket;
+			mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
+			printf("CASE 2 #%d -> \n", pCharacter->dwSessionID);
 
+			SendPacket_Unicast(pCharacter->pSession, &sPacket);
+		}
+	}
+
+	// 나에게 AddSector에 위치한 클라이언트들의 액션정보를 보낸다.
+	{
+		for (int j = 0; j < v.size(); j++)
+		{
+			if (v[j]->byMoveDirection == dfMOVE_STOP)
+				continue;
+
+			SerializePacket sPacket;
+			mpMoveStart(&sPacket, v[j]->dwSessionID, v[j]->byMoveDirection, v[j]->shX, v[j]->shY);
+
+			SendPacket_Unicast(pCharacter->pSession, &sPacket);
+		}
+	}
+
+	// AddSector에 위치한 클라이언트들에게 나의 생성정보 보낸다.
+	{
+		SerializePacket sPacket;
+		mpCreateOtherCharacter(&sPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY,pCharacter->chHP);
+		printf("CASE 1 #%d -> \n", pCharacter->dwSessionID);
+		for (int i = 0; i < addSectors.iCount; i++)
+		{
+			SendPacket_SectorOne(addSectors.around[i].iY, addSectors.around[i].iX, &sPacket, pCharacter->pSession);
+		}
+	}
+
+	// AddSector에 위치한 클라이언트들에게 나의 액션정보 보낸다.
+	{
+		if (pCharacter->byMoveDirection != dfMOVE_STOP)
+		{
+			SerializePacket sPacket;
+			mpMoveStart(&sPacket, pCharacter->dwSessionID, pCharacter->byMoveDirection, pCharacter->shX, pCharacter->shY);
+
+			for (int i = 0; i < addSectors.iCount; i++)
+			{
+				SendPacket_SectorOne(addSectors.around[i].iY, addSectors.around[i].iX, &sPacket, pCharacter->pSession);
+			}
+		}
+	}
  }
 
 void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemoveSector, OUT stSECTOR_AROUND* pAddSector)
@@ -195,7 +249,6 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 			pRemoveSector->around[count].iY = oldSectorAround.around[i].iY;
 			pRemoveSector->around[count].iX = oldSectorAround.around[i].iX;
 			count++;
-			break;
 		}
 	}
 	pRemoveSector->iCount = count;
@@ -203,7 +256,7 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 
 
 	//TODO:Debug Log print
-	printf("#CurSectorPos  (y,x) = (%d,%d)\n", curSector.iY, curSector.iX);
+	/*printf("#CurSectorPos  (y,x) = (%d,%d)\n", curSector.iY, curSector.iX);
 
 	printf("#OldSectorPos  (y,x) = (%d,%d)\n", oldSector.iY, oldSector.iX);
 	
@@ -215,7 +268,7 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 	for (int i = 0; i < pRemoveSector->iCount; i++)
 	{
 		printf("#removeSectors  (y,x) = (%d,%d)\n", pRemoveSector->around[i].iY, pRemoveSector->around[i].iX);
-	}
+	}*/
 
 	return;
 }
