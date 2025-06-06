@@ -65,6 +65,21 @@ void SetSector(stCharacter* pCharacter)
 	g_Sector[sectorY][sectorX].push_back(pCharacter);
 }
 
+bool DeleteInSector(int sectorY, int sectorX, stCharacter* destroyCharacter)
+{
+	list<stCharacter*>::iterator iter;
+	for (iter = g_Sector[sectorY][sectorX].begin(); iter != g_Sector[sectorY][sectorX].end(); ++iter)
+	{
+		if ((*iter) != destroyCharacter)
+			continue;
+
+		g_Sector[sectorY][sectorX].erase(iter);
+		return true;
+	}
+
+	return false;
+}
+
 bool UpdateSector(stCharacter* pCharacter)
 {
 	int sectorY = pCharacter->shY / dfSECTOR_SIZE;

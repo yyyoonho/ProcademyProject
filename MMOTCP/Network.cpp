@@ -341,7 +341,7 @@ void CreateSessionNCharacter()
 		newSession->dwSessionID = g_id++;
 		newSession->recvQ.Resize(5000);
 		newSession->sendQ.Resize(10000);
-		newSession->dwLastRecvTime = GetTickCount();
+		newSession->dwLastRecvTime = timeGetTime();
 
 		sessionMap.insert({ newSocket, newSession });
 
@@ -357,6 +357,7 @@ void DestroySessionNCharacter()
 		quitQ.pop();
 
 		DestroyCharacter(destroySession->dwSessionID);
+		
 
 		SOCKET key = destroySession->socket;
 		sessionMap.erase(key);
@@ -366,5 +367,7 @@ void DestroySessionNCharacter()
 		{
 			_LOG(dfLOG_LEVEL_SYSTEM, L"Error: sessionMP.Free\n");
 		}
+
+		closesocket(destroySession->socket);
 	}
 }

@@ -134,6 +134,8 @@ void DestroyCharacter(DWORD sessionId)
 {
 	stCharacter* destroyCharacter = characterMap.find(sessionId)->second;
 
+	DeleteInSector(destroyCharacter->curSector.iY, destroyCharacter->curSector.iX, destroyCharacter);
+
 	characterMap.erase(sessionId);
 
 	bool ret = characterMP.Free(destroyCharacter);

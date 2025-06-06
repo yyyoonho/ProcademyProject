@@ -27,6 +27,7 @@ void GetCharactersFromSector(int sectorY, int sectorX, OUT std::vector<stCharact
 
 void SetSector(stCharacter* pCharacter);
 
+bool DeleteInSector(int sectorY, int sectorX, stCharacter* destroyCharacter);
 bool UpdateSector(stCharacter* pCharacter);
 
 void CharacterSectorUpdatePacket(stCharacter* pCharacter);

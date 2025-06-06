@@ -74,8 +74,8 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 		return false;
 	}
 
-	int diffX = abs(shX - pCharacter->dX);
-	int diffY = abs(shY - pCharacter->dY);
+	int diffX = abs(shX - pCharacter->shX);
+	int diffY = abs(shY - pCharacter->shY);
 	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
 	{
 		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
@@ -118,7 +118,7 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 	mpMoveStart(sPacket, pSession->dwSessionID, byDirection, shX, shY);
 	SendPacket_Around(pSession, sPacket, false);
 
-	pSession->dwLastRecvTime = GetTickCount();
+	pSession->dwLastRecvTime = timeGetTime();
 
 	return true;
 }
@@ -140,13 +140,13 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	stCharacter* pCharacter = FindCharacter(pSession->dwSessionID);
 	if (pCharacter == NULL)
 	{
-		_LOG(dfLOG_LEVEL_ERROR, L"# MOVESTOP > SessionID:%d Character Not Found!\n", pSession->dwSessionID);
+		_LOG(dfLOG_LEVEL_ERROR, L"# MOVESTOP # SessionID:%d Character Not Found!\n", pSession->dwSessionID);
 
 		return false;
 	}
 
-	int diffX = abs(shX - pCharacter->dX);
-	int diffY = abs(shY - pCharacter->dY);
+	int diffX = abs(shX - pCharacter->shX);
+	int diffY = abs(shY - pCharacter->shY);
 	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
 	{
 		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
@@ -174,7 +174,7 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	mpMoveStop(sPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY);
 	SendPacket_Around(pCharacter->pSession, sPacket, false);
 
-	pSession->dwLastRecvTime = GetTickCount();
+	pSession->dwLastRecvTime = timeGetTime();
 
 	
 	return true;
@@ -182,22 +182,325 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 
 bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
 {
+	BYTE direction;
+	short shX;
+	short shY;
 
-	pSession->dwLastRecvTime = GetTickCount();
-	return false;
+	*sPacket >> direction;
+	*sPacket >> shX;
+	*sPacket >> shY;
+
+	DWORD sessionID = pSession->dwSessionID;
+	stCharacter* pCharacter = FindCharacter(sessionID);
+	if (pCharacter == NULL)
+	{
+		printf("ERROR: 캐릭터를 찾지 못했습니다.\n");
+		_LOG(dfLOG_LEVEL_ERROR, L"# ATTACK1 # SessionID:%d Character Not Found!\n", pSession->dwSessionID);
+
+		return false;
+	}
+
+	int diffX = abs(shX - pCharacter->shX);
+	int diffY = abs(shY - pCharacter->shY);
+	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
+	{
+		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pSession, sPacket);
+
+		shX = pCharacter->shX;
+		shY = pCharacter->shY;
+	}
+
+	pCharacter->byDirection = direction;
+	pCharacter->shX = shX;
+	pCharacter->shY = shY;
+
+	// 캐릭터 공격 모션 패킷 전송
+	{
+		SerializePacket attack1Packet;
+		mpAttack1(&attack1Packet, pSession->dwSessionID, direction, shX, shY);
+		SendPacket_Around(pSession, &attack1Packet, false);
+	}
+
+	if (UpdateSector(pCharacter))
+	{
+		CharacterSectorUpdatePacket(pCharacter);
+	}
+
+	// 공격 판정
+	int attackRangeMinX;
+	int attackRangeMaxX;
+	int attackRangeMinY = max(dfRANGE_MOVE_TOP, shY - dfATTACK1_RANGE_Y);
+	int attackRangeMaxY = min(dfRANGE_MOVE_BOTTOM, shY + dfATTACK1_RANGE_Y);
+
+	if (direction == dfPACKET_MOVE_DIR_LL)
+	{
+		attackRangeMinX = max(dfRANGE_MOVE_LEFT, shX - dfATTACK1_RANGE_X);
+		attackRangeMaxX = shX;
+	}
+	else
+	{
+		attackRangeMinX = shX;
+		attackRangeMaxX = min(dfRANGE_MOVE_RIGHT, shX + dfATTACK1_RANGE_X);
+	}
+	
+	stSECTOR_AROUND sectorAround;
+	GetSectorAround(pCharacter->curSector.iY, pCharacter->curSector.iX, &sectorAround);
+	vector<stCharacter*> v;
+	for (int i = 0; i < sectorAround.iCount; i++)
+	{
+		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
+	}
+
+	for (int i = 0; i < v.size(); i++)
+	{
+		if (v[i] == pCharacter)
+			continue;
+
+		short enemyY = v[i]->shY;
+		short enemyX = v[i]->shX;
+
+		if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
+			continue;
+		if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
+			continue;
+
+		v[i]->chHP -= 20;
+
+		SerializePacket damagePacket;
+		mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+
+		SendPacket_Around(v[i]->pSession, &damagePacket, true);
+
+		if (v[i]->chHP <= 0)
+		{
+			SerializePacket deadPacket;
+			mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
+
+			SendPacket_Around(v[i]->pSession, &deadPacket, false);
+
+			PushQuitQ(v[i]->pSession);
+		}
+
+	}
+
+	pSession->dwLastRecvTime = timeGetTime();
+	return true;
 }
 
 bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
 {
+	BYTE direction;
+	short shX;
+	short shY;
 
-	pSession->dwLastRecvTime = GetTickCount();
+	*sPacket >> direction;
+	*sPacket >> shX;
+	*sPacket >> shY;
+
+	DWORD sessionID = pSession->dwSessionID;
+	stCharacter* pCharacter = FindCharacter(sessionID);
+	if (pCharacter == NULL)
+	{
+		printf("ERROR: 캐릭터를 찾지 못했습니다.\n");
+		_LOG(dfLOG_LEVEL_ERROR, L"# ATTACK1 # SessionID:%d Character Not Found!\n", pSession->dwSessionID);
+
+		return false;
+	}
+
+	int diffX = abs(shX - pCharacter->shX);
+	int diffY = abs(shY - pCharacter->shY);
+	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
+	{
+		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pSession, sPacket);
+
+		shX = pCharacter->shX;
+		shY = pCharacter->shY;
+	}
+
+	pCharacter->byDirection = direction;
+	pCharacter->shX = shX;
+	pCharacter->shY = shY;
+
+	// 캐릭터 공격 모션 패킷 전송
+	{
+		SerializePacket attack2Packet;
+		mpAttack1(&attack2Packet, pSession->dwSessionID, direction, shX, shY);
+		SendPacket_Around(pSession, &attack2Packet, false);
+	}
+
+	if (UpdateSector(pCharacter))
+	{
+		CharacterSectorUpdatePacket(pCharacter);
+	}
+
+	// 공격 판정
+	int attackRangeMinX;
+	int attackRangeMaxX;
+	int attackRangeMinY = max(dfRANGE_MOVE_TOP, shY - dfATTACK2_RANGE_Y);
+	int attackRangeMaxY = min(dfRANGE_MOVE_BOTTOM, shY + dfATTACK2_RANGE_Y);
+
+	if (direction == dfPACKET_MOVE_DIR_LL)
+	{
+		attackRangeMinX = max(dfRANGE_MOVE_LEFT, shX - dfATTACK2_RANGE_X);
+		attackRangeMaxX = shX;
+	}
+	else
+	{
+		attackRangeMinX = shX;
+		attackRangeMaxX = min(dfRANGE_MOVE_RIGHT, shX + dfATTACK2_RANGE_X);
+	}
+
+	stSECTOR_AROUND sectorAround;
+	GetSectorAround(pCharacter->curSector.iY, pCharacter->curSector.iX, &sectorAround);
+	vector<stCharacter*> v;
+	for (int i = 0; i < sectorAround.iCount; i++)
+	{
+		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
+	}
+
+	for (int i = 0; i < v.size(); i++)
+	{
+		if (v[i] == pCharacter)
+			continue;
+
+		short enemyY = v[i]->shY;
+		short enemyX = v[i]->shX;
+
+		if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
+			continue;
+		if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
+			continue;
+
+		v[i]->chHP -= 20;
+
+		SerializePacket damagePacket;
+		mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+
+		SendPacket_Around(v[i]->pSession, &damagePacket, true);
+
+		if (v[i]->chHP <= 0)
+		{
+			SerializePacket deadPacket;
+			mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
+
+			SendPacket_Around(v[i]->pSession, &deadPacket, false);
+
+			PushQuitQ(v[i]->pSession);
+		}
+
+	}
+
+	pSession->dwLastRecvTime = timeGetTime();
 	return false;
 }
 
 bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
 {
+	BYTE direction;
+	short shX;
+	short shY;
 
-	pSession->dwLastRecvTime = GetTickCount();
+	*sPacket >> direction;
+	*sPacket >> shX;
+	*sPacket >> shY;
+
+	DWORD sessionID = pSession->dwSessionID;
+	stCharacter* pCharacter = FindCharacter(sessionID);
+	if (pCharacter == NULL)
+	{
+		printf("ERROR: 캐릭터를 찾지 못했습니다.\n");
+		_LOG(dfLOG_LEVEL_ERROR, L"# ATTACK1 # SessionID:%d Character Not Found!\n", pSession->dwSessionID);
+
+		return false;
+	}
+
+	int diffX = abs(shX - pCharacter->shX);
+	int diffY = abs(shY - pCharacter->shY);
+	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
+	{
+		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pSession, sPacket);
+
+		shX = pCharacter->shX;
+		shY = pCharacter->shY;
+	}
+
+	pCharacter->byDirection = direction;
+	pCharacter->shX = shX;
+	pCharacter->shY = shY;
+
+	// 캐릭터 공격 모션 패킷 전송
+	{
+		SerializePacket attack3Packet;
+		mpAttack1(&attack3Packet, pSession->dwSessionID, direction, shX, shY);
+		SendPacket_Around(pSession, &attack3Packet, false);
+	}
+
+	if (UpdateSector(pCharacter))
+	{
+		CharacterSectorUpdatePacket(pCharacter);
+	}
+
+	// 공격 판정
+	int attackRangeMinX;
+	int attackRangeMaxX;
+	int attackRangeMinY = max(dfRANGE_MOVE_TOP, shY - dfATTACK3_RANGE_Y);
+	int attackRangeMaxY = min(dfRANGE_MOVE_BOTTOM, shY + dfATTACK3_RANGE_Y);
+
+	if (direction == dfPACKET_MOVE_DIR_LL)
+	{
+		attackRangeMinX = max(dfRANGE_MOVE_LEFT, shX - dfATTACK3_RANGE_X);
+		attackRangeMaxX = shX;
+	}
+	else
+	{
+		attackRangeMinX = shX;
+		attackRangeMaxX = min(dfRANGE_MOVE_RIGHT, shX + dfATTACK3_RANGE_X);
+	}
+
+	stSECTOR_AROUND sectorAround;
+	GetSectorAround(pCharacter->curSector.iY, pCharacter->curSector.iX, &sectorAround);
+	vector<stCharacter*> v;
+	for (int i = 0; i < sectorAround.iCount; i++)
+	{
+		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
+	}
+
+	for (int i = 0; i < v.size(); i++)
+	{
+		if (v[i] == pCharacter)
+			continue;
+
+		short enemyY = v[i]->shY;
+		short enemyX = v[i]->shX;
+
+		if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
+			continue;
+		if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
+			continue;
+
+		v[i]->chHP -= 20;
+
+		SerializePacket damagePacket;
+		mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+
+		SendPacket_Around(v[i]->pSession, &damagePacket, true);
+
+		if (v[i]->chHP <= 0)
+		{
+			SerializePacket deadPacket;
+			mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
+
+			SendPacket_Around(v[i]->pSession, &deadPacket, false);
+
+			PushQuitQ(v[i]->pSession);
+		}
+
+	}
+
+	pSession->dwLastRecvTime = timeGetTime();
 	return false;
 }
 
@@ -210,6 +513,8 @@ bool netPacketProc_Echo(stSession* pSession, SerializePacket* sPacket)
 	mpEcho(sPacket, t);
 
 	SendPacket_Unicast(pSession, sPacket);
+
+	pSession->dwLastRecvTime = timeGetTime();
 	
 	return false;
 }
