@@ -22,7 +22,7 @@ bool LanServer::Start()
 
 	CreateAcceptThread();
 	CreateIOCPWorkerThread();
-	//CreateMonitorThread();
+	CreateMonitorThread();
 
 	return false;
 }
@@ -30,8 +30,14 @@ bool LanServer::Start()
 void LanServer::Stop()
 {
 	closesocket(listenSocket);
-
 	PostQueuedCompletionStatus(hIOCP, NULL, NULL, NULL);
+	exitMonitorThread = true;
+
+	WaitForSingleObject(hAcceptThread, INFINITE);
+	WaitForMultipleObjects(hWorkerThreads.size(), hWorkerThreads.data(), TRUE, INFINITE);
+	WaitForSingleObject(hMonitorThread, INFINITE);
+
+	return;
 }
 
 int LanServer::GetSessionCount()
@@ -244,25 +250,9 @@ void LanServer::WorkerThread()
 				int ret = pSession->recvQ.Dequeue(sPacket.GetBufferPtr(), sizeof(stHeader) + payLoadLen);
 				sPacket.MoveWritePos(ret);
 
-				OnMessage(pSession->sessionID, (SerializePacket*)((BYTE*)&sPacket + sizeof(stHeader)));
+				sPacket.MoveReadPos(sizeof(stHeader));
 
-
-				/* 에코를 위한 작업
-				* 일부러 직렬화버퍼를 따로 또 만들어서 sendPacket을 해보자.
-				*/
-				{
-					SerializePacket sPacket2;
-
-					stHeader tmpHeader;
-					__int64 tmpPayload;
-
-					sPacket.GetData((char*)&tmpHeader, sizeof(stHeader));
-					sPacket >> tmpPayload;
-
-					sPacket2 << tmpPayload;
-						
-					SendPacket(pSession->sessionID, &sPacket2);
-				}
+				OnMessage(pSession->sessionID, &sPacket);
 
 				// WSASend
 				if (InterlockedExchange(&pSession->sendFlag, false) == true)
@@ -321,7 +311,7 @@ void LanServer::AcceptThread()
 		{
 			if (WSAGetLastError() == WSAEINTR)
 			{
-				printf("Accept Thread 종료...\n");
+				printf("\n Accept Thread 종료...\n");
 				return;
 			}
 			else
@@ -389,10 +379,15 @@ void LanServer::MonitorThread()
 
 	while (1)
 	{
-		printf("acceptTPS : %d \n", InterlockedExchange((LONG*)&acceptTPS, 0));
-		printf("recvMessageTPS : %d \n", InterlockedExchange((LONG*)&recvMessageTPS, 0));
-		printf("sendMessageTPS : %d \n", InterlockedExchange((LONG*)&sendMessageTPS, 0));
-		printf("\n");
+		if (exitMonitorThread)
+		{
+			printf("\n[TCP 서버] 모니터 쓰레드 종료...\n");
+			break;
+		}
+
+		InterlockedExchange((LONG*)&acceptTPS, 0);
+		InterlockedExchange((LONG*)&recvMessageTPS, 0);
+		InterlockedExchange((LONG*)&sendMessageTPS, 0); 
 
 		Sleep(1000 - (timeGetTime() - oldTime));
 

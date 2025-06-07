@@ -65,11 +65,14 @@ public:
 	int GetSendMessageTPS();
 
 private:
+	SOCKET listenSocket;
+
 	HANDLE hIOCP;
 	vector<HANDLE> hWorkerThreads;
 	HANDLE hAcceptThread;
 	HANDLE hMonitorThread;
-	SOCKET listenSocket;
+	bool exitMonitorThread = false;
+
 
 	DWORD64 g_SessionId = 0;
 	DWORD64 totalSessionCount = 0;
