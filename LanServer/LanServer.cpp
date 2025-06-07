@@ -7,7 +7,7 @@ using namespace std;
 
 #define SERVERPORT 6000
 
-LanServer::LanServer() : sessionPool(0,false)
+LanServer::LanServer()
 {
 
 }
@@ -18,6 +18,8 @@ LanServer::~LanServer()
 
 bool LanServer::Start()
 {
+	InitSessionArray();
+
 	NetInit();
 
 	CreateAcceptThread();
@@ -49,35 +51,36 @@ int LanServer::GetSessionCount()
 
 bool LanServer::Disconnect(DWORD64 sessionID)
 {
-	//TODO: recv를 못하게 일단 해야겠네. IOCount가 0이 되도록 유도해야겠어. 소켓을 끊을까?
+	Session* pSession = FindSessionByID(sessionID);
+	if (pSession == NULL)
+	{
+		printf("Error: FindSessionByID() No targetSession in sessionArray\n");
+		return false;
+	}
+	pSession->active = false;
+	
+	closesocket(pSession->sock);
+	pSession->sock = -1;
 
-	return false;
+	return true;
 }
 
 bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 {
-	AcquireSRWLockExclusive(&sessionMapLock);
-	unordered_map<DWORD64, Session*>::iterator iter = sessionMap.find(sessionID);
-	ReleaseSRWLockExclusive(&sessionMapLock);
-
-	if (iter == sessionMap.end())
+	Session* pSession = FindSessionByID(sessionID);
+	if (pSession == NULL)
 	{
-		printf("Error: No targetSession in sessionMap");
+		printf("Error: FindSessionByID() No targetSession in sessionArray\n");
 		return false;
 	}
-		
-
-	Session* targetSession = iter->second;
 	
 	InterlockedIncrement((LONG*)&sendMessageTPS);
 
 	stHeader header;
 	header.len = sPacket->GetDataSize();
 
-	EnterCriticalSection(&targetSession->cs);
-	targetSession->sendQ.Enqueue((char*)&header, sizeof(stHeader));
-	targetSession->sendQ.Enqueue(sPacket->GetBufferPtr(), sPacket->GetDataSize());
-	LeaveCriticalSection(&targetSession->cs);
+	pSession->sendQ.Enqueue((char*)&header, sizeof(stHeader));
+	pSession->sendQ.Enqueue(sPacket->GetBufferPtr(), sPacket->GetDataSize());
 
 	return true;
 }
@@ -97,10 +100,21 @@ int LanServer::GetSendMessageTPS()
 	return sendMessageTPS;
 }
 
+void LanServer::InitSessionArray()
+{
+	for (int i = 0; i < MAXARR; i++)
+	{
+		sessionArray[i] = new Session;
+
+		sessionArray[i]->recvQ.Resize(10000);
+		sessionArray[i]->sendQ.Resize(10000);
+	}
+
+	return;
+}
+
 void LanServer::NetInit()
 {
-	InitializeSRWLock(&sessionMapLock);
-
 	WSADATA wsaData;
 	int wsaDataRet = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (wsaDataRet != 0)
@@ -257,16 +271,12 @@ void LanServer::WorkerThread()
 				// WSASend
 				if (InterlockedExchange(&pSession->sendFlag, false) == true)
 				{
-					EnterCriticalSection(&pSession->cs);
 					RequestWSASend(pSession);
-					LeaveCriticalSection(&pSession->cs);
 				}
 			}
 		}
 		else if (((MyOverlapped*)pOverlapped)->type == SEND)
 		{
-			EnterCriticalSection(&pSession->cs);
-
 			pSession->sendQ.MoveFront(cbTransferred);
 
 			if (pSession->sendQ.GetUseSize() > 0)
@@ -277,8 +287,6 @@ void LanServer::WorkerThread()
 			{
 				InterlockedExchange(&pSession->sendFlag, true);
 			}
-
-			LeaveCriticalSection(&pSession->cs);
 		}
 
 		if (InterlockedDecrement(&pSession->IOCount) == 0)
@@ -329,39 +337,38 @@ void LanServer::AcceptThread()
 		InterlockedIncrement(&totalSessionCount);
 
 		// 세션 생성
-		Session* newSession = sessionPool.Alloc();
+		//Session* newSession = sessionPool.Alloc();
 
-		newSession->sock = clientSocket;
-		newSession->sessionID = g_SessionId++;
-		newSession->recvQ.Resize(10000);
-		newSession->sendQ.Resize(10000);
+		int idx;
+		if (!FindNonActiveSession(&idx))
+		{
+			printf("Non-Active Session이 없습니다.\n");
+			return;
+		}
 
-		memset(&newSession->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
-		newSession->recvOverlapped.pSession = newSession;
-		newSession->recvOverlapped.type = RECV;
+		sessionArray[idx]->sock = clientSocket;
+		sessionArray[idx]->sessionID = g_SessionId++;
 
-		memset(&newSession->sendOverlapped.overlapped, 0, sizeof(OVERLAPPED));
-		newSession->sendOverlapped.pSession = newSession;
-		newSession->sendOverlapped.type = SEND;
+		memset(&sessionArray[idx]->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
+		sessionArray[idx]->recvOverlapped.pSession = sessionArray[idx];
+		sessionArray[idx]->recvOverlapped.type = RECV;
 
-		newSession->sendFlag = true;
+		memset(&sessionArray[idx]->sendOverlapped.overlapped, 0, sizeof(OVERLAPPED));
+		sessionArray[idx]->sendOverlapped.pSession = sessionArray[idx];
+		sessionArray[idx]->sendOverlapped.type = SEND;
 
-		InitializeCriticalSection(&newSession->cs);
+		sessionArray[idx]->sendFlag = true;
 
-		AcquireSRWLockExclusive(&sessionMapLock);
-		sessionMap.insert({ newSession->sessionID, newSession });
-		ReleaseSRWLockExclusive(&sessionMapLock);
+		sessionArray[idx]->active = true;
 
 		// 소켓 - IOCP 연결
-		CreateIoCompletionPort((HANDLE)clientSocket, hIOCP, (ULONG_PTR)newSession, 0);
+		CreateIoCompletionPort((HANDLE)clientSocket, hIOCP, (ULONG_PTR)sessionArray[idx], 0);
 
 		// 콘텐츠에 "새로운 세션이 만들어졌습니다" 알리기
-		OnAccept(clientAddr.sin_addr, clientAddr.sin_port, newSession->sessionID);
+		OnAccept(clientAddr.sin_addr, clientAddr.sin_port, sessionArray[idx]->sessionID);
 
 		// 비동기 RECV 걸어버리기
-		//EnterCriticalSection(&newSession->cs);
-		RequestWSARecv(newSession);
-		//LeaveCriticalSection(&newSession->cs);
+		RequestWSARecv(sessionArray[idx]);
 	}
 
 	return;
@@ -460,16 +467,46 @@ bool LanServer::RequestWSASend(Session* pSession)
 
 void LanServer::DestroySession(Session* pSession)
 {
-	AcquireSRWLockExclusive(&sessionMapLock);
-	sessionMap.erase(pSession->sessionID);
-	ReleaseSRWLockExclusive(&sessionMapLock);
-
 	closesocket(pSession->sock);
+	pSession->sock = -1;
+	pSession->sessionID = -1;
 
-	sessionPool.Free(pSession);
+	pSession->recvQ.ClearBuffer();
+	pSession->sendQ.ClearBuffer();
+
+	pSession->active = false;
 
 	// 콘텐츠에 "해당 세션이 삭제되었습니다" 알리기.
 	OnRelease(pSession->sessionID);
 
 	InterlockedDecrement(&totalSessionCount);
+}
+
+bool LanServer::FindNonActiveSession(OUT int* idx)
+{
+	for (int i = 0; i < MAXARR; i++)
+	{
+		if (sessionArray[i]->active == false)
+		{
+			*idx = i;
+
+			return true;
+		}
+	}
+
+	*idx = -1;
+	return false;
+}
+
+Session* LanServer::FindSessionByID(DWORD64 sessionID)
+{
+	for (int i = 0; i < MAXARR; i++)
+	{
+		if (sessionArray[i]->sessionID == sessionID)
+		{
+			return sessionArray[i];
+		}
+	}
+
+	return NULL;
 }

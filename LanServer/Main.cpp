@@ -79,6 +79,10 @@ int main()
 
 	while (1)
 	{
+		_int64 id = -1;
+		if(id!=-1)
+			server1.Disconnect(id);
+
 		if (_kbhit())
 		{
 			char input = _getch();

@@ -2,6 +2,8 @@
 
 using namespace std;
 
+#define MAXARR 300
+
 enum
 {
 	RECV,
@@ -19,8 +21,8 @@ struct MyOverlapped
 
 struct Session
 {
-	SOCKET sock;
-	DWORD64 sessionID;
+	SOCKET sock = -1;
+	DWORD64 sessionID = -1;
 
 	RingBuffer recvQ;
 	RingBuffer sendQ;
@@ -31,7 +33,7 @@ struct Session
 	LONG sendFlag = true;
 	LONG IOCount = 0;
 
-	CRITICAL_SECTION cs;
+	bool active = false;
 };
 
 class LanServer
@@ -76,11 +78,11 @@ private:
 
 	DWORD64 g_SessionId = 0;
 	DWORD64 totalSessionCount = 0;
-	
-	SRWLOCK sessionMapLock;
 
-	unordered_map<DWORD64, Session*> sessionMap;
-	procademy::MemoryPool<Session> sessionPool;
+	//unordered_map<DWORD64, Session*> sessionMap;
+	//procademy::MemoryPool<Session> sessionPool;
+
+	Session* sessionArray[MAXARR];
 
 	// 리턴 체크용 전역변수
 	int bindRet;
@@ -96,6 +98,8 @@ private:
 	int sendMessageTPS = 0;
 
 private:
+	void InitSessionArray();
+
 	void NetInit();
 	void CreateAcceptThread();
 	void CreateIOCPWorkerThread();
@@ -111,4 +115,7 @@ private:
 	bool RequestWSARecv(Session* pSession);
 	bool RequestWSASend(Session* pSession);
 	void DestroySession(Session* pSession);
+
+	bool FindNonActiveSession(OUT int* idx);
+	Session* FindSessionByID(DWORD64 sessionID);
 };
