@@ -34,6 +34,9 @@ struct Session
 	LONG IOCount = 0;
 
 	bool active = false;
+
+	// 스택 테스트용
+	int idx = -1;
 };
 
 class LanServer
@@ -92,10 +95,16 @@ private:
 	int wsaRecvRet;
 	int wsaSendRet;
 
+private:
 	// TPS
 	int acceptTPS = 0;
 	int recvMessageTPS = 0;
 	int sendMessageTPS = 0;
+public:
+	// TPS 대외용
+	int acceptTPS_Save = 0;
+	int recvMessageTPS_Save = 0;
+	int sendMessageTPS_Save = 0;
 
 private:
 	void InitSessionArray();
@@ -118,4 +127,15 @@ private:
 
 	bool FindNonActiveSession(OUT int* idx);
 	Session* FindSessionByID(DWORD64 sessionID);
+
+	// stack 테스트용
+	stack<int> idxStack;
+	SRWLOCK stackLock;
+
+	// idxMap 테스트용
+	unordered_map<DWORD64, int> idxMap;
+	SRWLOCK idxMapLock;
+
+	// 성능측적용 락
+	SRWLOCK LogLock;
 };

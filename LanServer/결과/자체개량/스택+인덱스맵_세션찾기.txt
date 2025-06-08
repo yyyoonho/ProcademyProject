@@ -1,0 +1,2 @@
+           Name  |        Average   |            Min   |            Max   |      Call  |
+FindSessionByID  |         0.2980§Á |         0.1000§Á |      9590.9000§Á |   8061615  |

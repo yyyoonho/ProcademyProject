@@ -15,6 +15,9 @@
     <Filter Include="소스 파일\LanServer">
       <UniqueIdentifier>{8b51ecb9-cb46-4c4b-9b06-b74bee233ac9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Server">
+      <UniqueIdentifier>{4e5319fa-b66d-46fa-9bd5-5c6309ddd7ee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -26,6 +29,9 @@
     <ClCompile Include="LanServer.cpp">
       <Filter>소스 파일\LanServer</Filter>
     </ClCompile>
+    <ClCompile Include="EchoServer.cpp">
+      <Filter>소스 파일\Server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -36,6 +42,9 @@
     </ClInclude>
     <ClInclude Include="LanServerProtocol.h">
       <Filter>소스 파일\LanServer</Filter>
+    </ClInclude>
+    <ClInclude Include="EchoServer.h">
+      <Filter>소스 파일\Server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

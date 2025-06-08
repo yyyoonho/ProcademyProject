@@ -7,6 +7,9 @@ using namespace std;
 
 #define SERVERPORT 6000
 
+//#define STACK
+//#define IDXMAP
+
 LanServer::LanServer()
 {
 
@@ -18,6 +21,15 @@ LanServer::~LanServer()
 
 bool LanServer::Start()
 {
+#ifdef STACK
+	InitializeSRWLock(&stackLock);
+#endif // STACK
+#ifdef IDXMAP
+	InitializeSRWLock(&idxMapLock);
+#endif // IDXMAP
+	InitializeSRWLock(&LogLock);
+
+
 	InitSessionArray();
 
 	NetInit();
@@ -60,13 +72,16 @@ bool LanServer::Disconnect(DWORD64 sessionID)
 	pSession->active = false;
 	
 	closesocket(pSession->sock);
-	pSession->sock = -1;
+	//pSession->sock = -1;	
 
 	return true;
 }
 
 bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 {
+	AcquireSRWLockExclusive(&LogLock);
+	PRO_BEGIN("FindSessionByID");
+
 	Session* pSession = FindSessionByID(sessionID);
 	if (pSession == NULL)
 	{
@@ -74,6 +89,9 @@ bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 		return false;
 	}
 	
+	PRO_END("FindSessionByID");
+	ReleaseSRWLockExclusive(&LogLock);
+
 	InterlockedIncrement((LONG*)&sendMessageTPS);
 
 	stHeader header;
@@ -102,12 +120,17 @@ int LanServer::GetSendMessageTPS()
 
 void LanServer::InitSessionArray()
 {
-	for (int i = 0; i < MAXARR; i++)
+	for (int i = MAXARR-1; i >=0 ; i--)
 	{
 		sessionArray[i] = new Session;
 
 		sessionArray[i]->recvQ.Resize(10000);
 		sessionArray[i]->sendQ.Resize(10000);
+
+	#ifdef STACK
+		idxStack.push(i);
+		sessionArray[i]->idx = i;
+	#endif // STACK
 	}
 
 	return;
@@ -337,7 +360,7 @@ void LanServer::AcceptThread()
 		InterlockedIncrement(&totalSessionCount);
 
 		// 세션 생성
-		//Session* newSession = sessionPool.Alloc();
+		//PRO_BEGIN("SessionAlloc");
 
 		int idx;
 		if (!FindNonActiveSession(&idx))
@@ -346,8 +369,17 @@ void LanServer::AcceptThread()
 			return;
 		}
 
+		//PRO_END("SessionAlloc");
+
 		sessionArray[idx]->sock = clientSocket;
 		sessionArray[idx]->sessionID = g_SessionId++;
+
+#ifdef IDXMAP
+		AcquireSRWLockExclusive(&idxMapLock);
+		idxMap.insert({ sessionArray[idx]->sessionID , idx });
+		ReleaseSRWLockExclusive(&idxMapLock);
+#endif // IDXMAP
+
 
 		memset(&sessionArray[idx]->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
 		sessionArray[idx]->recvOverlapped.pSession = sessionArray[idx];
@@ -369,6 +401,8 @@ void LanServer::AcceptThread()
 
 		// 비동기 RECV 걸어버리기
 		RequestWSARecv(sessionArray[idx]);
+
+		
 	}
 
 	return;
@@ -392,9 +426,9 @@ void LanServer::MonitorThread()
 			break;
 		}
 
-		InterlockedExchange((LONG*)&acceptTPS, 0);
-		InterlockedExchange((LONG*)&recvMessageTPS, 0);
-		InterlockedExchange((LONG*)&sendMessageTPS, 0); 
+		acceptTPS_Save = InterlockedExchange((LONG*)&acceptTPS, 0);
+		recvMessageTPS_Save = InterlockedExchange((LONG*)&recvMessageTPS, 0);
+		sendMessageTPS_Save = InterlockedExchange((LONG*)&sendMessageTPS, 0);
 
 		Sleep(1000 - (timeGetTime() - oldTime));
 
@@ -479,11 +513,42 @@ void LanServer::DestroySession(Session* pSession)
 	// 콘텐츠에 "해당 세션이 삭제되었습니다" 알리기.
 	OnRelease(pSession->sessionID);
 
+#ifdef STACK
+	AcquireSRWLockExclusive(&stackLock);
+	idxStack.push(pSession->idx);
+	ReleaseSRWLockExclusive(&stackLock);
+#endif // STACK
+
 	InterlockedDecrement(&totalSessionCount);
 }
 
 bool LanServer::FindNonActiveSession(OUT int* idx)
 {
+#ifdef STACK
+
+	AcquireSRWLockShared(&stackLock);
+	bool flag = idxStack.empty();
+	ReleaseSRWLockShared(&stackLock);
+
+	if (!flag)
+	{
+		AcquireSRWLockExclusive(&stackLock);
+		int tmpIdx = idxStack.top();
+		idxStack.pop();
+		ReleaseSRWLockExclusive(&stackLock);
+
+		*idx = tmpIdx;
+		
+		return true;
+	}
+	else
+	{
+		printf("스택이 비었습니다.\n");
+		return false;
+	}
+
+#endif // STACK
+
 	for (int i = 0; i < MAXARR; i++)
 	{
 		if (sessionArray[i]->active == false)
@@ -500,6 +565,22 @@ bool LanServer::FindNonActiveSession(OUT int* idx)
 
 Session* LanServer::FindSessionByID(DWORD64 sessionID)
 {
+#ifdef IDXMAP
+	AcquireSRWLockShared(&idxMapLock);
+	unordered_map<DWORD64, int>::iterator iter = idxMap.find(sessionID);
+	ReleaseSRWLockShared(&idxMapLock);
+
+	if (iter == idxMap.end())
+	{
+		printf("Error: FindSessionByID() - sessionID에 대한 value를 찾을 수 없습니다.\n");
+		return NULL;
+	}
+
+	int idx = iter->second;
+	return sessionArray[idx];
+#endif // IDXMAP
+
+
 	for (int i = 0; i < MAXARR; i++)
 	{
 		if (sessionArray[i]->sessionID == sessionID)

@@ -2,87 +2,27 @@
 #include "LanServerProtocol.h"
 
 #include "LanServer.h"
+#include "EchoServer.h"
 
 using namespace std;
 
-class EchoServer : public LanServer
-{
-public:
-	EchoServer();
-	~EchoServer();
+// 에코 서버 전역객체
+EchoServer server1;
 
-	virtual bool OnConnectionRequest(in_addr ipAddress, USHORT port);
-
-	virtual void OnAccept(in_addr ipAddress, USHORT port, DWORD64 sessionID);
-	virtual void OnRelease(DWORD64 sessionID);
-
-	virtual void OnMessage(DWORD64 sessionID, SerializePacket* sPacket);
-
-	virtual void OnError(int errorcode, WCHAR*);
-};
-
-
-EchoServer::EchoServer()
-{
-}
-
-EchoServer::~EchoServer()
-{
-}
-
-bool EchoServer::OnConnectionRequest(in_addr ipAddress, USHORT port)
-{
-	return true;
-}
-
-void EchoServer::OnAccept(in_addr ipAddress, USHORT port, DWORD64 sessionID)
-{
-	return;
-}
-
-void EchoServer::OnRelease(DWORD64 sessionID)
-{
-	return;
-}
-
-void EchoServer::OnMessage(DWORD64 sessionID, SerializePacket* sPacket)
-{
-
-	/* 에코를 위한 작업
-	* 일부러 직렬화버퍼를 따로 또 만들어서 sendPacket을 해보자.
-	*/
-	{
-		INT64 payload;
-		*sPacket >> payload;
-
-		SerializePacket sPacket2;
-		sPacket2 << payload;
-
-		SendPacket(sessionID, &sPacket2);
-	}
-
-	return;
-}
-
-void EchoServer::OnError(int errorcode, WCHAR*)
-{
-	return;
-}
-
+// 함수 전방선언
+void PrintTPSThread();
+bool exitTPSThread = false;
 
 int main()
 {
 	timeBeginPeriod(1);
 
-	EchoServer server1;
 	server1.Start();
+	
+	HANDLE hTPSThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&PrintTPSThread, NULL, NULL, NULL);
 
 	while (1)
 	{
-		_int64 id = -1;
-		if(id!=-1)
-			server1.Disconnect(id);
-
 		if (_kbhit())
 		{
 			char input = _getch();
@@ -90,12 +30,54 @@ int main()
 			if (input == 'Q' || input == 'q')
 			{
 				// TODO: 종료 유도.
+				exitTPSThread = true;
 				server1.Stop();
 
 				break;
 			}
+
+			ProfilerInput();
 		}
 	}
 
+	WaitForSingleObject(hTPSThread, INFINITE);
+
 	return 0;
+}
+
+void PrintTPSThread()
+{
+	int count = 0;
+	const char* fileName = "ServerTPS.txt";
+	DWORD oldTime = timeGetTime();
+
+	while (1)
+	{
+		if (exitTPSThread)
+			break;
+
+		FILE* fp;
+		errno_t ret = fopen_s(&fp, fileName, "at");
+		if (ret != 0)
+		{
+			printf("ERROR: fopen_s\n");
+			return;
+		}
+
+		char buf[500];
+		sprintf_s(buf, "[TPS: %d초]\n acceptTPS:%d \n recvMessageTPS:%d \n sendMessageTPS:%d \n\n",
+			count, server1.acceptTPS_Save, server1.recvMessageTPS_Save, server1.sendMessageTPS_Save);
+
+		fwrite(buf, strlen(buf), 1, fp);
+
+		fclose(fp);
+
+		count++;
+
+		Sleep(1000 - (timeGetTime()-oldTime));
+		oldTime = timeGetTime();
+	}
+
+	printf("\nPrintTPSThread 종료중...\n");
+	return;
 }
