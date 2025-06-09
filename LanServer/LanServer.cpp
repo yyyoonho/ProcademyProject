@@ -69,10 +69,11 @@ bool LanServer::Disconnect(DWORD64 sessionID)
 		printf("Error: FindSessionByID() No targetSession in sessionArray\n");
 		return false;
 	}
-	pSession->active = false;
+	//pSession->active = false;
 	
 	closesocket(pSession->sock);
-	//pSession->sock = -1;	
+	// 소켓넘버 재사용?이지않을까?
+	pSession->sock = -1;	
 
 	return true;
 }

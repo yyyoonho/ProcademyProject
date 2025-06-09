@@ -788,3 +788,88 @@
  recvMessageTPS:1376997 
  sendMessageTPS:1376996 
 
+[TPS: 0段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+
+[TPS: 1段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+
+[TPS: 2段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+
+[TPS: 3段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+
+[TPS: 4段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+
+[TPS: 5段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+
+[TPS: 6段]
+ acceptTPS:1126 
+ recvMessageTPS:229300 
+ sendMessageTPS:229300 
+
+[TPS: 7段]
+ acceptTPS:1595 
+ recvMessageTPS:320900 
+ sendMessageTPS:320900 
+
+[TPS: 8段]
+ acceptTPS:1590 
+ recvMessageTPS:316330 
+ sendMessageTPS:316330 
+
+[TPS: 9段]
+ acceptTPS:1657 
+ recvMessageTPS:322970 
+ sendMessageTPS:322970 
+
+[TPS: 10段]
+ acceptTPS:1661 
+ recvMessageTPS:334900 
+ sendMessageTPS:334900 
+
+[TPS: 11段]
+ acceptTPS:1679 
+ recvMessageTPS:338000 
+ sendMessageTPS:338000 
+
+[TPS: 12段]
+ acceptTPS:1609 
+ recvMessageTPS:324800 
+ sendMessageTPS:324800 
+
+[TPS: 13段]
+ acceptTPS:1758 
+ recvMessageTPS:354200 
+ sendMessageTPS:354200 
+
+[TPS: 14段]
+ acceptTPS:1705 
+ recvMessageTPS:345078 
+ sendMessageTPS:345078 
+
+[TPS: 15段]
+ acceptTPS:1669 
+ recvMessageTPS:334180 
+ sendMessageTPS:334180 
+
+[TPS: 16段]
+ acceptTPS:1457 
+ recvMessageTPS:281542 
+ sendMessageTPS:281542 
+
