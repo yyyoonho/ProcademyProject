@@ -65,8 +65,11 @@ void PrintTPSThread()
 		}
 
 		char buf[500];
-		sprintf_s(buf, "[TPS: %d√ ]\n acceptTPS:%d \n recvMessageTPS:%d \n sendMessageTPS:%d \n\n",
-			count, server1.acceptTPS_Save, server1.recvMessageTPS_Save, server1.sendMessageTPS_Save);
+		/*sprintf_s(buf, "[TPS: %d√ ]\n acceptTPS:%d \n recvMessageTPS:%d \n sendMessageTPS:%d \n\n",
+			count, server1.GetAcceptTPS(), server1.GetRecvMessageTPS(), server1.GetSendMessageTPS());*/
+
+		sprintf_s(buf, "[TPS: %d√ ]\n acceptTPS:%d \n recvMessageTPS:%d \n sendMessageTPS:%d \n disconnetTPS:%d\n\n",
+			count, server1.GetAcceptTPS(), server1.GetRecvMessageTPS(), server1.GetSendMessageTPS(), server1.disconnetFromClient_Save);
 
 		fwrite(buf, strlen(buf), 1, fp);
 

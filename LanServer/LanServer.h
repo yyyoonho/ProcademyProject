@@ -102,11 +102,16 @@ private:
 	int acceptTPS = 0;
 	int recvMessageTPS = 0;
 	int sendMessageTPS = 0;
-public:
+
+	int disconnetFromClient = 0;
+
 	// TPS ´ë¿Ü¿ë
 	int acceptTPS_Save = 0;
 	int recvMessageTPS_Save = 0;
 	int sendMessageTPS_Save = 0;
+
+public:
+	int disconnetFromClient_Save = 0;
 
 private:
 	void InitSessionArray();

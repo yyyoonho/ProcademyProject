@@ -7,8 +7,7 @@ using namespace std;
 
 #define SERVERPORT 6000
 
-//#define STACK
-#define IDXMAP
+#define STACK
 
 LanServer::LanServer()
 {
@@ -78,18 +77,12 @@ bool LanServer::Disconnect(DWORD64 sessionID)
 
 bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 {
-	AcquireSRWLockExclusive(&LogLock);
-	PRO_BEGIN("FindSessionByID");
-
 	Session* pSession = FindSessionByID(sessionID);
 	if (pSession == NULL)
 	{
 		printf("Error: FindSessionByID() No targetSession in sessionArray\n");
 		return false;
 	}
-	
-	PRO_END("FindSessionByID");
-	ReleaseSRWLockExclusive(&LogLock);
 
 	InterlockedIncrement((LONG*)&sendMessageTPS);
 
@@ -104,17 +97,17 @@ bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 
 int LanServer::GetAcceptTPS()
 {
-	return acceptTPS;
+	return acceptTPS_Save;
 }
 
 int LanServer::GetRecvMessageTPS()
 {
-	return recvMessageTPS;
+	return recvMessageTPS_Save;
 }
 
 int LanServer::GetSendMessageTPS()
 {
-	return sendMessageTPS;
+	return sendMessageTPS_Save;
 }
 
 void LanServer::InitSessionArray()
@@ -356,19 +349,18 @@ void LanServer::AcceptThread()
 			continue;
 
 		InterlockedIncrement((LONG*)&acceptTPS);
+
 		InterlockedIncrement(&totalSessionCount);
 
 		// 세션 생성
-		//PRO_BEGIN("SessionAlloc");
-
+		PRO_BEGIN("SessionAlloc");
 		unsigned int idx;
 		if (!FindNonActiveSession(&idx))
 		{
 			printf("Non-Active Session이 없습니다.\n");
 			return;
 		}
-
-		//PRO_END("SessionAlloc");
+		PRO_END("SessionAlloc");
 
 		sessionArray[idx]->sock = clientSocket;
 
@@ -424,6 +416,7 @@ void LanServer::MonitorThread()
 		acceptTPS_Save = InterlockedExchange((LONG*)&acceptTPS, 0);
 		recvMessageTPS_Save = InterlockedExchange((LONG*)&recvMessageTPS, 0);
 		sendMessageTPS_Save = InterlockedExchange((LONG*)&sendMessageTPS, 0);
+		disconnetFromClient_Save = InterlockedExchange((LONG*)&disconnetFromClient, 0);
 
 		Sleep(1000 - (timeGetTime() - oldTime));
 
@@ -514,15 +507,15 @@ void LanServer::DestroySession(Session* pSession)
 #endif // STACK
 
 	InterlockedDecrement(&totalSessionCount);
+
+	// TEST
+	InterlockedIncrement((LONG*) & disconnetFromClient);
 }
 
 bool LanServer::FindNonActiveSession(OUT unsigned int* idx)
 {
 #ifdef STACK
-
-	AcquireSRWLockShared(&stackLock);
 	bool flag = idxStack.empty();
-	ReleaseSRWLockShared(&stackLock);
 
 	if (!flag)
 	{
@@ -540,7 +533,6 @@ bool LanServer::FindNonActiveSession(OUT unsigned int* idx)
 		printf("스택이 비었습니다.\n");
 		return false;
 	}
-
 #endif // STACK
 
 	for (int i = 0; i < MAXARR; i++)
