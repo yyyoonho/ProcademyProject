@@ -22,7 +22,9 @@ struct MyOverlapped
 struct Session
 {
 	SOCKET sock = -1;
-	DWORD64 sessionID = -1;
+	
+	// [2바이트 = idx][6바이트 = sessionID]
+	DWORD64 sessionID;
 
 	RingBuffer recvQ;
 	RingBuffer sendQ;
@@ -125,16 +127,12 @@ private:
 	bool RequestWSASend(Session* pSession);
 	void DestroySession(Session* pSession);
 
-	bool FindNonActiveSession(OUT int* idx);
+	bool FindNonActiveSession(OUT unsigned int* idx);
 	Session* FindSessionByID(DWORD64 sessionID);
 
 	// stack 테스트용
 	stack<int> idxStack;
 	SRWLOCK stackLock;
-
-	// idxMap 테스트용
-	unordered_map<DWORD64, int> idxMap;
-	SRWLOCK idxMapLock;
 
 	// 성능측적용 락
 	SRWLOCK LogLock;

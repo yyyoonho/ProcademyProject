@@ -8,7 +8,7 @@ using namespace std;
 #define SERVERPORT 6000
 
 //#define STACK
-//#define IDXMAP
+#define IDXMAP
 
 LanServer::LanServer()
 {
@@ -24,9 +24,7 @@ bool LanServer::Start()
 #ifdef STACK
 	InitializeSRWLock(&stackLock);
 #endif // STACK
-#ifdef IDXMAP
-	InitializeSRWLock(&idxMapLock);
-#endif // IDXMAP
+
 	InitializeSRWLock(&LogLock);
 
 
@@ -69,10 +67,10 @@ bool LanServer::Disconnect(DWORD64 sessionID)
 		printf("Error: FindSessionByID() No targetSession in sessionArray\n");
 		return false;
 	}
-	//pSession->active = false;
-	
+
 	closesocket(pSession->sock);
 	// 소켓넘버 재사용?이지않을까?
+
 	pSession->sock = -1;	
 
 	return true;
@@ -363,7 +361,7 @@ void LanServer::AcceptThread()
 		// 세션 생성
 		//PRO_BEGIN("SessionAlloc");
 
-		int idx;
+		unsigned int idx;
 		if (!FindNonActiveSession(&idx))
 		{
 			printf("Non-Active Session이 없습니다.\n");
@@ -373,14 +371,10 @@ void LanServer::AcceptThread()
 		//PRO_END("SessionAlloc");
 
 		sessionArray[idx]->sock = clientSocket;
-		sessionArray[idx]->sessionID = g_SessionId++;
 
-#ifdef IDXMAP
-		AcquireSRWLockExclusive(&idxMapLock);
-		idxMap.insert({ sessionArray[idx]->sessionID , idx });
-		ReleaseSRWLockExclusive(&idxMapLock);
-#endif // IDXMAP
-
+		sessionArray[idx]->sessionID = idx;
+		sessionArray[idx]->sessionID = sessionArray[idx]->sessionID << 48;
+		sessionArray[idx]->sessionID |= g_SessionId++;
 
 		memset(&sessionArray[idx]->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
 		sessionArray[idx]->recvOverlapped.pSession = sessionArray[idx];
@@ -504,7 +498,6 @@ void LanServer::DestroySession(Session* pSession)
 {
 	closesocket(pSession->sock);
 	pSession->sock = -1;
-	pSession->sessionID = -1;
 
 	pSession->recvQ.ClearBuffer();
 	pSession->sendQ.ClearBuffer();
@@ -523,7 +516,7 @@ void LanServer::DestroySession(Session* pSession)
 	InterlockedDecrement(&totalSessionCount);
 }
 
-bool LanServer::FindNonActiveSession(OUT int* idx)
+bool LanServer::FindNonActiveSession(OUT unsigned int* idx)
 {
 #ifdef STACK
 
@@ -566,29 +559,7 @@ bool LanServer::FindNonActiveSession(OUT int* idx)
 
 Session* LanServer::FindSessionByID(DWORD64 sessionID)
 {
-#ifdef IDXMAP
-	AcquireSRWLockShared(&idxMapLock);
-	unordered_map<DWORD64, int>::iterator iter = idxMap.find(sessionID);
-	ReleaseSRWLockShared(&idxMapLock);
+	unsigned int idx = (sessionID & 0xffff000000000000) >> 48;
 
-	if (iter == idxMap.end())
-	{
-		printf("Error: FindSessionByID() - sessionID에 대한 value를 찾을 수 없습니다.\n");
-		return NULL;
-	}
-
-	int idx = iter->second;
 	return sessionArray[idx];
-#endif // IDXMAP
-
-
-	for (int i = 0; i < MAXARR; i++)
-	{
-		if (sessionArray[i]->sessionID == sessionID)
-		{
-			return sessionArray[i];
-		}
-	}
-
-	return NULL;
 }
