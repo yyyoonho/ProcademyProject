@@ -1,0 +1,2 @@
+           Name  |        Average   |            Min   |            Max   |      Call  |
+   SessionAlloc  |         0.2446§Á |         0.0000§Á |       129.9000§Á |    204375  |
