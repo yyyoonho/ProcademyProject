@@ -7,7 +7,7 @@ using namespace std;
 
 #define SERVERPORT 6000
 
-#define STACK
+//#define STACK
 
 LanServer::LanServer()
 {
@@ -120,7 +120,8 @@ void LanServer::InitSessionArray()
 		sessionArray[i]->sendQ.Resize(10000);
 
 	#ifdef STACK
-		idxStack.push(i);
+		//idxStack.push(i);
+		myStack.Push(i);
 		sessionArray[i]->idx = i;
 	#endif // STACK
 	}
@@ -502,7 +503,8 @@ void LanServer::DestroySession(Session* pSession)
 
 #ifdef STACK
 	AcquireSRWLockExclusive(&stackLock);
-	idxStack.push(pSession->idx);
+	//idxStack.push(pSession->idx);
+	myStack.Push(pSession->idx);
 	ReleaseSRWLockExclusive(&stackLock);
 #endif // STACK
 
@@ -515,13 +517,18 @@ void LanServer::DestroySession(Session* pSession)
 bool LanServer::FindNonActiveSession(OUT unsigned int* idx)
 {
 #ifdef STACK
-	bool flag = idxStack.empty();
+	//bool flag = idxStack.empty();
+	bool flag = myStack.Empty();
 
 	if (!flag)
 	{
 		AcquireSRWLockExclusive(&stackLock);
-		int tmpIdx = idxStack.top();
-		idxStack.pop();
+		//int tmpIdx = idxStack.top();
+		//idxStack.pop();
+
+		int tmpIdx = myStack.Top();
+		myStack.Pop();
+
 		ReleaseSRWLockExclusive(&stackLock);
 
 		*idx = tmpIdx;

@@ -136,7 +136,8 @@ private:
 	Session* FindSessionByID(DWORD64 sessionID);
 
 	// stack 테스트용
-	stack<int> idxStack;
+	//stack<int> idxStack;
+	MyStack myStack;
 	SRWLOCK stackLock;
 
 	// 성능측적용 락
