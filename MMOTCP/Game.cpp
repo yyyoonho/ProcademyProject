@@ -5,6 +5,8 @@
 #include "Network.h"
 #include "Protocol.h"
 #include "LogManager.h"
+#include "MakePacket.h"
+#include "SendPacket.h"
 
 #include "Game.h"
 
@@ -15,7 +17,7 @@ using namespace std;
 
 
 
-bool FrameControl()
+void FrameControl()
 {
 	static int oldTime = timeGetTime();
 
@@ -23,13 +25,14 @@ bool FrameControl()
 
 	if (diffTime < MSPERFRAME)
 	{
-		//Sleep(MSPERFRAME - diffTime); 
-		return false;
+		Sleep(MSPERFRAME - diffTime); 
+		oldTime += MSPERFRAME;
+		return;
 	}
 	else
 	{
 		oldTime += MSPERFRAME;
-		return true;
+		return;
 	}
 }
 
@@ -79,16 +82,16 @@ void Move(DWORD deltaTime, stCharacter* pCharacter, BYTE dir)
 	pCharacter->shX = nextX;
 	pCharacter->shY = nextY;
 
-	_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-		pCharacter->dwSessionID, pCharacter->byMoveDirection, pCharacter->shX, pCharacter->shY);
+	/*_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
+		pCharacter->dwSessionID, pCharacter->byMoveDirection, pCharacter->shX, pCharacter->shY);*/
 
 	return;
 }
 
 void GameUpdate()
 {
-	if (!FrameControl())
-		return;
+	ShowFrame();
+	FrameControl();
 
 	static DWORD oldTime = GetTickCount();
 	DWORD deltaTime = GetTickCount() - oldTime;
@@ -101,13 +104,33 @@ void GameUpdate()
 		// hp가 0이하면 종료처리.
 		if (pCharacter->chHP <= 0)
 		{
+			{
+				SerializePacket sPacket;
+				mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
+
+				SendPacket_Around(pCharacter->pSession, &sPacket, false);
+
+
+			}
+
 			PushQuitQ(pCharacter->pSession);
+
+			_LOG(dfLOG_LEVEL_DEBUG, L"# HP ZERO... # SessionID:%d\n", pCharacter->dwSessionID);
 			continue;
 		}
 
 		// 일정시간동안 수신이 없으면 종료처리.
-		if (GetTickCount() - pCharacter->pSession->dwLastRecvTime > dfNETWORK_PACKET_RECV_TIMEOUT)
+		DWORD a = GetTickCount();
+		DWORD diffTime = (a - pCharacter->pSession->dwLastRecvTime);
+		if ( diffTime > dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
+			{
+				SerializePacket sPacket;
+				mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
+
+				SendPacket_Around(pCharacter->pSession, &sPacket, false);
+			}
+
 			PushQuitQ(pCharacter->pSession);
 
 			_LOG(dfLOG_LEVEL_DEBUG, L"# Heartbeat TIMEOUT... # SessionID:%d\n", pCharacter->dwSessionID);
@@ -149,7 +172,6 @@ void GameUpdate()
 		{
 			if (UpdateSector(pCharacter))
 			{
-				printf("1\n");
 				CharacterSectorUpdatePacket(pCharacter);
 			}
 		}

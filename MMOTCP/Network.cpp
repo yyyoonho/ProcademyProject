@@ -5,6 +5,8 @@
 #include "SectorManager.h"
 #include "CharacterManager.h"
 #include "PacketProc.h"
+#include "MakePacket.h"
+#include "SendPacket.h"
 
 #include "Network.h"
 
@@ -252,24 +254,32 @@ void RecvProc(SOCKET socket)
 	recvRet = recv(pSession->socket, pSession->recvQ.GetRearBufferPtr(), pSession->recvQ.DirectEnqueueSize(), 0);
 	if (recvRet == SOCKET_ERROR)
 	{
-		if (WSAGetLastError() == 10054)
-		{
-			printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
-			quitQ.push(pSession);
-			return;
-
-		}
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
-			printf("ERROR: recv() %d\n", WSAGetLastError());
+			printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
+
+			{
+				SerializePacket sPacket;
+				mpDeleteCharacter(&sPacket, pSession->dwSessionID);
+
+				SendPacket_Around(pSession, &sPacket, false);
+			}
+
+			quitQ.push(pSession);
 			return;
 		}
 	}
 	if (recvRet == 0)
 	{
-		// TODO: 종료처리 (상대 FIN보낸거지)
-
 		printf("[상대방의 정상 연결 종료] id : %d\n", pSession->dwSessionID);
+
+		{
+			SerializePacket sPacket;
+			mpDeleteCharacter(&sPacket, pSession->dwSessionID);
+
+			SendPacket_Around(pSession, &sPacket, false);
+		}
+
 		quitQ.push(pSession);
 		return;
 	}
@@ -341,7 +351,9 @@ void CreateSessionNCharacter()
 		newSession->dwSessionID = g_id++;
 		newSession->recvQ.Resize(5000);
 		newSession->sendQ.Resize(10000);
-		newSession->dwLastRecvTime = timeGetTime();
+		newSession->dwLastRecvTime = GetTickCount();
+
+		printf("[접속] SessionID: %d\n", newSession->dwSessionID);
 
 		sessionMap.insert({ newSocket, newSession });
 

@@ -161,7 +161,6 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 		{
 			SerializePacket sPacket;
 			mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
-			printf("CASE 2 #%d -> \n", pCharacter->dwSessionID);
 
 			SendPacket_Unicast(pCharacter->pSession, &sPacket);
 		}
@@ -185,7 +184,6 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 	{
 		SerializePacket sPacket;
 		mpCreateOtherCharacter(&sPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY,pCharacter->chHP);
-		printf("CASE 1 #%d -> \n", pCharacter->dwSessionID);
 		for (int i = 0; i < addSectors.iCount; i++)
 		{
 			SendPacket_SectorOne(addSectors.around[i].iY, addSectors.around[i].iX, &sPacket, pCharacter->pSession);

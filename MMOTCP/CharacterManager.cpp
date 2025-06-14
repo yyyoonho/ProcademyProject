@@ -82,7 +82,6 @@ bool EnterWorld(stCharacter* pNewCharacter)
 
 				SerializePacket sPacket;
 				mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
-				printf("1\n");
 				SendPacket_Unicast(pNewSession, &sPacket);
 			}
 
@@ -122,7 +121,7 @@ bool EnterWorld(stCharacter* pNewCharacter)
 	{
 		SerializePacket sPacket;
 		mpCreateOtherCharacter(&sPacket, pNewSession->dwSessionID, pNewCharacter->byDirection, pNewCharacter->shX, pNewCharacter->shY, pNewCharacter->chHP);
-		printf("2\n");
+
 		SendPacket_Around(pNewSession, &sPacket, false);
 		printf("Other <- mpCreateOtherCharacter Send\n");
 	}
