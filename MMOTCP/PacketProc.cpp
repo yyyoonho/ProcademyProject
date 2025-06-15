@@ -77,8 +77,9 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 	int diffY = abs(shY - pCharacter->shY);
 	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
 	{
-		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		SendPacket_Around(pSession, sPacket, true);
+		SerializePacket syncPacket;
+		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pSession, &syncPacket, true);
 
 		shX = pCharacter->shX;
 		shY = pCharacter->shY;
@@ -110,9 +111,11 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 		CharacterSectorUpdatePacket(pCharacter);
 	}
 
-	sPacket->Clear();
-	mpMoveStart(sPacket, pSession->dwSessionID, byDirection, shX, shY);
-	SendPacket_Around(pSession, sPacket, false);
+	{
+		SerializePacket moveStartPacket;
+		mpMoveStart(&moveStartPacket, pSession->dwSessionID, byDirection, shX, shY);
+		SendPacket_Around(pSession, &moveStartPacket, false);
+	}
 
 	pSession->dwLastRecvTime = GetTickCount();
 
@@ -145,8 +148,9 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	int diffY = abs(shY - pCharacter->shY);
 	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
 	{
-		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		SendPacket_Around(pSession, sPacket);
+		SerializePacket syncPacket;
+		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
 		shY = pCharacter->shY;
@@ -164,9 +168,11 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 		CharacterSectorUpdatePacket(pCharacter);
 	}
 
-	sPacket->Clear();
-	mpMoveStop(sPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY);
-	SendPacket_Around(pCharacter->pSession, sPacket, false);
+	{
+		SerializePacket moveStopPacket;
+		mpMoveStop(&moveStopPacket, pCharacter->dwSessionID, pCharacter->byDirection, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pCharacter->pSession, &moveStopPacket, false);
+	}
 
 	pSession->dwLastRecvTime = GetTickCount();
 
@@ -202,8 +208,9 @@ bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
 	int diffY = abs(shY - pCharacter->shY);
 	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
 	{
-		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		SendPacket_Around(pSession, sPacket);
+		SerializePacket syncPacket;
+		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
 		shY = pCharacter->shY;
@@ -264,21 +271,28 @@ bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
 			continue;
 
 		v[i]->chHP -= dfATTACK1_DAMAGE;
+		if (v[i]->chHP < 0)
+		{
+			v[i]->chHP = 0;
+		}
 
-		SerializePacket damagePacket;
-		mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+		{
+			SerializePacket damagePacket;
+			mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
 
-		SendPacket_Around(v[i]->pSession, &damagePacket, true);
+			SendPacket_Around(v[i]->pSession, &damagePacket, true);
+		}
 
-		if (v[i]->chHP <= 0)
+		/*if (v[i]->chHP <= 0)
 		{
 			SerializePacket deadPacket;
 			mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
 
 			SendPacket_Around(v[i]->pSession, &deadPacket, false);
 
+			_LOG(dfLOG_LEVEL_SYSTEM, L"# Attack1_Delete # SessionID:%d\n", v[i]->dwSessionID);
 			PushQuitQ(v[i]->pSession);
-		}
+		}*/
 
 	}
 
@@ -313,8 +327,9 @@ bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
 	int diffY = abs(shY - pCharacter->shY);
 	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
 	{
-		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		SendPacket_Around(pSession, sPacket);
+		SerializePacket syncPacket;
+		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
 		shY = pCharacter->shY;
@@ -375,21 +390,28 @@ bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
 			continue;
 
 		v[i]->chHP -= dfATTACK2_DAMAGE;
-
-		SerializePacket damagePacket;
-		mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
-
-		SendPacket_Around(v[i]->pSession, &damagePacket, true);
-
-		if (v[i]->chHP <= 0)
+		if (v[i]->chHP < 0)
 		{
-			SerializePacket deadPacket;
-			mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
-
-			SendPacket_Around(v[i]->pSession, &deadPacket, false);
-
-			PushQuitQ(v[i]->pSession);
+			v[i]->chHP = 0;
 		}
+
+		{
+			SerializePacket damagePacket;
+			mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+
+			SendPacket_Around(v[i]->pSession, &damagePacket, true);
+		}
+
+		//if (v[i]->chHP <= 0)
+		//{
+		//	SerializePacket deadPacket;
+		//	mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
+
+		//	SendPacket_Around(v[i]->pSession, &deadPacket, false);
+
+		//	_LOG(dfLOG_LEVEL_SYSTEM, L"# Attack2_Delete # SessionID:%d\n", v[i]->dwSessionID);
+		//	PushQuitQ(v[i]->pSession);
+		//}
 
 	}
 
@@ -424,8 +446,9 @@ bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
 	int diffY = abs(shY - pCharacter->shY);
 	if (diffX > dfERROR_RANGE || diffY > dfERROR_RANGE)
 	{
-		mpSync(sPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		SendPacket_Around(pSession, sPacket);
+		SerializePacket syncPacket;
+		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
 		shY = pCharacter->shY;
@@ -486,21 +509,28 @@ bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
 			continue;
 
 		v[i]->chHP -= dfATTACK3_DAMAGE;
-
-		SerializePacket damagePacket;
-		mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
-
-		SendPacket_Around(v[i]->pSession, &damagePacket, true);
-
-		if (v[i]->chHP <= 0)
+		if (v[i]->chHP < 0)
 		{
-			SerializePacket deadPacket;
-			mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
-
-			SendPacket_Around(v[i]->pSession, &deadPacket, false);
-
-			PushQuitQ(v[i]->pSession);
+			v[i]->chHP = 0;
 		}
+
+		{
+			SerializePacket damagePacket;
+			mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+
+			SendPacket_Around(v[i]->pSession, &damagePacket, true);
+		}
+
+		//if (v[i]->chHP <= 0)
+		//{
+		//	SerializePacket deadPacket;
+		//	mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
+
+		//	SendPacket_Around(v[i]->pSession, &deadPacket, false);
+
+		//	_LOG(dfLOG_LEVEL_SYSTEM, L"# Attack3_Delete # SessionID:%d\n", v[i]->dwSessionID);
+		//	PushQuitQ(v[i]->pSession);
+		//}
 
 	}
 
@@ -512,13 +542,14 @@ bool netPacketProc_Echo(stSession* pSession, SerializePacket* sPacket)
 {
 	DWORD t;
 	(*sPacket) >> t;
-	sPacket->Clear();
 
 	_LOG(dfLOG_LEVEL_DEBUG, L"# ECHO # SessionID:%d\n",pSession->dwSessionID);
 
-	mpEcho(sPacket, t);
-
-	SendPacket_Unicast(pSession, sPacket);
+	{
+		SerializePacket echoPacket;
+		mpEcho(&echoPacket, t);
+		SendPacket_Unicast(pSession, &echoPacket);
+	}
 
 	pSession->dwLastRecvTime = GetTickCount();
 	

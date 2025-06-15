@@ -16,8 +16,13 @@ unordered_map<DWORD, stCharacter* > characterMap;
 
 bool EnterWorld(stCharacter* pNewCharacter);
 
+//TEST
+unordered_map<DWORD, DWORD > checkMap;
+
 void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# CreateCharacter # SessionID:%d\n", dwSessionID);
+
 	stCharacter* newCharacter = characterMP.Alloc();
 
 	newCharacter->pSession = pSession;
@@ -30,10 +35,14 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 	// TODO: 테스트코드
 	static short shX = 20;
 	static short shY = 20;
+
+	/*short shX = rand() % dfRANGE_MOVE_RIGHT;
+	short shY = rand() % dfRANGE_MOVE_BOTTOM;*/
+
 	newCharacter->shX = shX;
 	newCharacter->shY = shY;
-	shX += 20;
-	shY += 20;
+	/*shX += 20;
+	shY += 20;*/
 
 	newCharacter->dX = (double)newCharacter->shX;
 	newCharacter->dY = (double)newCharacter->shY;
@@ -44,7 +53,7 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 
 	newCharacter->chHP = 100;
 
-	characterMap.insert({ dwSessionID, newCharacter });
+	characterMap.insert({ newCharacter->dwSessionID, newCharacter });
 
 	EnterWorld(newCharacter);
 
@@ -53,20 +62,24 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 
 bool EnterWorld(stCharacter* pNewCharacter)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# EnterWorld # SessionID:%d\n", pNewCharacter->dwSessionID);
+
 	stSession* pNewSession = pNewCharacter->pSession;
 
 	// new에게 자신의 생성 메시지 보내기.
 	{
+		_LOG(dfLOG_LEVEL_DEBUG, L"# new에게 자신의 생성 메시지 보내기 # SessionID:%d\n", pNewCharacter->dwSessionID);
+
 		SerializePacket sPacket;
 
 		mpCreateMyCharacter(&sPacket, pNewCharacter->dwSessionID, pNewCharacter->byDirection, pNewCharacter->shX, pNewCharacter->shY);
 		SendPacket_Unicast(pNewSession, &sPacket);
-
-		printf("New <- mpCreateMyCharacter Send\n");
 	}
 
 	// new에게 기존 멤버들 생성 메시지 보내기.
 	{
+		_LOG(dfLOG_LEVEL_DEBUG, L"# new에게 기존 멤버들 생성 메시지 보내기 # SessionID:%d\n", pNewCharacter->dwSessionID);
+
 		stSECTOR_AROUND sectorAround;
 		GetSectorAround(pNewCharacter->curSector.iY, pNewCharacter->curSector.iX, &sectorAround);
 
@@ -93,6 +106,8 @@ bool EnterWorld(stCharacter* pNewCharacter)
 
 	// new에게 기존 멤버들 액션 메시지 보내기.
 	{
+		_LOG(dfLOG_LEVEL_DEBUG, L"# new에게 기존 멤버들 액션 메시지 보내기 # SessionID:%d\n", pNewCharacter->dwSessionID);
+
 		stSECTOR_AROUND sectorAround;
 		GetSectorAround(pNewCharacter->curSector.iY, pNewCharacter->curSector.iX, &sectorAround);
 
@@ -119,6 +134,8 @@ bool EnterWorld(stCharacter* pNewCharacter)
 
 	// 기존 멤버들에게 new 생성 메시지 보내기.
 	{
+		_LOG(dfLOG_LEVEL_DEBUG, L"# 기존 멤버들에게 new 생성 메시지 보내기 # SessionID:%d\n", pNewCharacter->dwSessionID);
+
 		SerializePacket sPacket;
 		mpCreateOtherCharacter(&sPacket, pNewSession->dwSessionID, pNewCharacter->byDirection, pNewCharacter->shX, pNewCharacter->shY, pNewCharacter->chHP);
 
@@ -131,11 +148,28 @@ bool EnterWorld(stCharacter* pNewCharacter)
 
 void DestroyCharacter(DWORD sessionId)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# DestroyCharacter # SessionID:%d\n", sessionId);
+
+	//TEST
+	if (checkMap.find(sessionId) != checkMap.end())
+	{
+		DebugBreak();
+	}
+	else
+	{
+		checkMap.insert({ sessionId,sessionId });
+	}
+
 	stCharacter* destroyCharacter = characterMap.find(sessionId)->second;
+	if (destroyCharacter == NULL)
+	{
+		DebugBreak();
+		return;
+	}
 
 	DeleteInSector(destroyCharacter->curSector.iY, destroyCharacter->curSector.iX, destroyCharacter);
 
-	characterMap.erase(sessionId);
+	characterMap.erase(sessionId);	
 
 	bool ret = characterMP.Free(destroyCharacter);
 	if (!ret)

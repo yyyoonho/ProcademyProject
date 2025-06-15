@@ -4,10 +4,11 @@
 #include "CharacterManager.h"
 #include "MakePacket.h"
 #include "SendPacket.h"
+#include "LogManager.h"
 
 using namespace std;
 
-list<stCharacter*> g_Sector[dfSECTOR_MAX_Y][dfSECTOR_MAX_X];
+list<stCharacter*> g_Sector[dfSECTOR_MAX_Y + 1][dfSECTOR_MAX_X + 1];
 
 int dy[9] = { 0,0,-1,-1,-1,0, 1,1,1 };
 int dx[9] = { 0,-1,-1,0,1,1, 1,0,-1 };
@@ -56,6 +57,8 @@ void GetCharactersFromSector(int sectorY, int sectorX, OUT std::vector<stCharact
 
 void SetSector(stCharacter* pCharacter)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# SetSector # SessionID:%d\n", pCharacter->dwSessionID);
+
 	int sectorY = pCharacter->shY / dfSECTOR_SIZE;
 	int sectorX = pCharacter->shX / dfSECTOR_SIZE;
 
@@ -67,6 +70,8 @@ void SetSector(stCharacter* pCharacter)
 
 bool DeleteInSector(int sectorY, int sectorX, stCharacter* destroyCharacter)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# DeleteInSector # SessionID:%d\n", destroyCharacter->dwSessionID);
+
 	list<stCharacter*>::iterator iter;
 	for (iter = g_Sector[sectorY][sectorX].begin(); iter != g_Sector[sectorY][sectorX].end(); ++iter)
 	{

@@ -1,11 +1,14 @@
 #include "stdafx.h"
 
 #include "MakePacket.h"
+#include "LogManager.h"
 
 using namespace std;
 
 void mpCreateMyCharacter(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpCreateMyCharacter # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 10;
@@ -25,6 +28,8 @@ void mpCreateMyCharacter(SerializePacket* sPacket, DWORD id, BYTE dir, short x, 
 
 void mpCreateOtherCharacter(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y, char hp)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpCreateOtherCharacter # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 10;
@@ -43,6 +48,8 @@ void mpCreateOtherCharacter(SerializePacket* sPacket, DWORD id, BYTE dir, short 
 
 void mpDeleteCharacter(SerializePacket* sPacket, DWORD id)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpDeleteCharacter # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 4;
@@ -57,6 +64,8 @@ void mpDeleteCharacter(SerializePacket* sPacket, DWORD id)
 
 void mpMoveStart(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpMoveStart # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 9;
@@ -74,6 +83,8 @@ void mpMoveStart(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 
 void mpMoveStop(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpMoveStop # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 9;
@@ -91,6 +102,8 @@ void mpMoveStop(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 
 void mpAttack1(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpAttack1 # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 9;
@@ -108,6 +121,8 @@ void mpAttack1(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 
 void mpAttack2(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpAttack2 # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 9;
@@ -125,6 +140,8 @@ void mpAttack2(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 
 void mpAttack3(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpAttack3 # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 9;
@@ -142,6 +159,8 @@ void mpAttack3(SerializePacket* sPacket, DWORD id, BYTE dir, short x, short y)
 
 void mpDamage(SerializePacket* sPacket, DWORD attackId, DWORD damageId, char damageHp)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpDamage # SessionID:%d\n", attackId);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 9;
@@ -158,6 +177,8 @@ void mpDamage(SerializePacket* sPacket, DWORD attackId, DWORD damageId, char dam
 
 void mpSync(SerializePacket* sPacket, DWORD id, short x, short y)
 {
+	_LOG(dfLOG_LEVEL_DEBUG, L"# mpSync # SessionID:%d\n", id);
+
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;
 	header.bySize = 8;

@@ -4,13 +4,14 @@
 
 using namespace std;
 
-int g_iLogLevel;
+//TEST
+int g_iLogLevel = 2;
 WCHAR g_szLogBuff[1024];
 time_t now;
 
 void Log(WCHAR* szString, int iLogLevel)
 {
-	char szFileName[32];
+	char szFileName[101];
 	struct tm date;
 	localtime_s(&date, &now);
 

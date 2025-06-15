@@ -54,7 +54,7 @@ void ShowFrame()
 
 bool CanGo(int y, int x)
 {
-	if (y < dfRANGE_MOVE_TOP || y >= dfRANGE_MOVE_RIGHT || x < dfRANGE_MOVE_LEFT || x >= dfRANGE_MOVE_BOTTOM)
+	if (y < dfRANGE_MOVE_TOP || y >= dfRANGE_MOVE_BOTTOM || x < dfRANGE_MOVE_LEFT || x >= dfRANGE_MOVE_RIGHT)
 		return false;
 
 	return true;
@@ -82,8 +82,8 @@ void Move(DWORD deltaTime, stCharacter* pCharacter, BYTE dir)
 	pCharacter->shX = nextX;
 	pCharacter->shY = nextY;
 
-	/*_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-		pCharacter->dwSessionID, pCharacter->byMoveDirection, pCharacter->shX, pCharacter->shY);*/
+	_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
+		pCharacter->dwSessionID, pCharacter->byMoveDirection, pCharacter->shX, pCharacter->shY);
 
 	return;
 }
@@ -109,13 +109,14 @@ void GameUpdate()
 				mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
 
 				SendPacket_Around(pCharacter->pSession, &sPacket, false);
-
-
 			}
+			_LOG(dfLOG_LEVEL_DEBUG, L"# HP ZERO... # SessionID:%d\n", pCharacter->dwSessionID);
 
+			//TEST
+			_LOG(dfLOG_LEVEL_SYSTEM, L"# Hp 0 # SessionID:%d\n", pCharacter->dwSessionID);
 			PushQuitQ(pCharacter->pSession);
 
-			_LOG(dfLOG_LEVEL_DEBUG, L"# HP ZERO... # SessionID:%d\n", pCharacter->dwSessionID);
+			
 			continue;
 		}
 
@@ -124,6 +125,8 @@ void GameUpdate()
 		DWORD diffTime = (a - pCharacter->pSession->dwLastRecvTime);
 		if ( diffTime > dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
+			DebugBreak();
+
 			{
 				SerializePacket sPacket;
 				mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
@@ -131,9 +134,11 @@ void GameUpdate()
 				SendPacket_Around(pCharacter->pSession, &sPacket, false);
 			}
 
-			PushQuitQ(pCharacter->pSession);
-
 			_LOG(dfLOG_LEVEL_DEBUG, L"# Heartbeat TIMEOUT... # SessionID:%d\n", pCharacter->dwSessionID);
+
+			//TEST
+			_LOG(dfLOG_LEVEL_SYSTEM, L"# Heartbeat # SessionID:%d\n", pCharacter->dwSessionID);
+			PushQuitQ(pCharacter->pSession);
 
 			continue;
 		}

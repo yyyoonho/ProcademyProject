@@ -265,7 +265,11 @@ void RecvProc(SOCKET socket)
 				SendPacket_Around(pSession, &sPacket, false);
 			}
 
+			//TEST
+			_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 비 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
 			quitQ.push(pSession);
+
+			_LOG(dfLOG_LEVEL_DEBUG, L"# Disconnet... # SessionID:%d\n", pSession->dwSessionID);
 			return;
 		}
 	}
@@ -280,7 +284,11 @@ void RecvProc(SOCKET socket)
 			SendPacket_Around(pSession, &sPacket, false);
 		}
 
+		//TEST
+		_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
 		quitQ.push(pSession);
+
+		_LOG(dfLOG_LEVEL_DEBUG, L"# Disconnet... # SessionID:%d\n", pSession->dwSessionID);
 		return;
 	}
 
@@ -368,8 +376,9 @@ void DestroySessionNCharacter()
 		stSession* destroySession = quitQ.front();
 		quitQ.pop();
 
+		_LOG(dfLOG_LEVEL_DEBUG, L"# DestroySessionNCharacter # SessionID:%d\n", destroySession->dwSessionID);
+
 		DestroyCharacter(destroySession->dwSessionID);
-		
 
 		SOCKET key = destroySession->socket;
 		sessionMap.erase(key);
