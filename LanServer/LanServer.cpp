@@ -7,7 +7,7 @@ using namespace std;
 
 #define SERVERPORT 6000
 
-//#define STACK
+#define STACK
 
 LanServer::LanServer()
 {

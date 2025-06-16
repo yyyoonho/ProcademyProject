@@ -20,6 +20,10 @@ int main()
 	server1.Start();
 	
 	HANDLE hTPSThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&PrintTPSThread, NULL, NULL, NULL);
+	if (hTPSThread == NULL)
+	{
+		return 0;
+	}
 
 	while (1)
 	{
@@ -65,8 +69,6 @@ void PrintTPSThread()
 		}
 
 		char buf[500];
-		/*sprintf_s(buf, "[TPS: %d√ ]\n acceptTPS:%d \n recvMessageTPS:%d \n sendMessageTPS:%d \n\n",
-			count, server1.GetAcceptTPS(), server1.GetRecvMessageTPS(), server1.GetSendMessageTPS());*/
 
 		sprintf_s(buf, "[TPS: %d√ ]\n acceptTPS:%d \n recvMessageTPS:%d \n sendMessageTPS:%d \n disconnetTPS:%d\n\n",
 			count, server1.GetAcceptTPS(), server1.GetRecvMessageTPS(), server1.GetSendMessageTPS(), server1.disconnetFromClient_Save);
