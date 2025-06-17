@@ -213,8 +213,8 @@ void LanServer::CreateIOCPWorkerThread()
 
 	// 워커쓰레드 생성
 	HANDLE hThread;
-	//for (int i = 0; i < (int)si.dwNumberOfProcessors; i++)
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < (int)si.dwNumberOfProcessors; i++)
+	//for (int i = 0; i < 1; i++)
 	{
 		hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&LanServer::WorkerThreadRun, this, NULL, NULL);
 		hWorkerThreads.push_back(hThread);
