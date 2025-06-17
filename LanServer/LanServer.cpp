@@ -26,7 +26,6 @@ bool LanServer::Start()
 
 	InitializeSRWLock(&LogLock);
 
-
 	InitSessionArray();
 
 	NetInit();
@@ -89,8 +88,16 @@ bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 	stHeader header;
 	header.len = sPacket->GetDataSize();
 
-	pSession->sendQ.Enqueue((char*)&header, sizeof(stHeader));
-	pSession->sendQ.Enqueue(sPacket->GetBufferPtr(), sPacket->GetDataSize());
+	SerializePacket* headerSPacket = new SerializePacket;
+	headerSPacket->Putdata((char*)&header, sizeof(stHeader));
+
+	//pSession->sendQ.Enqueue((char*)&header, sizeof(stHeader));
+	//pSession->sendQ.Enqueue(sPacket->GetBufferPtr(), sPacket->GetDataSize());
+	
+	AcquireSRWLockExclusive(&pSession->sendQLock);
+	pSession->sendQ.push(headerSPacket);
+	pSession->sendQ.push(sPacket);
+	ReleaseSRWLockExclusive(&pSession->sendQLock);
 
 	return true;
 }
@@ -117,7 +124,7 @@ void LanServer::InitSessionArray()
 		sessionArray[i] = new Session;
 
 		sessionArray[i]->recvQ.Resize(10000);
-		sessionArray[i]->sendQ.Resize(10000);
+		//sessionArray[i]->sendQ.Resize(10000);
 
 	#ifdef STACK
 		//idxStack.push(i);
@@ -206,7 +213,8 @@ void LanServer::CreateIOCPWorkerThread()
 
 	// 워커쓰레드 생성
 	HANDLE hThread;
-	for (int i = 0; i < (int)si.dwNumberOfProcessors; i++)
+	//for (int i = 0; i < (int)si.dwNumberOfProcessors; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&LanServer::WorkerThreadRun, this, NULL, NULL);
 		hWorkerThreads.push_back(hThread);
@@ -293,9 +301,20 @@ void LanServer::WorkerThread()
 		}
 		else if (((MyOverlapped*)pOverlapped)->type == SEND)
 		{
-			pSession->sendQ.MoveFront(cbTransferred);
+			//pSession->sendQ.MoveFront(cbTransferred);
+			for (int i = 0; i < ((MyOverlapped*)pOverlapped)->IOCompletionWaitQCount; i++)
+			{
+				delete pSession->IOCompletionWaitQ.front();
+				pSession->IOCompletionWaitQ.pop();
+			}
 
-			if (pSession->sendQ.GetUseSize() > 0)
+			((MyOverlapped*)pOverlapped)->IOCompletionWaitQCount = 0;
+
+			//AcquireSRWLockShared(&pSession->sendQLock);
+			int sendQSize = pSession->sendQ.size();
+			//ReleaseSRWLockShared(&pSession->sendQLock);
+
+			if (sendQSize > 0)
 			{
 				RequestWSASend(pSession);
 			}
@@ -368,6 +387,8 @@ void LanServer::AcceptThread()
 		sessionArray[idx]->sessionID = idx;
 		sessionArray[idx]->sessionID = sessionArray[idx]->sessionID << 48;
 		sessionArray[idx]->sessionID |= g_SessionId++;
+
+		//InitializeSRWLock(&sessionArray[idx]->sendQLock);
 
 		memset(&sessionArray[idx]->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
 		sessionArray[idx]->recvOverlapped.pSession = sessionArray[idx];
@@ -463,12 +484,37 @@ bool LanServer::RequestWSASend(Session* pSession)
 {
 	DWORD sendBytes;
 
-	WSABUF wsaBuf;
+	/*WSABUF wsaBuf;
 	wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
-	wsaBuf.len = pSession->sendQ.DirectDequeueSize();
+	wsaBuf.len = pSession->sendQ.DirectDequeueSize();*/
+	
+	WSABUF wsaBuf[200];
+
+	int count = 0;
+
+	AcquireSRWLockExclusive(&pSession->sendQLock);
+	while (!pSession->sendQ.empty())
+	{
+		if (count > 200)
+			break;
+
+		wsaBuf[count].buf = (char*)(pSession->sendQ.front()->GetBufferPtr());
+		wsaBuf[count].len = pSession->sendQ.front()->GetDataSize();
+
+		SerializePacket* tmpPacket = pSession->sendQ.front();
+		pSession->sendQ.pop();
+
+		pSession->IOCompletionWaitQ.push(tmpPacket);
+
+		count++;
+	}
+	ReleaseSRWLockExclusive(&pSession->sendQLock);
+
+	pSession->sendOverlapped.IOCompletionWaitQCount = count;
 
 	InterlockedIncrement(&pSession->IOCount);
-	wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendOverlapped, NULL);
+
+	wsaSendRet = WSASend(pSession->sock, wsaBuf, count, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendOverlapped, NULL);
 	if (wsaSendRet == SOCKET_ERROR)
 	{
 		if (WSAGetLastError() != WSA_IO_PENDING)
@@ -494,7 +540,7 @@ void LanServer::DestroySession(Session* pSession)
 	pSession->sock = -1;
 
 	pSession->recvQ.ClearBuffer();
-	pSession->sendQ.ClearBuffer();
+	//pSession->sendQ.ClearBuffer();
 
 	pSession->active = false;
 

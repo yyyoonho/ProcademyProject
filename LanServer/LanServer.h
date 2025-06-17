@@ -17,6 +17,8 @@ struct MyOverlapped
 	OVERLAPPED overlapped;
 	int type;
 	Session* pSession;
+
+	int IOCompletionWaitQCount = 0;
 };
 
 struct Session
@@ -27,7 +29,10 @@ struct Session
 	DWORD64 sessionID;
 
 	RingBuffer recvQ;
-	RingBuffer sendQ;
+	queue<SerializePacket*> sendQ;
+	queue<SerializePacket*> IOCompletionWaitQ;
+
+	SRWLOCK sendQLock;
 
 	MyOverlapped recvOverlapped;
 	MyOverlapped sendOverlapped;

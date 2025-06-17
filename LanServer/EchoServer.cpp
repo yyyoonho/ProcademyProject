@@ -28,18 +28,14 @@ void EchoServer::OnRelease(DWORD64 sessionID)
 
 void EchoServer::OnMessage(DWORD64 sessionID, SerializePacket* sPacket)
 {
-
-	/* 에코를 위한 작업
-	* 일부러 직렬화버퍼를 따로 또 만들어서 sendPacket을 해보자.
-	*/
 	{
 		INT64 payload;
 		*sPacket >> payload;
 
-		SerializePacket sPacket2;
-		sPacket2 << payload;
+		SerializePacket* sPacket2 = new SerializePacket;
+		(*sPacket2) << payload;
 
-		SendPacket(sessionID, &sPacket2);
+		SendPacket(sessionID, sPacket2);
 	}
 
 	return;

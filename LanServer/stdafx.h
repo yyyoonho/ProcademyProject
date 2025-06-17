@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <stack>
+#include <queue>
 
 #include "RingBuffer.h"
 #include "SerializeBuffer.h"
