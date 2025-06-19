@@ -115,8 +115,6 @@ private:
 	int recvMessageTPS_Save = 0;
 	int sendMessageTPS_Save = 0;
 
-	LONG sessionCount = 0;
-
 public:
 	int disconnetFromClient_Save = 0;
 
@@ -144,6 +142,9 @@ private:
 
 	MyStack myStack;
 	CRITICAL_SECTION stackLock;
+
+protected:
+	procademy::MemoryPool<SerializePacket> sPacketMP;
 
 	// 성능측적용 락
 	SRWLOCK LogLock;

@@ -32,7 +32,9 @@ void EchoServer::OnMessage(DWORD64 sessionID, SerializePacket* sPacket)
 		INT64 payload;
 		*sPacket >> payload;
 
-		SerializePacket* sPacket2 = new SerializePacket;
+		//SerializePacket* sPacket2 = new SerializePacket;
+		SerializePacket* sPacket2 = sPacketMP.Alloc();
+		sPacket2->Clear();
 		(*sPacket2) << payload;
 
 		SendPacket(sessionID, sPacket2);

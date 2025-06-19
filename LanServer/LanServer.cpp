@@ -7,7 +7,7 @@ using namespace std;
 
 #define SERVERPORT 6000
 
-LanServer::LanServer()
+LanServer::LanServer() :sPacketMP(0, false)
 {
 
 }
@@ -84,7 +84,8 @@ bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 	stHeader header;
 	header.len = sPacket->GetDataSize();
 
-	SerializePacket* headerSPacket = new SerializePacket;
+	SerializePacket* headerSPacket = sPacketMP.Alloc();
+	headerSPacket->Clear();
 	headerSPacket->Putdata((char*)&header, sizeof(stHeader));
 	
 	EnterCriticalSection(&pSession->sendQLock);
@@ -293,7 +294,7 @@ void LanServer::WorkerThread()
 		{
 			for (int i = 0; i < ((MyOverlapped*)pOverlapped)->IOCompletionWaitCount; i++)
 			{
-				delete pSession->IOCompletionWaitArr[i];
+				sPacketMP.Free(pSession->IOCompletionWaitArr[i]);
 			}
 			((MyOverlapped*)pOverlapped)->IOCompletionWaitCount = 0;
 
@@ -367,8 +368,6 @@ void LanServer::AcceptThread()
 			return;
 		}
 
-		_InterlockedIncrement(&sessionCount);
-
 		sessionArray[idx]->sock = clientSocket;
 
 		sessionArray[idx]->sessionID = idx;
@@ -420,8 +419,6 @@ void LanServer::MonitorThread()
 			printf("\n[TCP 서버] 모니터 쓰레드 종료...\n");
 			break;
 		}
-
-		printf("sessionCount:%d\n", sessionCount);
 
 		acceptTPS_Save = InterlockedExchange((LONG*)&acceptTPS, 0);
 		recvMessageTPS_Save = InterlockedExchange((LONG*)&recvMessageTPS, 0);
@@ -523,14 +520,16 @@ void LanServer::DestroySession(Session* pSession)
 	pSession->sock = -1;
 
 	pSession->recvQ.ClearBuffer();
-	//pSession->sendQ.ClearBuffer();
+	
+	while (!pSession->sendQ.empty())
+	{
+		pSession->sendQ.pop();
+	}
 
 	pSession->active = false;
 
 	// 콘텐츠에 "해당 세션이 삭제되었습니다" 알리기.
 	OnRelease(pSession->sessionID);
-
-	_InterlockedDecrement(&sessionCount);
 
 	EnterCriticalSection(&stackLock);
 	myStack.Push(pSession->idx);
