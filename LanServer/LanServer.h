@@ -3,6 +3,7 @@
 using namespace std;
 
 #define MAXARR 300
+#define MAXWSABUF 200
 
 enum
 {
@@ -18,7 +19,7 @@ struct MyOverlapped
 	int type;
 	Session* pSession;
 
-	int IOCompletionWaitQCount = 0;
+	int IOCompletionWaitCount;
 };
 
 struct Session
@@ -30,9 +31,8 @@ struct Session
 
 	RingBuffer recvQ;
 	queue<SerializePacket*> sendQ;
-	queue<SerializePacket*> IOCompletionWaitQ;
-
-	SRWLOCK sendQLock;
+	SerializePacket* IOCompletionWaitArr[MAXWSABUF];
+	CRITICAL_SECTION sendQLock;
 
 	MyOverlapped recvOverlapped;
 	MyOverlapped sendOverlapped;
@@ -115,6 +115,8 @@ private:
 	int recvMessageTPS_Save = 0;
 	int sendMessageTPS_Save = 0;
 
+	LONG sessionCount = 0;
+
 public:
 	int disconnetFromClient_Save = 0;
 
@@ -140,10 +142,8 @@ private:
 	bool FindNonActiveSession(OUT unsigned int* idx);
 	Session* FindSessionByID(DWORD64 sessionID);
 
-	// stack 테스트용
-	//stack<int> idxStack;
 	MyStack myStack;
-	SRWLOCK stackLock;
+	CRITICAL_SECTION stackLock;
 
 	// 성능측적용 락
 	SRWLOCK LogLock;

@@ -1,0 +1,2 @@
+           Name  |        Average   |            Min   |            Max   |      Call  |
+        wsaSend  |        52.0598§Á |         4.2000§Á |      4411.0000§Á |     17386  |

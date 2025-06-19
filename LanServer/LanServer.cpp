@@ -7,8 +7,6 @@ using namespace std;
 
 #define SERVERPORT 6000
 
-#define STACK
-
 LanServer::LanServer()
 {
 
@@ -20,9 +18,7 @@ LanServer::~LanServer()
 
 bool LanServer::Start()
 {
-#ifdef STACK
-	InitializeSRWLock(&stackLock);
-#endif // STACK
+	InitializeCriticalSection(&stackLock);
 
 	InitializeSRWLock(&LogLock);
 
@@ -90,14 +86,11 @@ bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 
 	SerializePacket* headerSPacket = new SerializePacket;
 	headerSPacket->Putdata((char*)&header, sizeof(stHeader));
-
-	//pSession->sendQ.Enqueue((char*)&header, sizeof(stHeader));
-	//pSession->sendQ.Enqueue(sPacket->GetBufferPtr(), sPacket->GetDataSize());
 	
-	AcquireSRWLockExclusive(&pSession->sendQLock);
+	EnterCriticalSection(&pSession->sendQLock);
 	pSession->sendQ.push(headerSPacket);
 	pSession->sendQ.push(sPacket);
-	ReleaseSRWLockExclusive(&pSession->sendQLock);
+	LeaveCriticalSection(&pSession->sendQLock);
 
 	return true;
 }
@@ -126,11 +119,8 @@ void LanServer::InitSessionArray()
 		sessionArray[i]->recvQ.Resize(10000);
 		//sessionArray[i]->sendQ.Resize(10000);
 
-	#ifdef STACK
-		//idxStack.push(i);
 		myStack.Push(i);
 		sessionArray[i]->idx = i;
-	#endif // STACK
 	}
 
 	return;
@@ -301,18 +291,15 @@ void LanServer::WorkerThread()
 		}
 		else if (((MyOverlapped*)pOverlapped)->type == SEND)
 		{
-			//pSession->sendQ.MoveFront(cbTransferred);
-			for (int i = 0; i < ((MyOverlapped*)pOverlapped)->IOCompletionWaitQCount; i++)
+			for (int i = 0; i < ((MyOverlapped*)pOverlapped)->IOCompletionWaitCount; i++)
 			{
-				delete pSession->IOCompletionWaitQ.front();
-				pSession->IOCompletionWaitQ.pop();
+				delete pSession->IOCompletionWaitArr[i];
 			}
+			((MyOverlapped*)pOverlapped)->IOCompletionWaitCount = 0;
 
-			((MyOverlapped*)pOverlapped)->IOCompletionWaitQCount = 0;
-
-			//AcquireSRWLockShared(&pSession->sendQLock);
+			EnterCriticalSection(&pSession->sendQLock);
 			int sendQSize = pSession->sendQ.size();
-			//ReleaseSRWLockShared(&pSession->sendQLock);
+			LeaveCriticalSection(&pSession->sendQLock);
 
 			if (sendQSize > 0)
 			{
@@ -373,14 +360,14 @@ void LanServer::AcceptThread()
 		InterlockedIncrement(&totalSessionCount);
 
 		// 세션 생성
-		PRO_BEGIN("SessionAlloc");
 		unsigned int idx;
 		if (!FindNonActiveSession(&idx))
 		{
 			printf("Non-Active Session이 없습니다.\n");
 			return;
 		}
-		PRO_END("SessionAlloc");
+
+		_InterlockedIncrement(&sessionCount);
 
 		sessionArray[idx]->sock = clientSocket;
 
@@ -388,7 +375,7 @@ void LanServer::AcceptThread()
 		sessionArray[idx]->sessionID = sessionArray[idx]->sessionID << 48;
 		sessionArray[idx]->sessionID |= g_SessionId++;
 
-		//InitializeSRWLock(&sessionArray[idx]->sendQLock);
+		InitializeCriticalSection(&sessionArray[idx]->sendQLock);
 
 		memset(&sessionArray[idx]->recvOverlapped.overlapped, 0, sizeof(OVERLAPPED));
 		sessionArray[idx]->recvOverlapped.pSession = sessionArray[idx];
@@ -397,6 +384,7 @@ void LanServer::AcceptThread()
 		memset(&sessionArray[idx]->sendOverlapped.overlapped, 0, sizeof(OVERLAPPED));
 		sessionArray[idx]->sendOverlapped.pSession = sessionArray[idx];
 		sessionArray[idx]->sendOverlapped.type = SEND;
+		sessionArray[idx]->sendOverlapped.IOCompletionWaitCount = 0;
 
 		sessionArray[idx]->sendFlag = true;
 
@@ -410,8 +398,6 @@ void LanServer::AcceptThread()
 
 		// 비동기 RECV 걸어버리기
 		RequestWSARecv(sessionArray[idx]);
-
-		
 	}
 
 	return;
@@ -434,6 +420,8 @@ void LanServer::MonitorThread()
 			printf("\n[TCP 서버] 모니터 쓰레드 종료...\n");
 			break;
 		}
+
+		printf("sessionCount:%d\n", sessionCount);
 
 		acceptTPS_Save = InterlockedExchange((LONG*)&acceptTPS, 0);
 		recvMessageTPS_Save = InterlockedExchange((LONG*)&recvMessageTPS, 0);
@@ -484,35 +472,31 @@ bool LanServer::RequestWSASend(Session* pSession)
 {
 	DWORD sendBytes;
 
-	/*WSABUF wsaBuf;
-	wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
-	wsaBuf.len = pSession->sendQ.DirectDequeueSize();*/
-	
-	WSABUF wsaBuf[200];
+	WSABUF wsaBuf[MAXWSABUF];
 
 	int count = 0;
 
-	AcquireSRWLockExclusive(&pSession->sendQLock);
+	EnterCriticalSection(&pSession->sendQLock);
 	while (!pSession->sendQ.empty())
 	{
-		if (count > 200)
+		if (count > MAXWSABUF)
 			break;
 
 		wsaBuf[count].buf = (char*)(pSession->sendQ.front()->GetBufferPtr());
 		wsaBuf[count].len = pSession->sendQ.front()->GetDataSize();
 
-		SerializePacket* tmpPacket = pSession->sendQ.front();
+		pSession->IOCompletionWaitArr[count] = pSession->sendQ.front();
 		pSession->sendQ.pop();
-
-		pSession->IOCompletionWaitQ.push(tmpPacket);
 
 		count++;
 	}
-	ReleaseSRWLockExclusive(&pSession->sendQLock);
+	LeaveCriticalSection(&pSession->sendQLock);
 
-	pSession->sendOverlapped.IOCompletionWaitQCount = count;
+	pSession->sendOverlapped.IOCompletionWaitCount = count;
 
 	InterlockedIncrement(&pSession->IOCount);
+
+	bool flag=true;
 
 	wsaSendRet = WSASend(pSession->sock, wsaBuf, count, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendOverlapped, NULL);
 	if (wsaSendRet == SOCKET_ERROR)
@@ -526,12 +510,11 @@ bool LanServer::RequestWSASend(Session* pSession)
 
 			InterlockedDecrement(&pSession->IOCount);
 
-
 			return false;
 		}
 	}
 
-	return true;
+	return flag;
 }
 
 void LanServer::DestroySession(Session* pSession)
@@ -547,12 +530,11 @@ void LanServer::DestroySession(Session* pSession)
 	// 콘텐츠에 "해당 세션이 삭제되었습니다" 알리기.
 	OnRelease(pSession->sessionID);
 
-#ifdef STACK
-	AcquireSRWLockExclusive(&stackLock);
-	//idxStack.push(pSession->idx);
+	_InterlockedDecrement(&sessionCount);
+
+	EnterCriticalSection(&stackLock);
 	myStack.Push(pSession->idx);
-	ReleaseSRWLockExclusive(&stackLock);
-#endif // STACK
+	LeaveCriticalSection(&stackLock);
 
 	InterlockedDecrement(&totalSessionCount);
 
@@ -562,20 +544,16 @@ void LanServer::DestroySession(Session* pSession)
 
 bool LanServer::FindNonActiveSession(OUT unsigned int* idx)
 {
-#ifdef STACK
-	//bool flag = idxStack.empty();
 	bool flag = myStack.Empty();
 
 	if (!flag)
 	{
-		AcquireSRWLockExclusive(&stackLock);
-		//int tmpIdx = idxStack.top();
-		//idxStack.pop();
+		EnterCriticalSection(&stackLock);
 
 		int tmpIdx = myStack.Top();
 		myStack.Pop();
 
-		ReleaseSRWLockExclusive(&stackLock);
+		LeaveCriticalSection(&stackLock);
 
 		*idx = tmpIdx;
 		
@@ -586,20 +564,6 @@ bool LanServer::FindNonActiveSession(OUT unsigned int* idx)
 		printf("스택이 비었습니다.\n");
 		return false;
 	}
-#endif // STACK
-
-	for (int i = 0; i < MAXARR; i++)
-	{
-		if (sessionArray[i]->active == false)
-		{
-			*idx = i;
-
-			return true;
-		}
-	}
-
-	*idx = -1;
-	return false;
 }
 
 Session* LanServer::FindSessionByID(DWORD64 sessionID)
