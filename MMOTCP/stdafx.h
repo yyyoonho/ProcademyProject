@@ -10,10 +10,9 @@
 #include <queue>
 #include <conio.h>
 #include <algorithm>
-
-
 #include "Protocol.h"
 
+#include "CustomProfiler.h"
 #include "MemoryPool.h"
 #include "SerializeBuffer.h"
 #include "RingBuffer.h"

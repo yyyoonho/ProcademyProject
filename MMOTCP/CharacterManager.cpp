@@ -16,8 +16,6 @@ unordered_map<DWORD, stCharacter* > characterMap;
 
 bool EnterWorld(stCharacter* pNewCharacter);
 
-//TEST
-unordered_map<DWORD, DWORD > checkMap;
 
 void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 {
@@ -33,11 +31,11 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 	newCharacter->byMoveDirection = dfMOVE_STOP;
 
 	// TODO: 테스트코드
-	static short shX = 20;
-	static short shY = 20;
+	/*static short shX = 20;
+	static short shY = 20;*/
 
-	/*short shX = rand() % dfRANGE_MOVE_RIGHT;
-	short shY = rand() % dfRANGE_MOVE_BOTTOM;*/
+	short shX = rand() % dfRANGE_MOVE_RIGHT;
+	short shY = rand() % dfRANGE_MOVE_BOTTOM;
 
 	newCharacter->shX = shX;
 	newCharacter->shY = shY;
@@ -101,7 +99,7 @@ bool EnterWorld(stCharacter* pNewCharacter)
 			v.clear();
 		}
 
-		printf("New <- mpCreateOtherCharacter Send\n");
+		//printf("New <- mpCreateOtherCharacter Send\n");
 	}
 
 	// new에게 기존 멤버들 액션 메시지 보내기.
@@ -129,7 +127,7 @@ bool EnterWorld(stCharacter* pNewCharacter)
 			v.clear();
 		}
 
-		printf("New <- mpMoveStart Send\n");
+		//printf("New <- mpMoveStart Send\n");
 	}
 
 	// 기존 멤버들에게 new 생성 메시지 보내기.
@@ -140,7 +138,7 @@ bool EnterWorld(stCharacter* pNewCharacter)
 		mpCreateOtherCharacter(&sPacket, pNewSession->dwSessionID, pNewCharacter->byDirection, pNewCharacter->shX, pNewCharacter->shY, pNewCharacter->chHP);
 
 		SendPacket_Around(pNewSession, &sPacket, false);
-		printf("Other <- mpCreateOtherCharacter Send\n");
+		//printf("Other <- mpCreateOtherCharacter Send\n");
 	}
 
 	return true;
@@ -149,16 +147,6 @@ bool EnterWorld(stCharacter* pNewCharacter)
 void DestroyCharacter(DWORD sessionId)
 {
 	_LOG(dfLOG_LEVEL_DEBUG, L"# DestroyCharacter # SessionID:%d\n", sessionId);
-
-	//TEST
-	if (checkMap.find(sessionId) != checkMap.end())
-	{
-		DebugBreak();
-	}
-	else
-	{
-		checkMap.insert({ sessionId,sessionId });
-	}
 
 	stCharacter* destroyCharacter = characterMap.find(sessionId)->second;
 	if (destroyCharacter == NULL)
@@ -170,11 +158,12 @@ void DestroyCharacter(DWORD sessionId)
 	DeleteInSector(destroyCharacter->curSector.iY, destroyCharacter->curSector.iX, destroyCharacter);
 
 	characterMap.erase(sessionId);	
+	_LOG(dfLOG_LEVEL_ERROR, L"# EraseCharacter # SessionID:%d\n", sessionId);
 
 	bool ret = characterMP.Free(destroyCharacter);
 	if (!ret)
 	{
-		_LOG(dfLOG_LEVEL_SYSTEM, L"Error: characterMP.Free\n");
+		_LOG(dfLOG_LEVEL_ERROR, L"Error: characterMP.Free\n");
 	}
 }
 
@@ -204,7 +193,7 @@ void GetCurSector(stSession* pSession, OUT stSECTOR_POS* pSectorPos)
 	return;
 }
 
-stCharacter* FindCharacter(BYTE sessionID)
+stCharacter* FindCharacter(DWORD sessionID)
 {
 	unordered_map<DWORD, stCharacter* >::iterator iter = characterMap.find(sessionID);
 	if (iter == characterMap.end())
@@ -213,4 +202,9 @@ stCharacter* FindCharacter(BYTE sessionID)
 	}
 
 	return (*iter).second;
+}
+
+int GetCharacterSize()
+{
+	return characterMap.size();
 }

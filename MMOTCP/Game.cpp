@@ -7,6 +7,7 @@
 #include "LogManager.h"
 #include "MakePacket.h"
 #include "SendPacket.h"
+#include "MonitorManager.h"
 
 #include "Game.h"
 
@@ -15,24 +16,21 @@ using namespace std;
 #define FRAME 25
 #define MSPERFRAME (1000/FRAME)
 
-
-
-void FrameControl()
+bool FrameControl()
 {
 	static int oldTime = timeGetTime();
 
 	int diffTime = timeGetTime() - oldTime;
 
-	if (diffTime < MSPERFRAME)
+	if (diffTime < 20) // 20ms
 	{
-		Sleep(MSPERFRAME - diffTime); 
-		oldTime += MSPERFRAME;
-		return;
+		return false;
 	}
 	else
 	{
-		oldTime += MSPERFRAME;
-		return;
+		PushDeltaTime(diffTime);
+		oldTime += 20;
+		return true;
 	}
 }
 
@@ -90,8 +88,10 @@ void Move(DWORD deltaTime, stCharacter* pCharacter, BYTE dir)
 
 void GameUpdate()
 {
+	if (!FrameControl())
+		return;
+
 	ShowFrame();
-	FrameControl();
 
 	static DWORD oldTime = GetTickCount();
 	DWORD deltaTime = GetTickCount() - oldTime;
@@ -113,7 +113,7 @@ void GameUpdate()
 			_LOG(dfLOG_LEVEL_DEBUG, L"# HP ZERO... # SessionID:%d\n", pCharacter->dwSessionID);
 
 			//TEST
-			_LOG(dfLOG_LEVEL_SYSTEM, L"# Hp 0 # SessionID:%d\n", pCharacter->dwSessionID);
+			_LOG(dfLOG_LEVEL_DEBUG, L"# Hp 0 # SessionID:%d\n", pCharacter->dwSessionID);
 			PushQuitQ(pCharacter->pSession);
 
 			
@@ -125,8 +125,6 @@ void GameUpdate()
 		DWORD diffTime = (a - pCharacter->pSession->dwLastRecvTime);
 		if ( diffTime > dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
-			DebugBreak();
-
 			{
 				SerializePacket sPacket;
 				mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
@@ -134,10 +132,8 @@ void GameUpdate()
 				SendPacket_Around(pCharacter->pSession, &sPacket, false);
 			}
 
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Heartbeat TIMEOUT... # SessionID:%d\n", pCharacter->dwSessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"# Heartbeat TIMEOUT... # SessionID:%d\n", pCharacter->dwSessionID);
 
-			//TEST
-			_LOG(dfLOG_LEVEL_SYSTEM, L"# Heartbeat # SessionID:%d\n", pCharacter->dwSessionID);
 			PushQuitQ(pCharacter->pSession);
 
 			continue;

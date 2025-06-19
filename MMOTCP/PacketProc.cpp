@@ -79,6 +79,7 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : MoveStart # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket, true);
 
 		shX = pCharacter->shX;
@@ -150,6 +151,7 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : MoveStop # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
@@ -210,6 +212,7 @@ bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : Attack1 # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
@@ -329,6 +332,7 @@ bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : Attack2 # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
@@ -448,6 +452,7 @@ bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : Attack3 # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;

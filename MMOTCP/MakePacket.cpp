@@ -177,7 +177,9 @@ void mpDamage(SerializePacket* sPacket, DWORD attackId, DWORD damageId, char dam
 
 void mpSync(SerializePacket* sPacket, DWORD id, short x, short y)
 {
-	_LOG(dfLOG_LEVEL_DEBUG, L"# mpSync # SessionID:%d\n", id);
+	// TEST:
+	static int count = 0;
+	printf("mpSyncCount: %d\n", ++count);
 
 	st_PACKET_HEADER header;
 	header.byCode = dfPACKET_CODE;

@@ -31,4 +31,6 @@ void DestroyCharacter(DWORD sessionId);
 
 void GetCurSector(stSession* pSession, OUT stSECTOR_POS* pSectorPos);
 
-stCharacter* FindCharacter(BYTE sessionID);
+stCharacter* FindCharacter(DWORD sessionID);
+
+int GetCharacterSize();

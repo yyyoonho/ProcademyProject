@@ -17,3 +17,5 @@ void NetCleanUp();
 
 void NetworkUpdate();
 void PushQuitQ(stSession* pSession);
+
+int GetSessionSize();

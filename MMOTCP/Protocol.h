@@ -1,6 +1,6 @@
 #pragma once
 
-#define dfNETWORK_PORT		20010
+#define dfNETWORK_PORT		20601
 
 struct st_PACKET_HEADER
 {

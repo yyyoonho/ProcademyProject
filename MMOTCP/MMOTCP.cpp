@@ -4,8 +4,10 @@
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "RingBuffer.lib")
 #pragma comment(lib, "SerializeBuffer.lib")
+#pragma comment(lib, "CustomProfiler.lib")
 
 #include "LogManager.h"
+#include "MonitorManager.h"
 #include "Game.h"
 #include "Network.h"
 
@@ -26,12 +28,15 @@ int main()
 
     while (!g_bShutdown)
     {
+        ProfilerInput();
+
         NetworkUpdate();
 
         GameUpdate();
 
         //ServerControl();
-        //Monitor();
+
+        Monitor();
     }
 
     NetCleanUp();

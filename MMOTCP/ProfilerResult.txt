@@ -1,0 +1,2 @@
+                Name  |             Average   |                 Min   |                 Max   |                Call  |
+         Select  |         9.9201§Á |         1.4000§Á |     14822.5000§Á |   3882526  |

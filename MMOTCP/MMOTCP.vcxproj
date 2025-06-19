@@ -134,6 +134,7 @@
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="MakePacket.cpp" />
     <ClCompile Include="MMOTCP.cpp" />
+    <ClCompile Include="MonitorManager.cpp" />
     <ClCompile Include="Network.cpp" />
     <ClCompile Include="PacketProc.cpp" />
     <ClCompile Include="SectorManager.cpp" />
@@ -148,6 +149,7 @@
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="MakePacket.h" />
     <ClInclude Include="MMOTCP.h" />
+    <ClInclude Include="MonitorManager.h" />
     <ClInclude Include="Network.h" />
     <ClInclude Include="PacketProc.h" />
     <ClInclude Include="Protocol.h" />

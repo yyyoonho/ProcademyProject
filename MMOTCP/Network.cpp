@@ -134,44 +134,49 @@ void NetCleanUp()
 
 void NetworkUpdate()
 {
-	// Select()
-	{
-		fd_set readSet;
-		fd_set writeSet;
+	PRO_BEGIN("Select");
 
+	// Select()
+	fd_set readSet;
+	fd_set writeSet;
+
+	FD_ZERO(&readSet);
+	FD_ZERO(&writeSet);
+
+	FD_SET(listenSocket, &readSet);
+	int setCount = 1;
+	bool isListenAdded = true;
+
+	unordered_map<SOCKET, stSession* >::iterator iter = sessionMap.begin();
+
+	while (iter != sessionMap.end() || isListenAdded == true)
+	{
+		if (isListenAdded == false)
+		{
+			FD_SET(listenSocket, &readSet);
+			setCount = 1;
+		}
+
+		// 64개씩 끊어서 select
+		for (; iter != sessionMap.end() && setCount < 64; ++iter)
+		{
+			FD_SET(iter->first, &readSet);
+			if (iter->second->sendQ.GetUseSize() > 0)
+			{
+				FD_SET(iter->first, &writeSet);
+			}
+
+			++setCount;
+		}
+
+		SelectFunc(&readSet, &writeSet);
 		FD_ZERO(&readSet);
 		FD_ZERO(&writeSet);
-
-		FD_SET(listenSocket, &readSet);
-		int setCount = 1;
-
-		unordered_map<SOCKET, stSession* >::iterator iter;
-		for (iter = sessionMap.begin(); iter != sessionMap.end(); ++iter)
-		{
-			stSession* nowSession = iter->second;
-
-			FD_SET(nowSession->socket, &readSet);
-
-			if (nowSession->sendQ.GetUseSize() > 0)
-			{
-				FD_SET(nowSession->socket, &writeSet);
-			}
-
-			setCount++;
-
-			if (setCount >= 64)
-			{
-				SelectFunc(&readSet, &writeSet);
-
-				FD_ZERO(&readSet);
-				FD_ZERO(&writeSet);
-
-				setCount = 0;
-			}
-		}
-		if (setCount > 0)
-			SelectFunc(&readSet, &writeSet);
+		isListenAdded = false;
+		setCount = 0;
 	}
+
+	PRO_END("Select");
 
 	// TODO: 세션&캐릭터 생성하기
 	CreateSessionNCharacter();
@@ -185,6 +190,11 @@ void PushQuitQ(stSession* pSession)
 	quitQ.push(pSession);
 }
 
+int GetSessionSize()
+{
+	return sessionMap.size();
+}
+
 void SelectFunc(FD_SET* pReadSet, FD_SET* pWriteSet)
 {
 	timeval time;
@@ -193,41 +203,33 @@ void SelectFunc(FD_SET* pReadSet, FD_SET* pWriteSet)
 
 	int result = select(0, pReadSet, pWriteSet, 0, &time);
 
-	if (result > 0)
-	{
-		if (FD_ISSET(listenSocket, pReadSet))
-		{
-			AcceptProc();
-		}
-
-		unordered_map<SOCKET, stSession* >::iterator iter;
-		for (iter = sessionMap.begin(); iter != sessionMap.end(); ++iter)
-		{
-			stSession* nowSession = iter->second;
-
-			if (FD_ISSET(nowSession->socket, pReadSet))
-			{
-				--result;
-				RecvProc(nowSession->socket);
-			}
-
-			if (FD_ISSET(nowSession->socket, pWriteSet))
-			{
-				--result;
-				SendProc(nowSession->socket);
-			}
-
-			if (result <= 0)
-				break;
-		}
-
-	}
-	else if (result == SOCKET_ERROR)
+	if (result == SOCKET_ERROR)
 	{
 		_LOG(dfLOG_LEVEL_SYSTEM, L"Error: select() %d\n", WSAGetLastError());
 		printf("ERROR: select() %d\n", WSAGetLastError());
 		return;
 	}
+
+	for (int i = 0; i < pReadSet->fd_count; i++)
+	{
+		SOCKET sock = pReadSet->fd_array[i];
+
+		if (sock == listenSocket)
+		{
+			AcceptProc();
+		}
+		else
+		{
+			RecvProc(sock);
+		}
+	}
+
+	for (int i = 0; i < pWriteSet->fd_count; i++)
+	{
+		SOCKET sock = pWriteSet->fd_array[i];
+		SendProc(sock);
+	}
+
 }
 
 void AcceptProc()
@@ -256,7 +258,7 @@ void RecvProc(SOCKET socket)
 	{
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
-			printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
+			//printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
 
 			{
 				SerializePacket sPacket;
@@ -266,7 +268,7 @@ void RecvProc(SOCKET socket)
 			}
 
 			//TEST
-			_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 비 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
+			_LOG(dfLOG_LEVEL_DEBUG, L"# [상대방의 비 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
 			quitQ.push(pSession);
 
 			_LOG(dfLOG_LEVEL_DEBUG, L"# Disconnet... # SessionID:%d\n", pSession->dwSessionID);
@@ -275,7 +277,7 @@ void RecvProc(SOCKET socket)
 	}
 	if (recvRet == 0)
 	{
-		printf("[상대방의 정상 연결 종료] id : %d\n", pSession->dwSessionID);
+		//printf("[상대방의 정상 연결 종료] id : %d\n", pSession->dwSessionID);
 
 		{
 			SerializePacket sPacket;
@@ -285,7 +287,7 @@ void RecvProc(SOCKET socket)
 		}
 
 		//TEST
-		_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
+		_LOG(dfLOG_LEVEL_DEBUG, L"# [상대방의 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
 		quitQ.push(pSession);
 
 		_LOG(dfLOG_LEVEL_DEBUG, L"# Disconnet... # SessionID:%d\n", pSession->dwSessionID);
@@ -361,7 +363,7 @@ void CreateSessionNCharacter()
 		newSession->sendQ.Resize(10000);
 		newSession->dwLastRecvTime = GetTickCount();
 
-		printf("[접속] SessionID: %d\n", newSession->dwSessionID);
+		//printf("[접속] SessionID: %d\n", newSession->dwSessionID);
 
 		sessionMap.insert({ newSocket, newSession });
 
@@ -386,7 +388,7 @@ void DestroySessionNCharacter()
 		bool ret = sessionMP.Free(destroySession);
 		if (!ret)
 		{
-			_LOG(dfLOG_LEVEL_SYSTEM, L"Error: sessionMP.Free\n");
+			_LOG(dfLOG_LEVEL_ERROR, L"Error: sessionMP.Free\n");
 		}
 
 		closesocket(destroySession->socket);
