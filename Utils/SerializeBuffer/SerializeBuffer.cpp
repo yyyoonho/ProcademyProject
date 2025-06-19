@@ -8,31 +8,33 @@ using namespace std;
 
 SerializePacket::SerializePacket()
 {
-    _buf = new char[eBUFFER_DEFAULT];
-
+    _original = new char[sizeof(stTCPHeader) + eBUFFER_DEFAULT];
+    _buf = _original + sizeof(stTCPHeader);
+    
     _writePos = 0;
     _readPos = 0;
     _size = 0;
 
-    _capacity = eBUFFER_DEFAULT;
+    _capacity = sizeof(stTCPHeader) + eBUFFER_DEFAULT;
 
     InitializeCriticalSection(&cs);
 }
 
 SerializePacket::SerializePacket(int bufferSize)
 {
-    _buf = new char[bufferSize];
+    _original = new char[sizeof(stTCPHeader) + bufferSize];
+    _buf = _buf + sizeof(stTCPHeader);
 
     _writePos = 0;
     _readPos = 0;
     _size = 0;
 
-    _capacity = bufferSize;
+    _capacity = sizeof(stTCPHeader) + bufferSize;
 }
 
 SerializePacket::~SerializePacket()
 {
-    delete[] _buf;
+    delete[] _original;
 }
 
 void SerializePacket::Clear()
@@ -57,7 +59,14 @@ int SerializePacket::GetDataSize()
 
 char* SerializePacket::GetBufferPtr()
 {
-    return _buf;
+    if (isHeaderPushed)
+    {
+        return _buf - pushedHeaderSize;
+    }
+    else
+    {
+        return _buf;
+    }
 }
 
 int SerializePacket::MoveWritePos(int size)
@@ -390,6 +399,15 @@ int SerializePacket::Putdata(char* chpSrc, int iSrcSize)
     _size = _writePos - _readPos;
 
     return iSrcSize;
+}
+
+void SerializePacket::PushHeader(char* header, int headerSize)
+{
+    memcpy_s(_buf - headerSize, sizeof(stTCPHeader), header, headerSize);
+    _size += headerSize;
+
+    isHeaderPushed = true;
+    pushedHeaderSize = headerSize;
 }
 
 /*
