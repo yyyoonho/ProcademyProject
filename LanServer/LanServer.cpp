@@ -84,12 +84,14 @@ bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 	stHeader header;
 	header.len = sPacket->GetDataSize();
 
-	SerializePacket* headerSPacket = sPacketMP.Alloc();
-	headerSPacket->Clear();
-	headerSPacket->Putdata((char*)&header, sizeof(stHeader));
+	//SerializePacket* headerSPacket = sPacketMP.Alloc();
+	//headerSPacket->Clear();
+	//headerSPacket->Putdata((char*)&header, sizeof(stHeader));
 	
+	sPacket->PushHeader((char*)&header, sizeof(stHeader));
+
 	EnterCriticalSection(&pSession->sendQLock);
-	pSession->sendQ.push(headerSPacket);
+	//pSession->sendQ.push(headerSPacket);
 	pSession->sendQ.push(sPacket);
 	LeaveCriticalSection(&pSession->sendQLock);
 
