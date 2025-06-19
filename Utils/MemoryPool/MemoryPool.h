@@ -49,6 +49,8 @@ namespace procademy
 		bool _bPlacement = false;
 
 		__int64 _poolId;
+
+		CRITICAL_SECTION cs;
 	};
 
 
@@ -137,6 +139,8 @@ namespace procademy
 	inline void MemoryPool<DATA>::Init()
 	{
 		// TODO: srand는 한번만 해도 되니 수정하자.
+		InitializeCriticalSection(&cs);
+
 		srand((unsigned int)time(NULL));
 
 		__int64 tmp = (__int64)rand();
@@ -150,6 +154,10 @@ namespace procademy
 	template<typename DATA>
 	inline DATA* MemoryPool<DATA>::Alloc()
 	{
+		EnterCriticalSection(&cs);
+
+		DATA* ret;
+
 		if (_pFreeNode == NULL)
 		{
 			Node* newNode = new Node;
@@ -163,7 +171,8 @@ namespace procademy
 			_capacity++;
 			_useCount++;
 
-			return &(newNode->_data);
+			//return &(newNode->_data);
+			ret = &(newNode->_data);
 		}
 		else
 		{
@@ -180,19 +189,26 @@ namespace procademy
 
 			_useCount++;
 
-			return &(newNode->_data);
+			//return &(newNode->_data);
+			ret = &(newNode->_data);
 		}
+
+		LeaveCriticalSection(&cs);
+		return ret;
 	}
 
 	template<typename DATA>
 	inline bool MemoryPool<DATA>::Free(DATA* pData)
 	{
+		EnterCriticalSection(&cs);
+
 		Node* tmpNode = (Node*)((BYTE*)pData - sizeof(Node*));
 
 		// 내 풀인지 아닌지 체크 + 언더플로우 체크
 		Node* underflowGuard = tmpNode->_underflowGuard;
 		if (underflowGuard != (Node*)_poolId)
 		{
+			LeaveCriticalSection(&cs);
 			return false;
 		}
 
@@ -200,6 +216,7 @@ namespace procademy
 		Node* overflowGuard = tmpNode->_pNextNode;
 		if (overflowGuard != (Node*)_poolId)
 		{
+			LeaveCriticalSection(&cs);
 			return false;
 		}
 
@@ -215,6 +232,7 @@ namespace procademy
 
 		_useCount--;
 
+		LeaveCriticalSection(&cs);
 		return true;
 	}
 

@@ -15,6 +15,8 @@ SerializePacket::SerializePacket()
     _size = 0;
 
     _capacity = eBUFFER_DEFAULT;
+
+    InitializeCriticalSection(&cs);
 }
 
 SerializePacket::SerializePacket(int bufferSize)
@@ -35,7 +37,12 @@ SerializePacket::~SerializePacket()
 
 void SerializePacket::Clear()
 {
+    EnterCriticalSection(&cs);
+
     _writePos = _readPos = 0;
+    _size = 0;
+
+    LeaveCriticalSection(&cs);
 }
 
 int SerializePacket::GetBufferSize()

@@ -64,4 +64,7 @@ protected:
 
 	int _capacity;
 	int _size;
+
+private:
+	CRITICAL_SECTION cs;
 };
