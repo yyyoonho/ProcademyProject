@@ -60,7 +60,8 @@ int main()
 
     SPacketPtr b = a;
 
-    Func(a);
-   
+    SPacketPtr c;
+
+    c = a;
 
 }
