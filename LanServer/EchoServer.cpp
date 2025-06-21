@@ -3,6 +3,8 @@
 
 #include "EchoServer.h"
 
+using namespace std;
+
 EchoServer::EchoServer()
 {
 }
@@ -18,6 +20,15 @@ bool EchoServer::OnConnectionRequest(in_addr ipAddress, USHORT port)
 
 void EchoServer::OnAccept(in_addr ipAddress, USHORT port, DWORD64 sessionID)
 {
+	SerializePacket* sPacket = sPacketMP.Alloc();
+	sPacket->Clear();
+
+	INT64 payload = 0x7fffffffffffffff;
+	
+	(*sPacket) << payload;
+
+	SendPacket(sessionID, sPacket);
+
 	return;
 }
 

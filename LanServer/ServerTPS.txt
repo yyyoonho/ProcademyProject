@@ -1504,3 +1504,585 @@
  sendMessageTPS:0 
  disconnetTPS:0
 
+[TPS: 0段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 1段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 2段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 3段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 4段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 5段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 6段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 7段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 8段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 9段]
+ acceptTPS:1777 
+ recvMessageTPS:365356 
+ sendMessageTPS:367133 
+ disconnetTPS:1741
+
+[TPS: 10段]
+ acceptTPS:1887 
+ recvMessageTPS:371044 
+ sendMessageTPS:372931 
+ disconnetTPS:1885
+
+[TPS: 11段]
+ acceptTPS:1909 
+ recvMessageTPS:373504 
+ sendMessageTPS:375413 
+ disconnetTPS:1910
+
+[TPS: 12段]
+ acceptTPS:1866 
+ recvMessageTPS:372396 
+ sendMessageTPS:374262 
+ disconnetTPS:1867
+
+[TPS: 13段]
+ acceptTPS:1894 
+ recvMessageTPS:373600 
+ sendMessageTPS:375494 
+ disconnetTPS:1892
+
+[TPS: 14段]
+ acceptTPS:1852 
+ recvMessageTPS:377700 
+ sendMessageTPS:379552 
+ disconnetTPS:1854
+
+[TPS: 15段]
+ acceptTPS:1860 
+ recvMessageTPS:375200 
+ sendMessageTPS:377060 
+ disconnetTPS:1861
+
+[TPS: 16段]
+ acceptTPS:1877 
+ recvMessageTPS:371753 
+ sendMessageTPS:373630 
+ disconnetTPS:1877
+
+[TPS: 17段]
+ acceptTPS:1739 
+ recvMessageTPS:355747 
+ sendMessageTPS:357486 
+ disconnetTPS:1739
+
+[TPS: 18段]
+ acceptTPS:1861 
+ recvMessageTPS:365900 
+ sendMessageTPS:367761 
+ disconnetTPS:1862
+
+[TPS: 19段]
+ acceptTPS:1833 
+ recvMessageTPS:378200 
+ sendMessageTPS:380033 
+ disconnetTPS:1831
+
+[TPS: 20段]
+ acceptTPS:1891 
+ recvMessageTPS:375547 
+ sendMessageTPS:377438 
+ disconnetTPS:1885
+
+[TPS: 21段]
+ acceptTPS:1873 
+ recvMessageTPS:379053 
+ sendMessageTPS:380926 
+ disconnetTPS:1877
+
+[TPS: 22段]
+ acceptTPS:1849 
+ recvMessageTPS:374800 
+ sendMessageTPS:376649 
+ disconnetTPS:1850
+
+[TPS: 23段]
+ acceptTPS:1883 
+ recvMessageTPS:374591 
+ sendMessageTPS:376474 
+ disconnetTPS:1879
+
+[TPS: 24段]
+ acceptTPS:1770 
+ recvMessageTPS:353709 
+ sendMessageTPS:355479 
+ disconnetTPS:1777
+
+[TPS: 25段]
+ acceptTPS:1770 
+ recvMessageTPS:353709 
+ sendMessageTPS:355479 
+ disconnetTPS:1777
+
+[TPS: 26段]
+ acceptTPS:1902 
+ recvMessageTPS:381300 
+ sendMessageTPS:383202 
+ disconnetTPS:1899
+
+[TPS: 27段]
+ acceptTPS:1921 
+ recvMessageTPS:377740 
+ sendMessageTPS:379661 
+ disconnetTPS:1921
+
+[TPS: 28段]
+ acceptTPS:1908 
+ recvMessageTPS:380200 
+ sendMessageTPS:382108 
+ disconnetTPS:1907
+
+[TPS: 29段]
+ acceptTPS:1908 
+ recvMessageTPS:380200 
+ sendMessageTPS:382108 
+ disconnetTPS:1907
+
+[TPS: 30段]
+ acceptTPS:1832 
+ recvMessageTPS:378901 
+ sendMessageTPS:380733 
+ disconnetTPS:1832
+
+[TPS: 31段]
+ acceptTPS:1891 
+ recvMessageTPS:378199 
+ sendMessageTPS:380090 
+ disconnetTPS:1889
+
+[TPS: 32段]
+ acceptTPS:1925 
+ recvMessageTPS:381100 
+ sendMessageTPS:383025 
+ disconnetTPS:1922
+
+[TPS: 33段]
+ acceptTPS:1900 
+ recvMessageTPS:376700 
+ sendMessageTPS:378600 
+ disconnetTPS:1899
+
+[TPS: 34段]
+ acceptTPS:1848 
+ recvMessageTPS:379300 
+ sendMessageTPS:381148 
+ disconnetTPS:1851
+
+[TPS: 35段]
+ acceptTPS:1742 
+ recvMessageTPS:356200 
+ sendMessageTPS:357942 
+ disconnetTPS:1739
+
+[TPS: 36段]
+ acceptTPS:1927 
+ recvMessageTPS:380118 
+ sendMessageTPS:382045 
+ disconnetTPS:1925
+
+[TPS: 37段]
+ acceptTPS:789 
+ recvMessageTPS:154281 
+ sendMessageTPS:155070 
+ disconnetTPS:781
+
+[TPS: 38段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 39段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 40段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 41段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 42段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 43段]
+ acceptTPS:0 
+ recvMessageTPS:426556 
+ sendMessageTPS:426556 
+ disconnetTPS:0
+
+[TPS: 44段]
+ acceptTPS:0 
+ recvMessageTPS:246244 
+ sendMessageTPS:246244 
+ disconnetTPS:50
+
+[TPS: 45段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 0段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 1段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 2段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 3段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 4段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 5段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 6段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 7段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 8段]
+ acceptTPS:0 
+ recvMessageTPS:0 
+ sendMessageTPS:0 
+ disconnetTPS:0
+
+[TPS: 9段]
+ acceptTPS:1750 
+ recvMessageTPS:353700 
+ sendMessageTPS:355450 
+ disconnetTPS:0
+
+[TPS: 10段]
+ acceptTPS:1897 
+ recvMessageTPS:372806 
+ sendMessageTPS:374703 
+ disconnetTPS:0
+
+[TPS: 11段]
+ acceptTPS:1883 
+ recvMessageTPS:369794 
+ sendMessageTPS:371677 
+ disconnetTPS:0
+
+[TPS: 12段]
+ acceptTPS:1901 
+ recvMessageTPS:375052 
+ sendMessageTPS:376953 
+ disconnetTPS:0
+
+[TPS: 13段]
+ acceptTPS:1904 
+ recvMessageTPS:374548 
+ sendMessageTPS:376452 
+ disconnetTPS:0
+
+[TPS: 14段]
+ acceptTPS:1881 
+ recvMessageTPS:372431 
+ sendMessageTPS:374312 
+ disconnetTPS:0
+
+[TPS: 15段]
+ acceptTPS:1829 
+ recvMessageTPS:377373 
+ sendMessageTPS:379202 
+ disconnetTPS:0
+
+[TPS: 16段]
+ acceptTPS:1886 
+ recvMessageTPS:371596 
+ sendMessageTPS:373482 
+ disconnetTPS:0
+
+[TPS: 17段]
+ acceptTPS:1819 
+ recvMessageTPS:367912 
+ sendMessageTPS:369731 
+ disconnetTPS:0
+
+[TPS: 18段]
+ acceptTPS:1884 
+ recvMessageTPS:376188 
+ sendMessageTPS:378072 
+ disconnetTPS:0
+
+[TPS: 19段]
+ acceptTPS:1846 
+ recvMessageTPS:375665 
+ sendMessageTPS:377511 
+ disconnetTPS:0
+
+[TPS: 20段]
+ acceptTPS:1844 
+ recvMessageTPS:377075 
+ sendMessageTPS:378919 
+ disconnetTPS:0
+
+[TPS: 21段]
+ acceptTPS:1905 
+ recvMessageTPS:376898 
+ sendMessageTPS:378803 
+ disconnetTPS:0
+
+[TPS: 22段]
+ acceptTPS:1849 
+ recvMessageTPS:370224 
+ sendMessageTPS:372073 
+ disconnetTPS:0
+
+[TPS: 23段]
+ acceptTPS:1837 
+ recvMessageTPS:380740 
+ sendMessageTPS:382577 
+ disconnetTPS:0
+
+[TPS: 24段]
+ acceptTPS:1915 
+ recvMessageTPS:376598 
+ sendMessageTPS:378513 
+ disconnetTPS:0
+
+[TPS: 25段]
+ acceptTPS:1938 
+ recvMessageTPS:379500 
+ sendMessageTPS:381438 
+ disconnetTPS:0
+
+[TPS: 26段]
+ acceptTPS:1934 
+ recvMessageTPS:375800 
+ sendMessageTPS:377734 
+ disconnetTPS:0
+
+[TPS: 27段]
+ acceptTPS:1894 
+ recvMessageTPS:376884 
+ sendMessageTPS:378778 
+ disconnetTPS:0
+
+[TPS: 28段]
+ acceptTPS:1857 
+ recvMessageTPS:379464 
+ sendMessageTPS:381321 
+ disconnetTPS:0
+
+[TPS: 29段]
+ acceptTPS:1906 
+ recvMessageTPS:379152 
+ sendMessageTPS:381058 
+ disconnetTPS:0
+
+[TPS: 30段]
+ acceptTPS:1897 
+ recvMessageTPS:381300 
+ sendMessageTPS:383197 
+ disconnetTPS:0
+
+[TPS: 31段]
+ acceptTPS:1835 
+ recvMessageTPS:378900 
+ sendMessageTPS:380735 
+ disconnetTPS:0
+
+[TPS: 32段]
+ acceptTPS:1873 
+ recvMessageTPS:383000 
+ sendMessageTPS:384873 
+ disconnetTPS:0
+
+[TPS: 33段]
+ acceptTPS:1886 
+ recvMessageTPS:384900 
+ sendMessageTPS:386786 
+ disconnetTPS:0
+
+[TPS: 34段]
+ acceptTPS:1912 
+ recvMessageTPS:377788 
+ sendMessageTPS:379700 
+ disconnetTPS:0
+
+[TPS: 35段]
+ acceptTPS:1896 
+ recvMessageTPS:380915 
+ sendMessageTPS:382811 
+ disconnetTPS:0
+
+[TPS: 36段]
+ acceptTPS:1910 
+ recvMessageTPS:384356 
+ sendMessageTPS:386266 
+ disconnetTPS:0
+
+[TPS: 37段]
+ acceptTPS:1957 
+ recvMessageTPS:379941 
+ sendMessageTPS:381898 
+ disconnetTPS:0
+
+[TPS: 38段]
+ acceptTPS:1935 
+ recvMessageTPS:382700 
+ sendMessageTPS:384635 
+ disconnetTPS:0
+
+[TPS: 39段]
+ acceptTPS:1951 
+ recvMessageTPS:383700 
+ sendMessageTPS:385651 
+ disconnetTPS:0
+
+[TPS: 40段]
+ acceptTPS:1909 
+ recvMessageTPS:386800 
+ sendMessageTPS:388709 
+ disconnetTPS:0
+
+[TPS: 41段]
+ acceptTPS:1891 
+ recvMessageTPS:384800 
+ sendMessageTPS:386691 
+ disconnetTPS:0
+
+[TPS: 42段]
+ acceptTPS:1892 
+ recvMessageTPS:388900 
+ sendMessageTPS:390792 
+ disconnetTPS:0
+
+[TPS: 43段]
+ acceptTPS:1925 
+ recvMessageTPS:376100 
+ sendMessageTPS:378025 
+ disconnetTPS:0
+
+[TPS: 44段]
+ acceptTPS:1890 
+ recvMessageTPS:382514 
+ sendMessageTPS:384404 
+ disconnetTPS:0
+
+[TPS: 45段]
+ acceptTPS:1959 
+ recvMessageTPS:383386 
+ sendMessageTPS:385345 
+ disconnetTPS:0
+
+[TPS: 46段]
+ acceptTPS:1906 
+ recvMessageTPS:384000 
+ sendMessageTPS:385906 
+ disconnetTPS:0
+
+[TPS: 47段]
+ acceptTPS:1937 
+ recvMessageTPS:384161 
+ sendMessageTPS:386098 
+ disconnetTPS:0
+
+[TPS: 48段]
+ acceptTPS:1895 
+ recvMessageTPS:383102 
+ sendMessageTPS:384997 
+ disconnetTPS:0
+
+[TPS: 49段]
+ acceptTPS:1842 
+ recvMessageTPS:371337 
+ sendMessageTPS:373179 
+ disconnetTPS:0
+
+[TPS: 50段]
+ acceptTPS:1253 
+ recvMessageTPS:260355 
+ sendMessageTPS:261608 
+ disconnetTPS:0
+

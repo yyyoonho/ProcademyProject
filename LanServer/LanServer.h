@@ -42,7 +42,6 @@ struct Session
 
 	bool active = false;
 
-	// 스택 테스트용
 	int idx = -1;
 };
 
@@ -85,12 +84,8 @@ private:
 	HANDLE hMonitorThread;
 	bool exitMonitorThread = false;
 
-
-	DWORD64 g_SessionId = 0;
+	DWORD64 g_SessionId = 1;
 	DWORD64 totalSessionCount = 0;
-
-	//unordered_map<DWORD64, Session*> sessionMap;
-	//procademy::MemoryPool<Session> sessionPool;
 
 	Session* sessionArray[MAXARR];
 
@@ -107,8 +102,6 @@ private:
 	int acceptTPS = 0;
 	int recvMessageTPS = 0;
 	int sendMessageTPS = 0;
-
-	int disconnetFromClient = 0;
 
 	// TPS 대외용
 	int acceptTPS_Save = 0;

@@ -83,15 +83,10 @@ bool LanServer::SendPacket(DWORD64 sessionID, SerializePacket* sPacket)
 
 	stHeader header;
 	header.len = sPacket->GetDataSize();
-
-	//SerializePacket* headerSPacket = sPacketMP.Alloc();
-	//headerSPacket->Clear();
-	//headerSPacket->Putdata((char*)&header, sizeof(stHeader));
 	
 	sPacket->PushHeader((char*)&header, sizeof(stHeader));
 
 	EnterCriticalSection(&pSession->sendQLock);
-	//pSession->sendQ.push(headerSPacket);
 	pSession->sendQ.push(sPacket);
 	LeaveCriticalSection(&pSession->sendQLock);
 
@@ -425,7 +420,6 @@ void LanServer::MonitorThread()
 		acceptTPS_Save = InterlockedExchange((LONG*)&acceptTPS, 0);
 		recvMessageTPS_Save = InterlockedExchange((LONG*)&recvMessageTPS, 0);
 		sendMessageTPS_Save = InterlockedExchange((LONG*)&sendMessageTPS, 0);
-		disconnetFromClient_Save = InterlockedExchange((LONG*)&disconnetFromClient, 0);
 
 		Sleep(1000 - (timeGetTime() - oldTime));
 
@@ -521,6 +515,8 @@ void LanServer::DestroySession(Session* pSession)
 	closesocket(pSession->sock);
 	pSession->sock = -1;
 
+	pSession->sessionID = pSession->sessionID & 0xffff000000000000;
+
 	pSession->recvQ.ClearBuffer();
 	
 	while (!pSession->sendQ.empty())
@@ -538,9 +534,6 @@ void LanServer::DestroySession(Session* pSession)
 	LeaveCriticalSection(&stackLock);
 
 	InterlockedDecrement(&totalSessionCount);
-
-	// TEST
-	InterlockedIncrement((LONG*) & disconnetFromClient);
 }
 
 bool LanServer::FindNonActiveSession(OUT unsigned int* idx)
