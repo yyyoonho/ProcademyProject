@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <stack>
 #include <queue>
+#include <unordered_set>
 
 #include "RingBuffer.h"
 #include "SerializeBuffer.h"

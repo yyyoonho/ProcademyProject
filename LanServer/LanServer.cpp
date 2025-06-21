@@ -216,108 +216,6 @@ void LanServer::CreateMonitorThread()
 	return;
 }
 
-void LanServer::WorkerThreadRun(LPVOID* lParam)
-{
-	LanServer* self = (LanServer*)lParam;
-	self->WorkerThread();
-}
-
-void LanServer::WorkerThread()
-{
-	while (1)
-	{
-		// GQCS() OUT파라메터 초기화
-		DWORD cbTransferred = 0;
-		Session* pSession = NULL;
-		OVERLAPPED* pOverlapped;
-
-		// GQCS()
-		int retVal = GetQueuedCompletionStatus(hIOCP, &cbTransferred, (PULONG_PTR)&pSession, &pOverlapped, INFINITE);
-		if (cbTransferred == NULL && pSession == NULL && pOverlapped == NULL)
-		{
-			printf("\n[TCP 서버] IOCP 워커쓰레드 종료...\n");
-			PostQueuedCompletionStatus(hIOCP, NULL, NULL, NULL);
-			return;
-		}
-		if (cbTransferred == 0)
-		{
-			// TODO: 연결종료를 위한 something
-
-		}
-
-		if (((MyOverlapped*)pOverlapped)->type == RECV)
-		{
-			pSession->recvQ.MoveRear(cbTransferred);
-
-			while (1)
-			{
-				if (pSession->recvQ.GetUseSize() < sizeof(stHeader))
-				{
-					// WSARecv
-					RequestWSARecv(pSession);
-					break;
-				}
-
-				char headerBuf[100 + 1];
-
-				pSession->recvQ.Peek(headerBuf, sizeof(stHeader));
-				short payLoadLen = ((stHeader*)headerBuf)->len;
-
-				if (pSession->recvQ.GetUseSize() < sizeof(stHeader) + payLoadLen)
-				{
-					// WSARecv
-					RequestWSARecv(pSession);
-					break;
-				}
-
-				InterlockedIncrement((LONG*)&recvMessageTPS);
-
-				SerializePacket sPacket;
-				int ret = pSession->recvQ.Dequeue(sPacket.GetBufferPtr(), sizeof(stHeader) + payLoadLen);
-				sPacket.MoveWritePos(ret);
-
-				sPacket.MoveReadPos(sizeof(stHeader));
-
-				OnMessage(pSession->sessionID, &sPacket);
-
-				// WSASend
-				if (InterlockedExchange(&pSession->sendFlag, false) == true)
-				{
-					RequestWSASend(pSession);
-				}
-			}
-		}
-		else if (((MyOverlapped*)pOverlapped)->type == SEND)
-		{
-			for (int i = 0; i < ((MyOverlapped*)pOverlapped)->IOCompletionWaitCount; i++)
-			{
-				sPacketMP.Free(pSession->IOCompletionWaitArr[i]);
-			}
-			((MyOverlapped*)pOverlapped)->IOCompletionWaitCount = 0;
-
-			EnterCriticalSection(&pSession->sendQLock);
-			int sendQSize = pSession->sendQ.size();
-			LeaveCriticalSection(&pSession->sendQLock);
-
-			if (sendQSize > 0)
-			{
-				RequestWSASend(pSession);
-			}
-			else
-			{
-				InterlockedExchange(&pSession->sendFlag, true);
-			}
-		}
-
-		if (InterlockedDecrement(&pSession->IOCount) == 0)
-		{
-			DestroySession(pSession);
-		}
-
-	}
-	return;
-}
-
 void LanServer::AcceptThreadRun(LPVOID* lParam)
 {
 	LanServer* self = (LanServer*)lParam;
@@ -429,6 +327,108 @@ void LanServer::MonitorThread()
 	return;
 }
 
+void LanServer::WorkerThreadRun(LPVOID* lParam)
+{
+	LanServer* self = (LanServer*)lParam;
+	self->WorkerThread();
+}
+
+void LanServer::WorkerThread()
+{
+	while (1)
+	{
+		// GQCS() OUT파라메터 초기화
+		DWORD cbTransferred = 0;
+		Session* pSession = NULL;
+		OVERLAPPED* pOverlapped;
+
+		// GQCS()
+		int retVal = GetQueuedCompletionStatus(hIOCP, &cbTransferred, (PULONG_PTR)&pSession, &pOverlapped, INFINITE);
+		if (cbTransferred == NULL && pSession == NULL && pOverlapped == NULL)
+		{
+			printf("\n[TCP 서버] IOCP 워커쓰레드 종료...\n");
+			PostQueuedCompletionStatus(hIOCP, NULL, NULL, NULL);
+			return;
+		}
+		if (cbTransferred == 0)
+		{
+			// TODO: 연결종료를 위한 something
+
+		}
+
+		if (((MyOverlapped*)pOverlapped)->type == RECV)
+		{
+			pSession->recvQ.MoveRear(cbTransferred);
+
+			while (1)
+			{
+				if (pSession->recvQ.GetUseSize() < sizeof(stHeader))
+				{
+					// WSARecv
+					RequestWSARecv(pSession);
+					break;
+				}
+
+				char headerBuf[100 + 1];
+
+				pSession->recvQ.Peek(headerBuf, sizeof(stHeader));
+				short payLoadLen = ((stHeader*)headerBuf)->len;
+
+				if (pSession->recvQ.GetUseSize() < sizeof(stHeader) + payLoadLen)
+				{
+					// WSARecv
+					RequestWSARecv(pSession);
+					break;
+				}
+
+				InterlockedIncrement((LONG*)&recvMessageTPS);
+
+				SerializePacket sPacket;
+				int ret = pSession->recvQ.Dequeue(sPacket.GetBufferPtr(), sizeof(stHeader) + payLoadLen);
+				sPacket.MoveWritePos(ret);
+
+				sPacket.MoveReadPos(sizeof(stHeader));
+
+				OnMessage(pSession->sessionID, &sPacket);
+
+				// WSASend
+				if (InterlockedExchange(&pSession->sendFlag, false) == true)
+				{
+					RequestWSASend(pSession);
+				}
+			}
+		}
+		else if (((MyOverlapped*)pOverlapped)->type == SEND)
+		{
+			for (int i = 0; i < ((MyOverlapped*)pOverlapped)->IOCompletionWaitCount; i++)
+			{
+				sPacketMP.Free(pSession->IOCompletionWaitArr[i]);
+			}
+			((MyOverlapped*)pOverlapped)->IOCompletionWaitCount = 0;
+
+			EnterCriticalSection(&pSession->sendQLock);
+			int sendQSize = pSession->sendQ.size();
+			LeaveCriticalSection(&pSession->sendQLock);
+
+			if (sendQSize > 0)
+			{
+				RequestWSASend(pSession);
+			}
+			else
+			{
+				InterlockedExchange(&pSession->sendFlag, true);
+			}
+		}
+
+		if (InterlockedDecrement(&pSession->IOCount) == 0)
+		{
+			DestroySession(pSession);
+		}
+
+	}
+	return;
+}
+
 bool LanServer::RequestWSARecv(Session* pSession)
 {
 	DWORD recvBytes;
@@ -470,6 +470,7 @@ bool LanServer::RequestWSASend(Session* pSession)
 	int count = 0;
 
 	EnterCriticalSection(&pSession->sendQLock);
+
 	while (!pSession->sendQ.empty())
 	{
 		if (count > MAXWSABUF)
@@ -499,6 +500,12 @@ bool LanServer::RequestWSASend(Session* pSession)
 			if (WSAGetLastError() != WSAECONNRESET)
 			{
 				printf("ERROR: WSASend() %d\n", WSAGetLastError());
+			}
+
+			if (WSAGetLastError() == 10022)
+			{
+				//DebugBreak();
+				printf("10022 Idx: %d\n", ((pSession->sessionID)&0xffff000000000000)>>48);
 			}
 
 			InterlockedDecrement(&pSession->IOCount);
