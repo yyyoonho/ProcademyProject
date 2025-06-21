@@ -1,10 +1,12 @@
 ﻿#include <Windows.h>
 #include <iostream>
 
+#include "MemoryPool.h"
 #include "SerializeBuffer.h"
 
 using namespace std;
 
+procademy::MemoryPool<SerializePacket> SerializePacket::SPacketMP(0, false);
 
 SerializePacket::SerializePacket()
 {

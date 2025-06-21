@@ -7,16 +7,22 @@ struct stTCPHeader
 
 class SerializePacket
 {
+	friend procademy::MemoryPool<SerializePacket>;
+public:
+	static procademy::MemoryPool<SerializePacket> SPacketMP;
+
 public:
 	enum en_PACKET
 	{
 		eBUFFER_DEFAULT = 1400 // 패킷의 기본 버퍼 사이즈
 	};
 
+private:
 	SerializePacket();
 	SerializePacket(int bufferSize);
 	virtual ~SerializePacket();
 
+public:
 	void Clear();
 	int GetBufferSize();
 	int GetDataSize();

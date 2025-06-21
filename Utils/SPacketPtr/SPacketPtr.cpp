@@ -2,13 +2,33 @@
 
 #include <iostream>
 #include "Windows.h"
-#include "SerializeBuffer.h"
 #include "MemoryPool.h"
-
+#include "SerializeBuffer.h"
 #include "SPacketPtr.h"
 
 using namespace std;
 
+void RawPtr::IncreseRefCount()
+{
+    InterlockedIncrement(&_RCBPtr->count);
+}
+
+void RawPtr::DecreseRefCount()
+{
+    if (InterlockedDecrement(&_RCBPtr->count) == 0)
+    {
+        SerializePacket::SPacketMP.Free(_ptr);
+        delete _RCBPtr;
+
+        _ptr = NULL;
+        _RCBPtr = NULL;
+    }
+}
+
+SerializePacket* SPacketPtr::MakeSerializePacket()
+{
+    return SerializePacket::SPacketMP.Alloc();
+}
 
 SPacketPtr::SPacketPtr()
 {
@@ -41,27 +61,14 @@ SPacketPtr::~SPacketPtr()
 {
     if (InterlockedDecrement(&_RCBPtr->count) == 0)
     {
-        SPacketPtr::SPacketMP.Free(_ptr);
+        // 찐 소멸
+        SerializePacket::SPacketMP.Free(_ptr);
         delete _RCBPtr;
-
-        cout << "찐 소멸" << endl;
     }
 }
 
-
-void Func(SPacketPtr tmp)
+void SPacketPtr::GetRawPtr(OUT RawPtr* pRaw)
 {
-    return;
-}
-
-int main()
-{
-    SPacketPtr a(SPacketPtr::SPacketMP.Alloc());
-
-    SPacketPtr b = a;
-
-    SPacketPtr c;
-
-    c = a;
-
+    pRaw->_ptr = _ptr;
+    pRaw->_RCBPtr = _RCBPtr;
 }
