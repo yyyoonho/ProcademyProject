@@ -16,6 +16,8 @@ using namespace std;
 #define FRAME 25
 #define MSPERFRAME (1000/FRAME)
 
+list<stCharacter*> moveCharacterList;
+
 bool FrameControl()
 {
 	static int oldTime = timeGetTime();

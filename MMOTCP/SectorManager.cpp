@@ -425,6 +425,365 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 
 void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemoveSector, OUT stSECTOR_AROUND* pAddSector)
 {
+
+	stSECTOR_POS curSector = pCharacter->curSector;
+	stSECTOR_POS oldSector = pCharacter->oldSector;
+
+	
+
+	// 우로 이동
+	if (curSector.iY == oldSector.iY && curSector.iX == oldSector.iX + 1)
+	{
+		int curDy[3] = { -1,0,1 };
+		int curDx[3] = { 1,1,1 };
+
+		int count = 0;
+		for (int i = 0; i < 3; i++)
+		{
+			int aroundSectorY = curSector.iY + curDy[i];
+			int aroundSectorX = curSector.iX + curDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pAddSector->around[count].iY = aroundSectorY;
+			pAddSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pAddSector->iCount = count;
+		count = 0;
+
+		int oldDy[3] = { -1,0,1 };
+		int oldDx[3] = { -1,-1,-1 };
+
+		for (int i = 0; i < 3; i++)
+		{
+			int aroundSectorY = oldSector.iY + oldDy[i];
+			int aroundSectorX = oldSector.iX + oldDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pRemoveSector->around[count].iY = aroundSectorY;
+			pRemoveSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pRemoveSector->iCount = count;
+		
+		return;
+	}
+
+	// 좌로 이동
+	if (curSector.iY == oldSector.iY && curSector.iX == oldSector.iX - 1)
+	{
+		int curDy[3] = { -1,0,1 };
+		int curDx[3] = { -1,-1,-1 };
+
+		int count = 0;
+		for (int i = 0; i < 3; i++)
+		{
+			int aroundSectorY = curSector.iY + curDy[i];
+			int aroundSectorX = curSector.iX + curDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pAddSector->around[count].iY = aroundSectorY;
+			pAddSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pAddSector->iCount = count;
+		count = 0;
+
+		int oldDy[3] = { -1,0,1 };
+		int oldDx[3] = { 1,1,1 };
+
+		for (int i = 0; i < 3; i++)
+		{
+			int aroundSectorY = oldSector.iY + oldDy[i];
+			int aroundSectorX = oldSector.iX + oldDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pRemoveSector->around[count].iY = aroundSectorY;
+			pRemoveSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pRemoveSector->iCount = count;
+
+		return;
+	}
+
+	// 위로 이동
+	if (curSector.iY == oldSector.iY - 1 && curSector.iX == oldSector.iX)
+	{
+		int curDy[3] = { -1,-1,-1 };
+		int curDx[3] = { -1,0,1 };
+
+		int count = 0;
+		for (int i = 0; i < 3; i++)
+		{
+			int aroundSectorY = curSector.iY + curDy[i];
+			int aroundSectorX = curSector.iX + curDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pAddSector->around[count].iY = aroundSectorY;
+			pAddSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pAddSector->iCount = count;
+		count = 0;
+
+		int oldDy[3] = { 1,1,1 };
+		int oldDx[3] = { -1,0,1 };
+
+		for (int i = 0; i < 3; i++)
+		{
+			int aroundSectorY = oldSector.iY + oldDy[i];
+			int aroundSectorX = oldSector.iX + oldDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pRemoveSector->around[count].iY = aroundSectorY;
+			pRemoveSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pRemoveSector->iCount = count;
+
+		return;
+	}
+	 
+	// 아래로 이동
+	if (curSector.iY == oldSector.iY + 1 && curSector.iX == oldSector.iX)
+	{
+		int curDy[3] = { 1,1,1 };
+		int curDx[3] = { -1,0,1 };
+
+		int count = 0;
+		for (int i = 0; i < 3; i++)
+		{
+			int aroundSectorY = curSector.iY + curDy[i];
+			int aroundSectorX = curSector.iX + curDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pAddSector->around[count].iY = aroundSectorY;
+			pAddSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pAddSector->iCount = count;
+		count = 0;
+
+		int oldDy[3] = { -1,-1,-11 };
+		int oldDx[3] = { -1,0,1 };
+
+		for (int i = 0; i < 3; i++)
+		{
+			int aroundSectorY = oldSector.iY + oldDy[i];
+			int aroundSectorX = oldSector.iX + oldDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pRemoveSector->around[count].iY = aroundSectorY;
+			pRemoveSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pRemoveSector->iCount = count;
+
+		return;
+	}
+
+	// 대각우상 이동
+	if (curSector.iY == oldSector.iY - 1 && curSector.iX == oldSector.iX + 1)
+	{
+		int curDy[5] = { -1,-1,-1,0,1 };
+		int curDx[5] = { -1,0,1,1,1 };
+
+		int count = 0;
+		for (int i = 0; i < 5; i++)
+		{
+			int aroundSectorY = curSector.iY + curDy[i];
+			int aroundSectorX = curSector.iX + curDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pAddSector->around[count].iY = aroundSectorY;
+			pAddSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pAddSector->iCount = count;
+		count = 0;
+
+		int oldDy[5] = { -1,0,1,1,1 };
+		int oldDx[5] = { -1,-1,-1,0,1 };
+
+		for (int i = 0; i < 5; i++)
+		{
+			int aroundSectorY = oldSector.iY + oldDy[i];
+			int aroundSectorX = oldSector.iX + oldDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pRemoveSector->around[count].iY = aroundSectorY;
+			pRemoveSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pRemoveSector->iCount = count;
+
+		return;
+	}
+
+	// 대각우하 이동
+	if (curSector.iY == oldSector.iY + 1 && curSector.iX == oldSector.iX + 1)
+	{
+		int curDy[5] = { -1,0,1,1,1 };
+		int curDx[5] = { 1,1,1,0,-1 };
+
+		int count = 0;
+		for (int i = 0; i < 5; i++)
+		{
+			int aroundSectorY = curSector.iY + curDy[i];
+			int aroundSectorX = curSector.iX + curDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pAddSector->around[count].iY = aroundSectorY;
+			pAddSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pAddSector->iCount = count;
+		count = 0;
+
+		int oldDy[5] = { -1,-1,-1,0,1 };
+		int oldDx[5] = { 1,0,-1,-1,-1 };
+
+		for (int i = 0; i < 5; i++)
+		{
+			int aroundSectorY = oldSector.iY + oldDy[i];
+			int aroundSectorX = oldSector.iX + oldDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pRemoveSector->around[count].iY = aroundSectorY;
+			pRemoveSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pRemoveSector->iCount = count;
+
+		return;
+	}
+
+	// 대각좌상 이동
+	if (curSector.iY == oldSector.iY - 1 && curSector.iX == oldSector.iX - 1)
+	{
+		int curDy[5] = { -1,-1,-1,0,1 };
+		int curDx[5] = { 1,0,-1,-1,-1 };
+
+		int count = 0;
+		for (int i = 0; i < 5; i++)
+		{
+			int aroundSectorY = curSector.iY + curDy[i];
+			int aroundSectorX = curSector.iX + curDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pAddSector->around[count].iY = aroundSectorY;
+			pAddSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pAddSector->iCount = count;
+		count = 0;
+
+		int oldDy[5] = { -1,0,1,1,1 };
+		int oldDx[5] = { 1,1,1,0,-1 };
+
+		for (int i = 0; i < 5; i++)
+		{
+			int aroundSectorY = oldSector.iY + oldDy[i];
+			int aroundSectorX = oldSector.iX + oldDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pRemoveSector->around[count].iY = aroundSectorY;
+			pRemoveSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pRemoveSector->iCount = count;
+
+		return;
+	}
+
+	// 대각좌하 이동
+	if (curSector.iY == oldSector.iY + 1 && curSector.iX == oldSector.iX - 1);
+	{
+		int curDy[5] = { -1,0,1,1,1 };
+		int curDx[5] = { -1,-1,-1,0,1 };
+
+		int count = 0;
+		for (int i = 0; i < 5; i++)
+		{
+			int aroundSectorY = curSector.iY + curDy[i];
+			int aroundSectorX = curSector.iX + curDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pAddSector->around[count].iY = aroundSectorY;
+			pAddSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pAddSector->iCount = count;
+		count = 0;
+
+		int oldDy[5] = { -1,-1,-1,0,1 };
+		int oldDx[5] = { -1,0,1,1,1 };
+
+		for (int i = 0; i < 5; i++)
+		{
+			int aroundSectorY = oldSector.iY + oldDy[i];
+			int aroundSectorX = oldSector.iX + oldDx[i];
+
+			if (aroundSectorY < 0 || aroundSectorY >= dfSECTOR_MAX_Y || aroundSectorX < 0 || aroundSectorX >= dfSECTOR_MAX_X)
+				continue;
+
+			pRemoveSector->around[count].iY = aroundSectorY;
+			pRemoveSector->around[count].iX = aroundSectorX;
+
+			count++;
+		}
+		pRemoveSector->iCount = count;
+
+		return;
+	}
+
+	/*
 	stSECTOR_POS curSector = pCharacter->curSector;
 	stSECTOR_POS oldSector = pCharacter->oldSector;
 
@@ -483,6 +842,7 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 		}
 	}
 	pRemoveSector->iCount = count;
+	*/
 
 	return;
 }
