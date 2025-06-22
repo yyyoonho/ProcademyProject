@@ -24,14 +24,14 @@ bool FrameControl()
 
 	int diffTime = timeGetTime() - oldTime;
 
-	if (diffTime < 20) // 20ms
+	if (diffTime < 40) // 20ms
 	{
 		return false;
 	}
 	else
 	{
 		PushDeltaTime(diffTime);
-		oldTime += 20;
+		oldTime += 40;
 		return true;
 	}
 }
@@ -82,9 +82,6 @@ void Move(DWORD deltaTime, stCharacter* pCharacter, BYTE dir)
 	pCharacter->shX = nextX;
 	pCharacter->shY = nextY;
 
-	_LOG(dfLOG_LEVEL_DEBUG, L"# Moving... # SessionID:%d / Action:%d / X:%d / Y:%d\n",
-		pCharacter->dwSessionID, pCharacter->byMoveDirection, pCharacter->shX, pCharacter->shY);
-
 	return;
 }
 
@@ -106,19 +103,10 @@ void GameUpdate()
 		// hp가 0이하면 종료처리.
 		if (pCharacter->chHP <= 0)
 		{
-			{
-				SerializePacket sPacket;
-				mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
-
-				SendPacket_Around(pCharacter->pSession, &sPacket, false);
-			}
 			_LOG(dfLOG_LEVEL_DEBUG, L"# HP ZERO... # SessionID:%d\n", pCharacter->dwSessionID);
 
-			//TEST
-			_LOG(dfLOG_LEVEL_DEBUG, L"# Hp 0 # SessionID:%d\n", pCharacter->dwSessionID);
 			PushQuitQ(pCharacter->pSession);
 
-			
 			continue;
 		}
 
@@ -127,14 +115,7 @@ void GameUpdate()
 		DWORD diffTime = (a - pCharacter->pSession->dwLastRecvTime);
 		if ( diffTime > dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
-			{
-				SerializePacket sPacket;
-				mpDeleteCharacter(&sPacket, pCharacter->dwSessionID);
-
-				SendPacket_Around(pCharacter->pSession, &sPacket, false);
-			}
-
-			_LOG(dfLOG_LEVEL_SYSTEM, L"# Heartbeat TIMEOUT... # SessionID:%d\n", pCharacter->dwSessionID);
+			_LOG(dfLOG_LEVEL_DEBUG, L"# Heartbeat TIMEOUT... # SessionID:%d\n", pCharacter->dwSessionID);
 
 			PushQuitQ(pCharacter->pSession);
 
@@ -144,31 +125,66 @@ void GameUpdate()
 		switch (pCharacter->byMoveDirection)
 		{
 		case dfPACKET_MOVE_DIR_LL:
-			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			//Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			if (CanGo(pCharacter->shY, pCharacter->shX - dfSPEED_PLAYER_X))
+			{
+				pCharacter->shX = pCharacter->shX - dfSPEED_PLAYER_X;
+			}
 			break;
 		case dfPACKET_MOVE_DIR_LU:
-			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			//Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			if (CanGo(pCharacter->shY - dfSPEED_PLAYER_Y, pCharacter->shX - dfSPEED_PLAYER_X))
+			{
+				pCharacter->shY = pCharacter->shY - dfSPEED_PLAYER_Y;
+				pCharacter->shX = pCharacter->shX - dfSPEED_PLAYER_X;
+			}
 			break;
 		case dfPACKET_MOVE_DIR_UU:
-			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			//Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			if (CanGo(pCharacter->shY - dfSPEED_PLAYER_Y, pCharacter->shX))
+			{
+				pCharacter->shY = pCharacter->shY - dfSPEED_PLAYER_Y;
+			}
 			break;
 		case dfPACKET_MOVE_DIR_RU:
-			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			//Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			if (CanGo(pCharacter->shY - dfSPEED_PLAYER_Y, pCharacter->shX + dfSPEED_PLAYER_X))
+			{
+				pCharacter->shY = pCharacter->shY - dfSPEED_PLAYER_Y;
+				pCharacter->shX = pCharacter->shX + dfSPEED_PLAYER_X;
+			}
 			break;
 		case dfPACKET_MOVE_DIR_RR:
-			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			//Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			if (CanGo(pCharacter->shY, pCharacter->shX + dfSPEED_PLAYER_X))
+			{
+				pCharacter->shX = pCharacter->shX + dfSPEED_PLAYER_X;
+			}
 			break;
 		case dfPACKET_MOVE_DIR_RD:
-			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			//Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			if (CanGo(pCharacter->shY + dfSPEED_PLAYER_Y, pCharacter->shX + dfSPEED_PLAYER_X))
+			{
+				pCharacter->shY = pCharacter->shY + dfSPEED_PLAYER_Y,
+				pCharacter->shX = pCharacter->shX + dfSPEED_PLAYER_X;
+			}
 			break;
 		case dfPACKET_MOVE_DIR_DD:
-			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			//Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			if (CanGo(pCharacter->shY + dfSPEED_PLAYER_Y, pCharacter->shX))
+			{
+				pCharacter->shY = pCharacter->shY + dfSPEED_PLAYER_Y;
+			}
 			break;
 		case dfPACKET_MOVE_DIR_LD:
-			Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			//Move(deltaTime, pCharacter, pCharacter->byMoveDirection);
+			if (CanGo(pCharacter->shY + dfSPEED_PLAYER_Y, pCharacter->shX - dfSPEED_PLAYER_X))
+			{
+				pCharacter->shY = pCharacter->shY + dfSPEED_PLAYER_Y;
+				pCharacter->shX = pCharacter->shX - dfSPEED_PLAYER_X;
+			}
 			break;
 		}
-
 
 		// 섹터 변경 체크
 		if (pCharacter->dwAction >= dfPACKET_MOVE_DIR_LL && pCharacter->dwAction <= dfPACKET_MOVE_DIR_LD)

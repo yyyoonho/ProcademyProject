@@ -20,7 +20,7 @@ queue<SOCKET> entryQ;
 queue<stSession*> quitQ;
 
 int totalSession = 0;
-int g_id = 0;
+int g_id = 1;
 
 /* 함수 리턴용 전역변수 */
 int wsaStartupRet;
@@ -260,15 +260,8 @@ void RecvProc(SOCKET socket)
 		{
 			//printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
 
-			{
-				SerializePacket sPacket;
-				mpDeleteCharacter(&sPacket, pSession->dwSessionID);
-
-				SendPacket_Around(pSession, &sPacket, false);
-			}
-
 			//TEST
-			_LOG(dfLOG_LEVEL_DEBUG, L"# [상대방의 비 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 비 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
 			quitQ.push(pSession);
 
 			_LOG(dfLOG_LEVEL_DEBUG, L"# Disconnet... # SessionID:%d\n", pSession->dwSessionID);
@@ -279,15 +272,8 @@ void RecvProc(SOCKET socket)
 	{
 		//printf("[상대방의 정상 연결 종료] id : %d\n", pSession->dwSessionID);
 
-		{
-			SerializePacket sPacket;
-			mpDeleteCharacter(&sPacket, pSession->dwSessionID);
-
-			SendPacket_Around(pSession, &sPacket, false);
-		}
-
 		//TEST
-		_LOG(dfLOG_LEVEL_DEBUG, L"# [상대방의 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
 		quitQ.push(pSession);
 
 		_LOG(dfLOG_LEVEL_DEBUG, L"# Disconnet... # SessionID:%d\n", pSession->dwSessionID);
@@ -338,8 +324,14 @@ void SendProc(SOCKET socket)
 	{
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
-			printf("ERROR: send() %d\n", WSAGetLastError());
-			return;
+			if (WSAGetLastError() != 10054)
+			{
+				printf("ERROR: send() %d\n", WSAGetLastError());
+
+				quitQ.push(pSession);
+
+				return;
+			}
 		}
 	}
 
@@ -356,11 +348,19 @@ void CreateSessionNCharacter()
 		entryQ.pop();
 
 		stSession* newSession = sessionMP.Alloc();
+		
+		//디버깅
+		//stSession* newSession = new stSession;
 
 		newSession->socket = newSocket;
 		newSession->dwSessionID = g_id++;
+
 		newSession->recvQ.Resize(5000);
+		newSession->recvQ.ClearBuffer();
+
 		newSession->sendQ.Resize(10000);
+		newSession->sendQ.ClearBuffer();
+
 		newSession->dwLastRecvTime = GetTickCount();
 
 		//printf("[접속] SessionID: %d\n", newSession->dwSessionID);
@@ -378,12 +378,18 @@ void DestroySessionNCharacter()
 		stSession* destroySession = quitQ.front();
 		quitQ.pop();
 
-		_LOG(dfLOG_LEVEL_DEBUG, L"# DestroySessionNCharacter # SessionID:%d\n", destroySession->dwSessionID);
+		{
+			SerializePacket sPacket;
+			mpDeleteCharacter(&sPacket, destroySession->dwSessionID);
+
+			SendPacket_Around(destroySession, &sPacket, false);
+		}
 
 		DestroyCharacter(destroySession->dwSessionID);
 
-		SOCKET key = destroySession->socket;
-		sessionMap.erase(key);
+		sessionMap.erase(destroySession->socket);
+
+		closesocket(destroySession->socket);
 
 		bool ret = sessionMP.Free(destroySession);
 		if (!ret)
@@ -391,6 +397,6 @@ void DestroySessionNCharacter()
 			_LOG(dfLOG_LEVEL_ERROR, L"Error: sessionMP.Free\n");
 		}
 
-		closesocket(destroySession->socket);
+		//delete destroySession;
 	}
 }

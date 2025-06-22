@@ -31,16 +31,16 @@ void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 	newCharacter->byMoveDirection = dfMOVE_STOP;
 
 	// TODO: 테스트코드
-	/*static short shX = 20;
-	static short shY = 20;*/
+	//static short shX = 20;
+	//static short shY = 20;
 
 	short shX = rand() % dfRANGE_MOVE_RIGHT;
 	short shY = rand() % dfRANGE_MOVE_BOTTOM;
 
 	newCharacter->shX = shX;
 	newCharacter->shY = shY;
-	/*shX += 20;
-	shY += 20;*/
+	//shX += 20;
+	//shY += 20;
 
 	newCharacter->dX = (double)newCharacter->shX;
 	newCharacter->dY = (double)newCharacter->shY;
@@ -153,7 +153,7 @@ void DestroyCharacter(DWORD sessionId)
 	stCharacter* destroyCharacter = characterMap.find(sessionId)->second;
 	if (destroyCharacter == NULL)
 	{
-		DebugBreak();
+		//DebugBreak();
 		return;
 	}
 

@@ -242,6 +242,7 @@ void GetSessionsFromSector(int sectorY, int sectorX, OUT stSession* v[], OUT int
 	{
 		//v.push_back((*iter)->pSession);
 		v[tmpCount] = (*iter)->pSession;
+		tmpCount++;
 	}
 
 	*count = tmpCount;
@@ -258,6 +259,7 @@ void GetCharactersFromSector(int sectorY, int sectorX, OUT stCharacter* v[], OUT
 	{
 		//v.push_back((*iter));
 		v[tmpCount] = (*iter);
+		tmpCount++;
 	}
 
 	*count = tmpCount;
@@ -371,30 +373,30 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 	for (int i = 0; i < addSectors.iCount; i++)
 	{
 		GetCharactersFromSector(addSectors.around[i].iY, addSectors.around[i].iX, v, &count);
-	}
 
-	// 나에게 AddSector에 위치한 클라이언트들의 생성정보를 보낸다.
-	{
-		for (int j = 0; j < count; j++)
+		// 나에게 AddSector에 위치한 클라이언트들의 생성정보를 보낸다.
 		{
-			SerializePacket sPacket;
-			mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
+			for (int j = 0; j < count; j++)
+			{
+				SerializePacket sPacket;
+				mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
 
-			SendPacket_Unicast(pCharacter->pSession, &sPacket);
+				SendPacket_Unicast(pCharacter->pSession, &sPacket);
+			}
 		}
-	}
 
-	// 나에게 AddSector에 위치한 클라이언트들의 액션정보를 보낸다.
-	{
-		for (int j = 0; j < count; j++)
+		// 나에게 AddSector에 위치한 클라이언트들의 액션정보를 보낸다.
 		{
-			if (v[j]->byMoveDirection == dfMOVE_STOP)
-				continue;
+			for (int j = 0; j < count; j++)
+			{
+				if (v[j]->byMoveDirection == dfMOVE_STOP)
+					continue;
 
-			SerializePacket sPacket;
-			mpMoveStart(&sPacket, v[j]->dwSessionID, v[j]->byMoveDirection, v[j]->shX, v[j]->shY);
+				SerializePacket sPacket;
+				mpMoveStart(&sPacket, v[j]->dwSessionID, v[j]->byMoveDirection, v[j]->shX, v[j]->shY);
 
-			SendPacket_Unicast(pCharacter->pSession, &sPacket);
+				SendPacket_Unicast(pCharacter->pSession, &sPacket);
+			}
 		}
 	}
 
@@ -425,7 +427,7 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 
 void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemoveSector, OUT stSECTOR_AROUND* pAddSector)
 {
-
+	
 	stSECTOR_POS curSector = pCharacter->curSector;
 	stSECTOR_POS oldSector = pCharacter->oldSector;
 
@@ -782,8 +784,9 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 
 		return;
 	}
-
-	/*
+	
+	
+/*
 	stSECTOR_POS curSector = pCharacter->curSector;
 	stSECTOR_POS oldSector = pCharacter->oldSector;
 
@@ -842,6 +845,7 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 		}
 	}
 	pRemoveSector->iCount = count;
+	
 	*/
 
 	return;
