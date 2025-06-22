@@ -314,3 +314,9 @@ struct st_PACKET_HEADER
 //	4	-	Time
 //
 //---------------------------------------------------------------
+
+
+/* ÀÚÃ¼ define */
+#define dfATTACK_TYPE_1	1
+#define dfATTACK_TYPE_2 2
+#define dfATTACK_TYPE_3 3

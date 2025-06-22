@@ -79,7 +79,7 @@ bool netPacketProc_MoveStart(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : MoveStart # SessionID:%d\n", pCharacter->dwSessionID);
+		_LOG(dfLOG_LEVEL_DEBUG, L"# mpSync : MoveStart # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket, true);
 
 		shX = pCharacter->shX;
@@ -151,7 +151,7 @@ bool netPacketProc_MoveStop(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : MoveStop # SessionID:%d\n", pCharacter->dwSessionID);
+		_LOG(dfLOG_LEVEL_DEBUG, L"# mpSync : MoveStop # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
@@ -212,7 +212,7 @@ bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : Attack1 # SessionID:%d\n", pCharacter->dwSessionID);
+		_LOG(dfLOG_LEVEL_DEBUG, L"# mpSync : Attack1 # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
@@ -253,50 +253,45 @@ bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
 	}
 	
 	stSECTOR_AROUND sectorAround;
-	GetSectorAround(pCharacter->curSector.iY, pCharacter->curSector.iX, &sectorAround);
-	vector<stCharacter*> v;
+	GetSectorAroundForAttack(pCharacter->byDirection, dfATTACK_TYPE_1, pCharacter, &sectorAround);
+
+	//vector<stCharacter*> v;
+	stCharacter* v[3000];
+	int count = 0;
+
 	for (int i = 0; i < sectorAround.iCount; i++)
 	{
-		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
-	}
+		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v, &count);
 
-	for (int i = 0; i < v.size(); i++)
-	{
-		if (v[i] == pCharacter)
-			continue;
-
-		short enemyY = v[i]->shY;
-		short enemyX = v[i]->shX;
-
-		if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
-			continue;
-		if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
-			continue;
-
-		v[i]->chHP -= dfATTACK1_DAMAGE;
-		if (v[i]->chHP < 0)
+		for (int i = 0; i < count; i++)
 		{
-			v[i]->chHP = 0;
+			if (v[i] == pCharacter)
+				continue;
+
+			short enemyY = v[i]->shY;
+			short enemyX = v[i]->shX;
+
+			if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
+				continue;
+			if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
+				continue;
+
+			v[i]->chHP -= dfATTACK1_DAMAGE;
+			if (v[i]->chHP < 0)
+			{
+				v[i]->chHP = 0;
+			}
+
+			{
+				SerializePacket damagePacket;
+				mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+
+				SendPacket_Around(v[i]->pSession, &damagePacket, true);
+			}
+
 		}
 
-		{
-			SerializePacket damagePacket;
-			mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
-
-			SendPacket_Around(v[i]->pSession, &damagePacket, true);
-		}
-
-		/*if (v[i]->chHP <= 0)
-		{
-			SerializePacket deadPacket;
-			mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
-
-			SendPacket_Around(v[i]->pSession, &deadPacket, false);
-
-			_LOG(dfLOG_LEVEL_SYSTEM, L"# Attack1_Delete # SessionID:%d\n", v[i]->dwSessionID);
-			PushQuitQ(v[i]->pSession);
-		}*/
-
+		count = 0;
 	}
 
 	pSession->dwLastRecvTime = GetTickCount();
@@ -332,7 +327,7 @@ bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : Attack2 # SessionID:%d\n", pCharacter->dwSessionID);
+		_LOG(dfLOG_LEVEL_DEBUG, L"# mpSync : Attack2 # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
@@ -373,51 +368,45 @@ bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
 	}
 
 	stSECTOR_AROUND sectorAround;
-	GetSectorAround(pCharacter->curSector.iY, pCharacter->curSector.iX, &sectorAround);
-	vector<stCharacter*> v;
+	GetSectorAroundForAttack(pCharacter->byDirection, dfATTACK_TYPE_2, pCharacter, &sectorAround);
+
+	//vector<stCharacter*> v;
+	stCharacter* v[3000];
+	int count = 0;
+
 	for (int i = 0; i < sectorAround.iCount; i++)
 	{
-		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
-	}
+		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v, &count);
 
-	for (int i = 0; i < v.size(); i++)
-	{
-		if (v[i] == pCharacter)
-			continue;
-
-		short enemyY = v[i]->shY;
-		short enemyX = v[i]->shX;
-
-		if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
-			continue;
-		if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
-			continue;
-
-		v[i]->chHP -= dfATTACK2_DAMAGE;
-		if (v[i]->chHP < 0)
+		for (int i = 0; i < count; i++)
 		{
-			v[i]->chHP = 0;
+			if (v[i] == pCharacter)
+				continue;
+
+			short enemyY = v[i]->shY;
+			short enemyX = v[i]->shX;
+
+			if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
+				continue;
+			if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
+				continue;
+
+			v[i]->chHP -= dfATTACK2_DAMAGE;
+			if (v[i]->chHP < 0)
+			{
+				v[i]->chHP = 0;
+			}
+
+			{
+				SerializePacket damagePacket;
+				mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+
+				SendPacket_Around(v[i]->pSession, &damagePacket, true);
+			}
 		}
 
-		{
-			SerializePacket damagePacket;
-			mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
-
-			SendPacket_Around(v[i]->pSession, &damagePacket, true);
-		}
-
-		//if (v[i]->chHP <= 0)
-		//{
-		//	SerializePacket deadPacket;
-		//	mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
-
-		//	SendPacket_Around(v[i]->pSession, &deadPacket, false);
-
-		//	_LOG(dfLOG_LEVEL_SYSTEM, L"# Attack2_Delete # SessionID:%d\n", v[i]->dwSessionID);
-		//	PushQuitQ(v[i]->pSession);
-		//}
-
-	}
+		count = 0;
+	}	
 
 	pSession->dwLastRecvTime = GetTickCount();
 	return false;
@@ -452,7 +441,7 @@ bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
 	{
 		SerializePacket syncPacket;
 		mpSync(&syncPacket, pCharacter->dwSessionID, pCharacter->shX, pCharacter->shY);
-		_LOG(dfLOG_LEVEL_SYSTEM, L"# mpSync : Attack3 # SessionID:%d\n", pCharacter->dwSessionID);
+		_LOG(dfLOG_LEVEL_DEBUG, L"# mpSync : Attack3 # SessionID:%d\n", pCharacter->dwSessionID);
 		SendPacket_Around(pSession, &syncPacket);
 
 		shX = pCharacter->shX;
@@ -493,50 +482,45 @@ bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
 	}
 
 	stSECTOR_AROUND sectorAround;
-	GetSectorAround(pCharacter->curSector.iY, pCharacter->curSector.iX, &sectorAround);
-	vector<stCharacter*> v;
+	GetSectorAroundForAttack(pCharacter->byDirection, dfATTACK_TYPE_3, pCharacter, &sectorAround);
+
+
+	//vector<stCharacter*> v;
+	stCharacter* v[3000];
+	int count = 0;
+
 	for (int i = 0; i < sectorAround.iCount; i++)
 	{
-		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
-	}
-
-	for (int i = 0; i < v.size(); i++)
-	{
-		if (v[i] == pCharacter)
-			continue;
-
-		short enemyY = v[i]->shY;
-		short enemyX = v[i]->shX;
-
-		if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
-			continue;
-		if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
-			continue;
-
-		v[i]->chHP -= dfATTACK3_DAMAGE;
-		if (v[i]->chHP < 0)
+		GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v, &count);
+	
+		for (int i = 0; i < count; i++)
 		{
-			v[i]->chHP = 0;
+			if (v[i] == pCharacter)
+				continue;
+
+			short enemyY = v[i]->shY;
+			short enemyX = v[i]->shX;
+
+			if (enemyX < attackRangeMinX || enemyX > attackRangeMaxX)
+				continue;
+			if (enemyY < attackRangeMinY || enemyY > attackRangeMaxY)
+				continue;
+
+			v[i]->chHP -= dfATTACK3_DAMAGE;
+			if (v[i]->chHP < 0)
+			{
+				v[i]->chHP = 0;
+			}
+
+			{
+				SerializePacket damagePacket;
+				mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
+
+				SendPacket_Around(v[i]->pSession, &damagePacket, true);
+			}
 		}
 
-		{
-			SerializePacket damagePacket;
-			mpDamage(&damagePacket, sessionID, v[i]->dwSessionID, v[i]->chHP);
-
-			SendPacket_Around(v[i]->pSession, &damagePacket, true);
-		}
-
-		//if (v[i]->chHP <= 0)
-		//{
-		//	SerializePacket deadPacket;
-		//	mpDeleteCharacter(&deadPacket, v[i]->dwSessionID);
-
-		//	SendPacket_Around(v[i]->pSession, &deadPacket, false);
-
-		//	_LOG(dfLOG_LEVEL_SYSTEM, L"# Attack3_Delete # SessionID:%d\n", v[i]->dwSessionID);
-		//	PushQuitQ(v[i]->pSession);
-		//}
-
+		count = 0;
 	}
 
 	pSession->dwLastRecvTime = GetTickCount();

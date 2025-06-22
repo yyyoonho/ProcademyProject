@@ -10,10 +10,12 @@ using namespace std;
 
 void SendPacket_SectorOne(int iSectorY, int isectorX, SerializePacket* sPacket, stSession* pExceptSession)
 {
-	vector<stSession*> v;
-	GetSessionsFromSector(iSectorY, isectorX, v);
+	stSession* v[3000];
+	int count = 0;
 
-	for (int j = 0; j < v.size(); j++)
+	GetSessionsFromSector(iSectorY, isectorX, v, &count);
+
+	for (int j = 0; j < count; j++)
 	{
 		if (v[j] == pExceptSession)
 			continue;
@@ -41,11 +43,14 @@ void SendPacket_Around(stSession* pMySession, SerializePacket* sPacket, bool bSe
 	{
 		int sectorY = sectorAround.around[i].iY;
 		int sectorX = sectorAround.around[i].iX;
-		vector<stSession*> v;
+		//vector<stSession*> v;
 
-		GetSessionsFromSector(sectorY, sectorX, v);
+		stSession* v[3000];
+		int count = 0;
 
-		for (int j = 0; j < v.size(); j++)
+		GetSessionsFromSector(sectorY, sectorX, v, &count);
+
+		for (int j = 0; j < count; j++)
 		{
 			if (pMySession == v[j] && bSendMe == false)
 				continue;

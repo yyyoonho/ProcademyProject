@@ -48,7 +48,7 @@ void LogDeltaTime()
 {
 	DWORD avgTime = sumTime / deltaTimeCount;
 
-	_LOG(dfLOG_LEVEL_SYSTEM, L"DeltaTime| Min: %d | Max: %d | Avg: %d\n", minTime, maxTime, avgTime);
+	_LOG(dfLOG_LEVEL_DEBUG, L"DeltaTime| Min: %d | Max: %d | Avg: %d\n", minTime, maxTime, avgTime);
 
 	minTime = 99999999;
 	maxTime = 0;

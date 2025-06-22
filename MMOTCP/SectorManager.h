@@ -21,9 +21,12 @@ struct stSECTOR_AROUND
 	stSECTOR_POS around[9];
 };
 
+// µð¹ö±ë
+void GetSectorAroundForAttack(BYTE direction, BYTE attackType, stCharacter* pCharacter, OUT stSECTOR_AROUND* pSectorAround);
+
 void GetSectorAround(int iSectorY, int iSectorX, OUT stSECTOR_AROUND* pSectorAround);
-void GetSessionsFromSector(int sectorY, int sectorX, OUT std::vector<stSession*>& v);
-void GetCharactersFromSector(int sectorY, int sectorX, OUT std::vector<stCharacter*>& v);
+void GetSessionsFromSector(int sectorY, int sectorX, OUT stSession* v[], OUT int* count);
+void GetCharactersFromSector(int sectorY, int sectorX, OUT stCharacter* v[], OUT int* count);
 
 void SetSector(stCharacter* pCharacter);
 

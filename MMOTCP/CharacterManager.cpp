@@ -81,12 +81,15 @@ bool EnterWorld(stCharacter* pNewCharacter)
 		stSECTOR_AROUND sectorAround;
 		GetSectorAround(pNewCharacter->curSector.iY, pNewCharacter->curSector.iX, &sectorAround);
 
-		vector<stCharacter*> v;
+		//vector<stCharacter*> v;
+		stCharacter* v[3000];
+		int count = 0;
+
 		for (int i = 0; i < sectorAround.iCount; i++)
 		{
-			GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
+			GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v, &count);
 
-			for (int j = 0; j < v.size(); j++)
+			for (int j = 0; j < count; j++)
 			{
 				if (v[j] == pNewCharacter)
 					continue;
@@ -95,8 +98,6 @@ bool EnterWorld(stCharacter* pNewCharacter)
 				mpCreateOtherCharacter(&sPacket, v[j]->dwSessionID, v[j]->byDirection, v[j]->shX, v[j]->shY, v[j]->chHP);
 				SendPacket_Unicast(pNewSession, &sPacket);
 			}
-
-			v.clear();
 		}
 
 		//printf("New <- mpCreateOtherCharacter Send\n");
@@ -109,12 +110,15 @@ bool EnterWorld(stCharacter* pNewCharacter)
 		stSECTOR_AROUND sectorAround;
 		GetSectorAround(pNewCharacter->curSector.iY, pNewCharacter->curSector.iX, &sectorAround);
 
-		vector<stCharacter*> v;
+		//vector<stCharacter*> v;
+		stCharacter* v[3000];
+		int count = 0;
+
 		for (int i = 0; i < sectorAround.iCount; i++)
 		{
-			GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v);
+			GetCharactersFromSector(sectorAround.around[i].iY, sectorAround.around[i].iX, v, &count);
 
-			for (int j = 0; j < v.size(); j++)
+			for (int j = 0; j < count; j++)
 			{
 				if (v[j]->dwAction == dfMOVE_STOP)
 					continue;
@@ -123,8 +127,6 @@ bool EnterWorld(stCharacter* pNewCharacter)
 				mpMoveStart(&sPacket, v[j]->dwSessionID, v[j]->byMoveDirection, v[j]->shX, v[j]->shY);
 				SendPacket_Unicast(pNewSession, &sPacket);
 			}
-
-			v.clear();
 		}
 
 		//printf("New <- mpMoveStart Send\n");
