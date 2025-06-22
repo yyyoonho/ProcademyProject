@@ -17,6 +17,10 @@ using namespace std;
 bool g_bShutdown = false;
 
 void Init();
+bool FrameControl();
+void ShowFrame();
+
+int g_FrameCount = 0;
 
 int main()
 {
@@ -32,11 +36,17 @@ int main()
 
         NetworkUpdate();
 
-        GameUpdate();
+        while (FrameControl())
+        {
+            GameUpdate();
+        }
 
         //ServerControl();
 
         Monitor();
+
+        // ShowFrame은 나중에 모니터링 함수로 빼자.
+        ShowFrame();
     }
 
     NetCleanUp();
@@ -48,4 +58,38 @@ void Init()
 {
     srand(time(NULL));
     InitLog();
+}
+
+
+bool FrameControl()
+{
+    static int oldTime = timeGetTime();
+
+    int diffTime = timeGetTime() - oldTime;
+
+    if (diffTime < 40) // 20ms
+    {
+        return false;
+    }
+    else
+    {
+        PushDeltaTime(diffTime);
+        oldTime += 40;
+        g_FrameCount++;
+        return true;
+    }
+}
+
+void ShowFrame()
+{
+    static int oldTime = timeGetTime();
+
+    int diffTime = timeGetTime() - oldTime;
+    if (diffTime >= 1000)
+    {
+        printf("Frame: %d\n", g_FrameCount);
+        g_FrameCount = 0;
+
+        oldTime += 1000;
+    }
 }

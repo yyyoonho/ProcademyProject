@@ -153,7 +153,7 @@ void DestroyCharacter(DWORD sessionId)
 	stCharacter* destroyCharacter = characterMap.find(sessionId)->second;
 	if (destroyCharacter == NULL)
 	{
-		//DebugBreak();
+		DebugBreak();
 		return;
 	}
 

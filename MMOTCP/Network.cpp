@@ -349,9 +349,6 @@ void CreateSessionNCharacter()
 
 		stSession* newSession = sessionMP.Alloc();
 		
-		//µð¹ö±ë
-		//stSession* newSession = new stSession;
-
 		newSession->socket = newSocket;
 		newSession->dwSessionID = g_id++;
 

@@ -18,6 +18,7 @@ using namespace std;
 
 list<stCharacter*> moveCharacterList;
 
+/*
 bool FrameControl()
 {
 	static int oldTime = timeGetTime();
@@ -51,6 +52,7 @@ void ShowFrame()
 		oldTime += 1000;
 	}
 }
+*/
 
 bool CanGo(int y, int x)
 {
@@ -87,10 +89,11 @@ void Move(DWORD deltaTime, stCharacter* pCharacter, BYTE dir)
 
 void GameUpdate()
 {
-	if (!FrameControl())
-		return;
+	// µð¹ö±ë
+	/*if (!FrameControl())
+		return;*/
 
-	ShowFrame();
+	//ShowFrame();
 
 	static DWORD oldTime = GetTickCount();
 	DWORD deltaTime = GetTickCount() - oldTime;
