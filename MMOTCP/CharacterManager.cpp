@@ -17,6 +17,8 @@ unordered_map<DWORD, stCharacter* > characterMap;
 bool EnterWorld(stCharacter* pNewCharacter);
 
 
+
+
 void CreateCharacter(stSession* pSession, DWORD dwSessionID)
 {
 	_LOG(dfLOG_LEVEL_DEBUG, L"# CreateCharacter # SessionID:%d\n", dwSessionID);
@@ -82,7 +84,7 @@ bool EnterWorld(stCharacter* pNewCharacter)
 		GetSectorAround(pNewCharacter->curSector.iY, pNewCharacter->curSector.iX, &sectorAround);
 
 		//vector<stCharacter*> v;
-		stCharacter* v[3000];
+		stCharacter* v[2000];
 		int count = 0;
 
 		for (int i = 0; i < sectorAround.iCount; i++)
@@ -111,7 +113,7 @@ bool EnterWorld(stCharacter* pNewCharacter)
 		GetSectorAround(pNewCharacter->curSector.iY, pNewCharacter->curSector.iX, &sectorAround);
 
 		//vector<stCharacter*> v;
-		stCharacter* v[3000];
+		stCharacter* v[2000];
 		int count = 0;
 
 		for (int i = 0; i < sectorAround.iCount; i++)
@@ -150,10 +152,15 @@ void DestroyCharacter(DWORD sessionId)
 {
 	_LOG(dfLOG_LEVEL_DEBUG, L"# DestroyCharacter # SessionID:%d\n", sessionId);
 
+
 	stCharacter* destroyCharacter = characterMap.find(sessionId)->second;
+	if (characterMap.find(sessionId) == characterMap.end())
+	{
+		return;
+	}
 	if (destroyCharacter == NULL)
 	{
-		DebugBreak();
+		//DebugBreak();
 		return;
 	}
 
@@ -173,9 +180,10 @@ void GetCurSector(stSession* pSession, OUT stSECTOR_POS* pSectorPos)
 {
 	stCharacter* tmpCharacter = NULL;
 	unordered_map<DWORD, stCharacter* >::iterator iter = characterMap.find(pSession->dwSessionID);
+
 	if (iter == characterMap.end())
 	{
-		_LOG(dfLOG_LEVEL_DEBUG, L"ERROR: GetCurSector() 캐릭터가 없습니다.\n");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"ERROR: GetCurSector() 캐릭터가 없습니다.\n");
 
 		g_bShutdown = true;
 		return;
@@ -184,7 +192,7 @@ void GetCurSector(stSession* pSession, OUT stSECTOR_POS* pSectorPos)
 	tmpCharacter = (*iter).second;
 	if (tmpCharacter == NULL)
 	{
-		_LOG(dfLOG_LEVEL_DEBUG, L"ERROR: GetCurSector() tmpCharacter == NULL\n");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"ERROR: GetCurSector() tmpCharacter == NULL\n");
 
 		g_bShutdown = true;
 		return;

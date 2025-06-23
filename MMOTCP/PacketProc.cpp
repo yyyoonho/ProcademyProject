@@ -256,7 +256,7 @@ bool netPacketProc_Attack1(stSession* pSession, SerializePacket* sPacket)
 	GetSectorAroundForAttack(pCharacter->byDirection, dfATTACK_TYPE_1, pCharacter, &sectorAround);
 
 	//vector<stCharacter*> v;
-	stCharacter* v[3000];
+	stCharacter* v[2000];
 	int count = 0;
 
 	for (int i = 0; i < sectorAround.iCount; i++)
@@ -371,7 +371,7 @@ bool netPacketProc_Attack2(stSession* pSession, SerializePacket* sPacket)
 	GetSectorAroundForAttack(pCharacter->byDirection, dfATTACK_TYPE_2, pCharacter, &sectorAround);
 
 	//vector<stCharacter*> v;
-	stCharacter* v[3000];
+	stCharacter* v[2000];
 	int count = 0;
 
 	for (int i = 0; i < sectorAround.iCount; i++)
@@ -486,7 +486,7 @@ bool netPacketProc_Attack3(stSession* pSession, SerializePacket* sPacket)
 
 
 	//vector<stCharacter*> v;
-	stCharacter* v[3000];
+	stCharacter* v[2000];
 	int count = 0;
 
 	for (int i = 0; i < sectorAround.iCount; i++)

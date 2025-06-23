@@ -10,7 +10,7 @@ using namespace std;
 
 void SendPacket_SectorOne(int iSectorY, int isectorX, SerializePacket* sPacket, stSession* pExceptSession)
 {
-	stSession* v[3000];
+	stSession* v[2000];
 	int count = 0;
 
 	GetSessionsFromSector(iSectorY, isectorX, v, &count);
@@ -45,7 +45,7 @@ void SendPacket_Around(stSession* pMySession, SerializePacket* sPacket, bool bSe
 		int sectorX = sectorAround.around[i].iX;
 		//vector<stSession*> v;
 
-		stSession* v[3000];
+		stSession* v[2000];
 		int count = 0;
 
 		GetSessionsFromSector(sectorY, sectorX, v, &count);

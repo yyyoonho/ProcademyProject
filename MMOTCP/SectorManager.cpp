@@ -367,7 +367,7 @@ void CharacterSectorUpdatePacket(stCharacter* pCharacter)
 
 	// AddSector에 있는 캐릭터들 얻기
 	//vector<stCharacter*> v;
-	stCharacter* v[3000];
+	stCharacter* v[2000];
 	int count = 0;
 
 	for (int i = 0; i < addSectors.iCount; i++)

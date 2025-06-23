@@ -46,6 +46,9 @@ void PushDeltaTime(DWORD deltaTime)
 
 void LogDeltaTime()
 {
+	if (sumTime == 0 || deltaTimeCount == 0)
+		return;
+
 	DWORD avgTime = sumTime / deltaTimeCount;
 
 	_LOG(dfLOG_LEVEL_DEBUG, L"DeltaTime| Min: %d | Max: %d | Avg: %d\n", minTime, maxTime, avgTime);

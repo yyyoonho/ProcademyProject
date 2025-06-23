@@ -39,6 +39,9 @@ void SendProc(SOCKET socket);
 void CreateSessionNCharacter();
 void DestroySessionNCharacter();
 
+// 디버깅
+unordered_set<DWORD> debugSet;
+
 void NetInit()
 {
 	WSADATA wsaData;
@@ -187,6 +190,10 @@ void NetworkUpdate()
 
 void PushQuitQ(stSession* pSession)
 {
+	if (pSession->active == false)
+		return;
+
+	pSession->active = false;
 	quitQ.push(pSession);
 }
 
@@ -261,8 +268,9 @@ void RecvProc(SOCKET socket)
 			//printf("[상대방의 비 정상 연결 종료] id : %d\n", pSession->dwSessionID);
 
 			//TEST
-			_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 비 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
-			quitQ.push(pSession);
+			//_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 비 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
+			//quitQ.push(pSession);
+			PushQuitQ(pSession);
 
 			_LOG(dfLOG_LEVEL_DEBUG, L"# Disconnet... # SessionID:%d\n", pSession->dwSessionID);
 			return;
@@ -273,8 +281,9 @@ void RecvProc(SOCKET socket)
 		//printf("[상대방의 정상 연결 종료] id : %d\n", pSession->dwSessionID);
 
 		//TEST
-		_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
-		quitQ.push(pSession);
+		//_LOG(dfLOG_LEVEL_SYSTEM, L"# [상대방의 정상 연결 종료] # SessionID:%d\n", pSession->dwSessionID);
+		//quitQ.push(pSession);
+		PushQuitQ(pSession);
 
 		_LOG(dfLOG_LEVEL_DEBUG, L"# Disconnet... # SessionID:%d\n", pSession->dwSessionID);
 		return;
@@ -328,7 +337,8 @@ void SendProc(SOCKET socket)
 			{
 				printf("ERROR: send() %d\n", WSAGetLastError());
 
-				quitQ.push(pSession);
+				//quitQ.push(pSession);
+				PushQuitQ(pSession);
 
 				return;
 			}
@@ -359,6 +369,8 @@ void CreateSessionNCharacter()
 		newSession->sendQ.ClearBuffer();
 
 		newSession->dwLastRecvTime = GetTickCount();
+
+		newSession->active = true;
 
 		//printf("[접속] SessionID: %d\n", newSession->dwSessionID);
 

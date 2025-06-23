@@ -10,6 +10,8 @@
 #include <queue>
 #include <conio.h>
 #include <algorithm>
+#include <unordered_set>
+
 #include "Protocol.h"
 
 #include "CustomProfiler.h"
