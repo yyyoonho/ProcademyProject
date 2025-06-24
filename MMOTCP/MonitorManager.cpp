@@ -4,6 +4,7 @@
 #include "SectorManager.h"
 #include "CharacterManager.h"
 #include "Network.h"
+#include "MMOTCP.h"
 
 #include "MonitorManager.h"
 
@@ -20,15 +21,24 @@ void Monitor()
 {
 	static DWORD oldTime = timeGetTime();
 
-	if (timeGetTime() - oldTime < 1000)
+	int diffTime = timeGetTime() - oldTime;
+	if (diffTime < 1000)
 		return;
 
-	// 모니터링
+	printf("---------------------------------------------------------\n");
+
+	// 현재 접속한 접속자 (세션 수 | 캐릭터 수)
 	printf("SessionCount: %d | CharacterCount: %d\n", GetSessionSize(), GetCharacterSize());
+
+	// 게임 로직 프레임
+	printf("Frame: %d\n", g_FrameCount);
+	g_FrameCount = 0;
 
 	LogDeltaTime();
 
 	oldTime += 1000;
+
+	printf("---------------------------------------------------------\n\n");
 }
 
 void PushDeltaTime(DWORD deltaTime)

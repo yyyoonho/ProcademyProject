@@ -4,7 +4,6 @@
 
 using namespace std;
 
-//TEST
 int g_iLogLevel = dfLOG_LEVEL_SYSTEM;
 WCHAR g_szLogBuff[1024];
 time_t now;
