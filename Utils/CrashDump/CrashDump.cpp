@@ -3,7 +3,9 @@
 #include <DbgHelp.h>
 #include "CrashDump.h"
 
-//using namespace std;
+using namespace std;
+
+
 
 int main()
 {
