@@ -20,6 +20,7 @@ struct Node
 
 // 디버깅 전역변수
 unordered_set<Node<int>*> deleteSet;
+CRITICAL_SECTION cs;
 
 template <typename T>
 class MyStack
@@ -42,13 +43,19 @@ void MyStack<T>::Push(T data)
 		Node<T>* oldTop = top;
 		newNode->next = oldTop;
 
+		EnterCriticalSection(&cs);
 		LONG64 ret = InterlockedCompareExchange64((LONG64*)&top, (LONG64)newNode, (LONG64)oldTop);
 		if ((Node<T>*)ret == oldTop)
 		{
 			// 디버깅 - 4번 씬
 			printf("ThreadID:%5d Push() | oldTop(= newNode->next): %p | newTop(= newNode): %p\n", GetCurrentThreadId(), oldTop, newNode);
+			LeaveCriticalSection(&cs);
 
 			break;
+		}
+		else
+		{
+			LeaveCriticalSection(&cs);
 		}
 	}
 }
@@ -61,6 +68,7 @@ void MyStack<T>::Pop(T* data)
 		Node<T>* oldTop = top;
 		Node<T>* newTop = oldTop->next;
 
+		EnterCriticalSection(&cs);
 		LONG64 ret = InterlockedCompareExchange64((LONG64*)&top, (LONG64)newTop, (LONG64)oldTop);
 		if ((Node<T>*)ret == oldTop)
 		{
@@ -70,20 +78,25 @@ void MyStack<T>::Pop(T* data)
 			printf("ThreadID:%5d Pop() | oldTop:%p | newTop(= oldTop->Next):%p\n", GetCurrentThreadId(), oldTop, newTop);
 
 			// 디버깅 - 1번 씬
-			if (deleteSet.find(oldTop) == deleteSet.end())
-			{
-				deleteSet.insert(oldTop);
-			}
-			else
-			{
-				// 디버깅 - 2번 씬, 3번 씬
-				printf("중복 delete 발생! %p\n", oldTop);
-				DebugBreak();
-			}
+			//if (deleteSet.find(oldTop) == deleteSet.end())                         
+			//{
+			//	deleteSet.insert(oldTop);
+			//}
+			//else
+			//{
+			//	// 디버깅 - 2번 씬, 3번 씬
+			//	printf("중복 delete 발생! %p\n", oldTop);
+			//	DebugBreak();
+			//}
 
 			delete oldTop;
 
+			LeaveCriticalSection(&cs);
 			break;
+		}
+		else
+		{
+			LeaveCriticalSection(&cs);
 		}
 	}
 
@@ -119,7 +132,7 @@ void ThreadFunc()
 void ThreadFunc2()
 {
 	int tmp;
-	while (1)
+	for (int i = 0; i < 50000; i++)
 	{
 		g_Stack.Pop(&tmp);
 	}
@@ -131,6 +144,8 @@ int main()
 {
 	timeBeginPeriod(1);
 
+	InitializeCriticalSection(&cs);
+
 	thread1 = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&ThreadFunc, NULL, NULL, NULL);
 	thread2 = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&ThreadFunc, NULL, NULL, NULL);
 
@@ -138,7 +153,7 @@ int main()
 	WaitForSingleObject(thread2, INFINITE);
 	
 
-	//for (int i = 0; i < 10000; i++)
+	//for (int i = 0; i < 1000000; i++)
 	//{
 	//	g_Stack.Push(i);
 	//}
