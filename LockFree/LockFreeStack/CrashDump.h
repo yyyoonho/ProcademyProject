@@ -110,6 +110,8 @@ namespace procademy
 
 		static long _DumpCount;
 	};
+
+	long CrashDump::_DumpCount = 0;
 }
 
 #endif // !__PROCADEMY_LIB_CRASH_DUMP__
