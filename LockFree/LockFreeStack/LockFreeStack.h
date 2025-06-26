@@ -17,6 +17,11 @@ public:
 	void Pop(T* data);
 
 private:
+
+	/*
+		0x [0000][0000 .... 0000]
+		Node 주소의 상위 2바이트 = 16비트를 id로 사용.
+	*/
 	void PushID(Node<T>** ppNewNode);
 	void PopID(Node<T>** ppOldNode);
 	Node<T>* GetTmpNodeOriginPtr(Node<T>* pNode);
@@ -30,7 +35,7 @@ void MyStack<T>::Push(T data)
 	Node<T>* newNode = new Node<T>;
 
 	newNode->data = new T;
-	*(newNode->data) = data;
+	*(newNode->data) = data; 
 
 	PushID(&newNode);
 
