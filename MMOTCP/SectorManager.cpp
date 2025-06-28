@@ -588,7 +588,7 @@ void GetUpdateSectorAround(stCharacter* pCharacter, OUT stSECTOR_AROUND* pRemove
 		pAddSector->iCount = count;
 		count = 0;
 
-		int oldDy[3] = { -1,-1,-11 };
+		int oldDy[3] = { -1,-1,-1 };
 		int oldDx[3] = { -1,0,1 };
 
 		for (int i = 0; i < 3; i++)
