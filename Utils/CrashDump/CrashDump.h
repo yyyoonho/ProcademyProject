@@ -3,6 +3,9 @@
 #ifndef __PROCADEMY_LIB_CRASH_DUMP__
 #define __PROCADEMY_LIB_CRASH_DUMP__
 
+#include <DbgHelp.h>
+#include <minidumpapiset.h>
+
 namespace procademy
 {
 	class CrashDump
@@ -110,6 +113,8 @@ namespace procademy
 
 		static long _DumpCount;
 	};
+
+	long CrashDump::_DumpCount = 0;
 }
 
 #endif // !__PROCADEMY_LIB_CRASH_DUMP__
