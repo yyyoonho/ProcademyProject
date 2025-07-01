@@ -22,10 +22,6 @@ private:
 		0x [0000][0000 .... 0000]
 		Node 주소의 상위 2바이트 = 16비트를 id로 사용.
 	*/
-	void PushID(Node<T>** ppNewNode);
-	void PopID(Node<T>** ppOldNode);
-	Node<T>* GetTmpNodeOriginPtr(Node<T>* pNode);
-
 	unsigned short _id = 0;
 };
 
@@ -37,13 +33,13 @@ void MyStack<T>::Push(T data)
 	newNode->data = new T;
 	*(newNode->data) = data; 
 
-	PushID(&newNode);
+	DWORD64 ret = (DWORD64)InterlockedIncrement((LONG*)&_id);
+	newNode = (Node<T>*)((DWORD64)newNode | (ret << 48));
 
 	while (1)
 	{
 		Node<T>* oldTop = top;
-		//newNode->next = oldTop;
-		GetTmpNodeOriginPtr(newNode)->next = oldTop;
+		((Node<T>*)((DWORD64)newNode & (0x0000ffffffffffff)))->next = oldTop;
 
 		LONG64 ret = InterlockedCompareExchange64((LONG64*)&top, (LONG64)newNode, (LONG64)oldTop);
 		if ((Node<T>*)ret == oldTop)
@@ -59,12 +55,12 @@ void MyStack<T>::Pop(T* data)
 	while (1)
 	{
 		Node<T>* oldTop = top;
-		Node<T>* newTop = GetTmpNodeOriginPtr(oldTop)->next;
+		Node<T>* newTop = ((Node<T>*)((DWORD64)oldTop & (0x0000ffffffffffff)))->next;
 
 		LONG64 ret = InterlockedCompareExchange64((LONG64*)&top, (LONG64)newTop, (LONG64)oldTop);
 		if ((Node<T>*)ret == oldTop)
 		{
-			PopID(&oldTop);
+			oldTop = (Node<T>*)((DWORD64)(oldTop) & (0x0000ffffffffffff));
 
 			*data = *(oldTop->data);
 			delete (oldTop->data);
@@ -75,33 +71,4 @@ void MyStack<T>::Pop(T* data)
 	}
 
 	return;
-}
-
-template<typename T>
-inline void MyStack<T>::PushID(Node<T>** ppNewNode)
-{
-	DWORD64 ret = (DWORD64)InterlockedIncrement((LONG*)&_id);
-
-	DWORD64 tmp = (DWORD64)*ppNewNode;
-	tmp = tmp | (ret << 48);
-
-	*ppNewNode = (Node<T>*)tmp;
-}
-
-template<typename T>
-inline void MyStack<T>::PopID(Node<T>** ppOldNode)
-{
-	DWORD64 tmp = (DWORD64)*ppOldNode;
-	tmp = tmp & (0x0000ffffffffffff);
-
-	*ppOldNode = (Node<T>*)tmp;
-}
-
-template<typename T>
-inline Node<T>* MyStack<T>::GetTmpNodeOriginPtr(Node<T>* pNode)
-{
-	DWORD64 tmp = (DWORD64)pNode;
-	tmp = tmp & (0x0000ffffffffffff);
-
-	return (Node<T>*)tmp;
 }
