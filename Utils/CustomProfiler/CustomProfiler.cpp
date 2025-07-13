@@ -138,55 +138,56 @@ void ProfileDataOutText(char* szFileName)
 		return;
 	}
 
-	char buf[200];
-	sprintf_s(buf, "%15s  |%15s   |%15s   |%15s   |%10s  |\n",
-		"Name",
-		"Average",
-		"Min",
-		"Max",
-		"Call");
-	fwrite(buf, strlen(buf), 1, fp);
+	fprintf(fp,
+		"=========================================================================================\n");
+	fprintf(fp,
+		"%-20s | %15s | %15s | %15s | %10s\n",
+		"Name", "Average (㎲)", "Min (㎲)", "Max (㎲)", "Call");
+	fprintf(fp,
+		"-----------------------------------------------------------------------------------------\n");
 
 	for (int i = 0; i < profileArrSize; i++)
 	{
 		if (profileArr[i].call == -1 || profileArr[i].call == -2)
 		{
-			sprintf_s(buf, "%15s  |%15.4d㎲ |%15.4d㎲ |%15.4d㎲ |%10d  |\n",
+			fprintf(fp, "%-20s | %15s | %15s | %15s | %10d\n",
 				profileArr[i].tagName,
-				-1,
-				-1,
-				-1,
-				profileArr[i].call);
-
-			fwrite(buf, strlen(buf), 1, fp);
+				"-", "-", "-", profileArr[i].call);
 			continue;
 		}
 
 		double average = 0;
-		__int64 maxSum = 0;
-		__int64 minSum = 0;
-		__int64 call = profileArr[i].call - 2;
+		__int64 maxSum = profileArr[i].max;
+		__int64 minSum = profileArr[i].min;
+		__int64 call = profileArr[i].call;
 
-		maxSum += profileArr[i].max;
-		minSum += profileArr[i].min;
+		if (call == 0)
+			return;
 
-		average = (double)(profileArr[i].total - (maxSum + minSum)) / call;
+		if (call > 2)
+		{
+			call = profileArr[i].call - 2;
+			average = (double)(profileArr[i].total - (maxSum + minSum)) / call;
+		}
+		else
+		{
+			average = (double)(profileArr[i].total) / call;
+		}
 
-		double minTime = (double)profileArr[i].min * MICROSEC;
-		minTime = minTime / frequency.QuadPart;
+		double minTime = (double)profileArr[i].min * MICROSEC / frequency.QuadPart;
+		double maxTime = (double)profileArr[i].max * MICROSEC / frequency.QuadPart;
+		double avgTime = average * MICROSEC / frequency.QuadPart;
 
-		double maxTime = (double)profileArr[i].max * MICROSEC;
-		maxTime = maxTime / frequency.QuadPart;
-
-		sprintf_s(buf, "%15s  |%15.4f㎲ |%15.4f㎲ |%15.4f㎲ |%10lld  |\n",
+		fprintf(fp, "%-20s | %15.4f | %15.4f | %15.4f | %10lld\n",
 			profileArr[i].tagName,
-			average * MICROSEC / frequency.QuadPart,
+			avgTime,
 			minTime,
 			maxTime,
 			call);
-
-		fwrite(buf, strlen(buf), 1, fp);
 	}
+
+	fprintf(fp,
+		"=========================================================================================\n");
 
 	fclose(fp);
 }
