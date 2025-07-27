@@ -7,6 +7,7 @@
 #include <list>
 #include <string.h>
 #include <algorithm>
+#include <map>
 
 #include "RingBuffer.h"
 #include "Protocol.h"
@@ -32,9 +33,72 @@ RingBuffer 			g_msgQ(50000);
 SRWLOCK msgQ_Lock;
 SRWLOCK list_Lock;
 HANDLE hEventForMsgQ;
+HANDLE hEventForQuitThread;
 
 HANDLE hWorkerThread[3];
 
+HANDLE hMonitorThread;
+
+LONG TPS_ALLMSG;
+
+LONG TPS_ADD;
+LONG TPS_DEL;
+LONG TPS_SORT;
+LONG TPS_FIND;
+LONG TPS_PRINT;
+
+map<DWORD, LONG*> TPS_WORKER_map;
+LONG TPS_WORKER[3];
+
+void MonitorThread()
+{
+	while (1)
+	{
+		DWORD ret = WaitForSingleObject(hEventForQuitThread, 1000);
+		if (ret != WAIT_TIMEOUT)
+		{
+			return;
+		}
+
+		LONG tpsALL = TPS_ALLMSG;
+
+		LONG tpsADD = TPS_ADD;
+		LONG tpsDEL = TPS_DEL;
+		LONG tpsSORT = TPS_SORT;
+		LONG tpsFIND = TPS_FIND;
+		LONG tpsPRINT = TPS_PRINT;
+
+		LONG tpsWorker0 = TPS_WORKER[0];
+		LONG tpsWorker1 = TPS_WORKER[1];
+		LONG tpsWorker2 = TPS_WORKER[2];
+
+		InterlockedExchange(&TPS_ALLMSG, 0);
+		InterlockedExchange(&TPS_ADD, 0);
+		InterlockedExchange(&TPS_DEL, 0);
+		InterlockedExchange(&TPS_SORT, 0);
+		InterlockedExchange(&TPS_FIND, 0);
+		InterlockedExchange(&TPS_PRINT, 0);
+		InterlockedExchange(&TPS_WORKER[0], 0);
+		InterlockedExchange(&TPS_WORKER[1], 0);
+		InterlockedExchange(&TPS_WORKER[2], 0);
+
+		printf("-----------------------------\n");
+		printf("TPS_ALLMSG: %d\n", tpsALL);
+		printf("\n");
+		printf("TPS_ADD: %d\n", tpsADD);
+		printf("TPS_DEL: %d\n", tpsDEL);
+		printf("TPS_SORT: %d\n", tpsSORT);
+		printf("TPS_FIND: %d\n", tpsFIND);
+		printf("TPS_PRINT: %d\n", tpsPRINT);
+		printf("\n");
+		printf("TPS_WORKER0: %d\n", tpsWorker0);
+		printf("TPS_WORKER1: %d\n", tpsWorker1);
+		printf("TPS_WORKER2: %d\n", tpsWorker2);
+		printf("\n");
+		printf("RINGBUFFER USESIZE: %d / %d\n", g_msgQ.GetUseSize(), g_msgQ._capacity);
+		printf("-----------------------------\n");
+	}
+}
 
 void WorkerThread()
 {
@@ -76,6 +140,8 @@ void WorkerThread()
 			g_List.push_front(strData);
 
 			ReleaseSRWLockExclusive(&list_Lock);
+
+			InterlockedIncrement(&TPS_ADD);
 		}
 			break;
 		case dfJOB_DEL:
@@ -89,6 +155,8 @@ void WorkerThread()
 				g_List.erase(iter);
 
 			ReleaseSRWLockExclusive(&list_Lock);
+
+			InterlockedIncrement(&TPS_DEL);
 		}
 			break;
 		case dfJOB_SORT:
@@ -98,6 +166,8 @@ void WorkerThread()
 			g_List.sort();
 
 			ReleaseSRWLockExclusive(&list_Lock);
+
+			InterlockedIncrement(&TPS_SORT);
 		}
 			break;
 		case dfJOB_FIND:
@@ -108,6 +178,8 @@ void WorkerThread()
 			iter = find(g_List.begin(), g_List.end(), strData);
 
 			ReleaseSRWLockShared(&list_Lock);
+
+			InterlockedIncrement(&TPS_FIND);
 		}
 			break;
 		case dfJOB_PRINT:
@@ -126,19 +198,23 @@ void WorkerThread()
 
 			ReleaseSRWLockShared(&list_Lock);
 
-			for (int i = 0; i < cnt; i++)
+			/*for (int i = 0; i < cnt; i++)
 			{
 				wprintf(L"%ls - ", wStrArr[i]);
 			}
-			cout << endl;
+			cout << endl;*/
 
+			Sleep(10);
+
+			InterlockedIncrement(&TPS_PRINT);
 		}
 			break;
 		case dfJOB_QUIT:
 		{
 			AcquireSRWLockShared(&list_Lock);
 
-
+			g_msgQ.Enqueue((char*)&msgHeader, sizeof(msgHeader));
+			SetEvent(hEventForMsgQ);
 
 			ReleaseSRWLockShared(&list_Lock);
 
@@ -147,6 +223,9 @@ void WorkerThread()
 			break;
 		}
 
+		InterlockedIncrement(&TPS_ALLMSG);
+
+		InterlockedIncrement(TPS_WORKER_map[GetCurrentThreadId()]);
 	}
 }
 
@@ -160,13 +239,20 @@ int main()
 	InitializeSRWLock(&msgQ_Lock);
 	InitializeSRWLock(&list_Lock);
 	hEventForMsgQ = CreateEvent(NULL, FALSE, FALSE, NULL);
+	hEventForQuitThread = CreateEvent(NULL, FALSE, FALSE, NULL);
 	
-	srand(time(NULL) + GetCurrentThreadId());
+	srand(time(NULL));
+
+	// 모니터링 쓰레드 생성
+	hMonitorThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThread, NULL, NULL, NULL);
 
 	// 워커쓰레드 생성
 	for (int i = 0; i < 3; i++)
 	{
 		hWorkerThread[i] = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&WorkerThread, NULL, NULL, NULL);
+
+		DWORD threadID = GetThreadId(hWorkerThread[i]);
+		TPS_WORKER_map.insert(make_pair(threadID, &TPS_WORKER[i]));
 	}
 
 	while (1)
@@ -215,7 +301,7 @@ int main()
 			break;
 		}
 
-		Sleep(50);
+		Sleep(33);
 	}
 	
 	WaitForMultipleObjects(3, hWorkerThread, TRUE, INFINITE);
