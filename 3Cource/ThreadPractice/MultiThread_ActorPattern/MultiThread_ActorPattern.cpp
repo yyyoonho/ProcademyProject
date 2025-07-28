@@ -15,6 +15,7 @@
 using namespace std;
 
 #define BUFSIZE 100
+#define DEFAULTFRAME 50
 
 //wstring str[5] = { L"HANHWA", L"LG", L"LOTTE", L"KIA", L"KT" };
 wstring str[5] = { L"한화", L"엘지", L"롯데", L"기아", L"케티" };
@@ -50,6 +51,11 @@ LONG TPS_PRINT;
 map<DWORD, LONG*> TPS_WORKER_map;
 LONG TPS_WORKER[3];
 
+int g_Frame = 50;
+int g_FrameCount = 0;
+
+float g_UsePercent;
+
 void MonitorThread()
 {
 	while (1)
@@ -72,6 +78,9 @@ void MonitorThread()
 		LONG tpsWorker1 = TPS_WORKER[1];
 		LONG tpsWorker2 = TPS_WORKER[2];
 
+		int useSize = g_msgQ.GetUseSize();
+		g_UsePercent = ((float)useSize / (float)g_msgQ._capacity) * 100;
+
 		InterlockedExchange(&TPS_ALLMSG, 0);
 		InterlockedExchange(&TPS_ADD, 0);
 		InterlockedExchange(&TPS_DEL, 0);
@@ -82,7 +91,11 @@ void MonitorThread()
 		InterlockedExchange(&TPS_WORKER[1], 0);
 		InterlockedExchange(&TPS_WORKER[2], 0);
 
-		printf("-----------------------------\n");
+		printf("----------------------------------------------------------\n");
+		printf("Frame: %d\n", g_FrameCount);
+		g_FrameCount = 0;
+		printf("\n");
+
 		printf("TPS_ALLMSG: %d\n", tpsALL);
 		printf("\n");
 		printf("TPS_ADD: %d\n", tpsADD);
@@ -95,8 +108,8 @@ void MonitorThread()
 		printf("TPS_WORKER1: %d\n", tpsWorker1);
 		printf("TPS_WORKER2: %d\n", tpsWorker2);
 		printf("\n");
-		printf("RINGBUFFER USESIZE: %d / %d\n", g_msgQ.GetUseSize(), g_msgQ._capacity);
-		printf("-----------------------------\n");
+		printf("RINGBUFFER USESIZE: %d / %d [ %f %%]\n", useSize, g_msgQ._capacity, g_UsePercent);
+		printf("----------------------------------------------------------\n");
 	}
 }
 
@@ -151,8 +164,10 @@ void WorkerThread()
 			list<wstring>::iterator iter;
 			iter = find(g_List.begin(), g_List.end(), strData);
 
-			if (iter != g_List.end())
-				g_List.erase(iter);
+			/*if (iter != g_List.end())
+				g_List.erase(iter);*/
+
+			g_List.clear();
 
 			ReleaseSRWLockExclusive(&list_Lock);
 
@@ -192,7 +207,7 @@ void WorkerThread()
 			list<wstring>::iterator iter;
 			for (iter = g_List.begin(); iter != g_List.end(); ++iter)
 			{
-				wStrArr[cnt] = *iter;
+				//wStrArr[cnt] = *iter;
 				cnt++;
 			}
 
@@ -204,7 +219,8 @@ void WorkerThread()
 			}
 			cout << endl;*/
 
-			Sleep(10);
+			// 출력을 1000으로 표현
+			Sleep(1000);
 
 			InterlockedIncrement(&TPS_PRINT);
 		}
@@ -226,6 +242,33 @@ void WorkerThread()
 		InterlockedIncrement(&TPS_ALLMSG);
 
 		InterlockedIncrement(TPS_WORKER_map[GetCurrentThreadId()]);
+	}
+}
+
+bool Frame()
+{
+	static DWORD oldTime = timeGetTime();
+
+	if (g_UsePercent >= 80)
+	{
+		g_Frame = DEFAULTFRAME / 10;
+	}
+	if (g_UsePercent <= 50)
+	{
+		g_Frame = DEFAULTFRAME;
+	}
+
+
+	DWORD diffTime = timeGetTime() - oldTime;
+	if (diffTime >= (1000 / g_Frame))
+	{
+		oldTime += (1000 / g_Frame);
+		g_FrameCount++;
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
@@ -257,6 +300,9 @@ int main()
 
 	while (1)
 	{
+		if (!Frame())
+			continue;
+
 		st_MSG_HEAD msgHeader;
 		int msgType = rand() % 5; // 0 ~ 4
 		int strType = rand() % 5;
@@ -300,8 +346,6 @@ int main()
 			ReleaseSRWLockExclusive(&msgQ_Lock);
 			break;
 		}
-
-		Sleep(33);
 	}
 	
 	WaitForMultipleObjects(3, hWorkerThread, TRUE, INFINITE);
