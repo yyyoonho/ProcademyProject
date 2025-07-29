@@ -117,6 +117,10 @@ void NewSession(DWORD dwSessionID)
 
 void DeleteSession(DWORD dwSessionID)
 {
+	// FIX_9 (비효율2)
+	// 지금 당장 버그는 없다.
+	// + 하나의 쓰레드 에서만 g_SessionList를 사용하기 때문에 동기화를 해줄 필요가 없다.
+
 	LockSession();
 
 	list<st_SESSION *>::iterator SessionIter = g_SessionList.begin();
@@ -152,11 +156,11 @@ void DeleteSession(DWORD dwSessionID)
 
 bool FindSessionList(DWORD dwSessionID)
 {
-	// FIX_8
+	// FIX_8 (비효율1)
 	// 지금 당장 버그는 없다.
 	// + 하나의 쓰레드 에서만 g_SessionList를 사용하기 때문에 동기화를 해줄 필요가 없다.
 
-	LockSession();
+	//LockSession();
 
 	list<st_SESSION *>::iterator SessionIter = g_SessionList.begin();
 	for ( ; SessionIter != g_SessionList.end(); SessionIter++ )
@@ -166,7 +170,7 @@ bool FindSessionList(DWORD dwSessionID)
 			return true;
 		}
 	}
-	UnlockSession();
+	//UnlockSession();
 
 	return false;
 }
@@ -364,6 +368,11 @@ unsigned int WINAPI UpdateThread(LPVOID lpParam)
 			dwSessionID = *g_ActionPacketList.begin();
 			g_ActionPacketList.pop_front();
 
+			// FIX_10 (비효율3)
+			// 지금 당장 버그는 없다.
+			// 하지만 굳이 g_ActionPacketList 에 대한 언락을 아래에서 해줄 필요는 없다.
+			UnlockAction();
+
 			//----------------------------------------------------------
 			// PlayerList 에 이미 존재하는 SessionID 인지 확인. 있는 경우만 해당 플레이어 찾아서 + 1
 			//----------------------------------------------------------
@@ -388,7 +397,9 @@ unsigned int WINAPI UpdateThread(LPVOID lpParam)
 				}
 			}
 			UnlockPlayer();
-			UnlockAction();
+			
+			// 여기!
+			//UnlockAction();
 
 		}
 
