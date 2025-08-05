@@ -1,6 +1,7 @@
 ﻿#pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "RingBuffer.lib")
+#pragma comment(lib, "CustomProfiler.lib")
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -11,6 +12,7 @@
 #include <vector>
 #include <conio.h>
 #include "RingBuffer.h"
+#include "CustomProfiler.h"
 
 using namespace std;
 
@@ -108,6 +110,8 @@ int main()
 
             break;
         }
+
+        ProfilerInput();
     }
 
     WaitForMultipleObjects(workerThreadHandles.size(), workerThreadHandles.data(), TRUE, INFINITE);
@@ -183,10 +187,14 @@ void AcceptThread()
         memset(&(newSession->recvMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
         newSession->recvMyOverlapped.pSession = newSession;
         newSession->recvMyOverlapped.type = RECV;
+        
+        newSession->recvQ.Resize(20000);
 
         memset(&(newSession->sendMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
         newSession->sendMyOverlapped.pSession = newSession;
         newSession->sendMyOverlapped.type = SEND;
+
+        newSession->sendQ.Resize(20000);
 
         AcquireSRWLockExclusive(&sessionListLock);
         sessionList.push_back(newSession);
@@ -271,18 +279,30 @@ void WorkerThread()
 
             getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
             InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
-            printf("[TCP/%ls: %d] %s\n", addrBuf, ntohs(clientAddr.sin_port), strBuf);
+            //printf("[TCP/%ls: %d] %s\n", addrBuf, ntohs(clientAddr.sin_port), strBuf);
 
             // WSASend
+
             pSession->sendQ.Enqueue(strBuf, ret);
 
             DWORD sendBytes;
             
-            WSABUF wsaBuf;
+            /*WSABUF wsaBuf;
             wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
-            wsaBuf.len = pSession->sendQ.DirectDequeueSize();
+            wsaBuf.len = pSession->sendQ.DirectDequeueSize();*/
 
-            DWORD wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
+            // 테스트
+            WSABUF wsaBuf[200];
+            for (int i = 0; i < 200; i++)
+            {
+                wsaBuf[i].buf = pSession->sendQ.GetFrontBufferPtr();
+                wsaBuf[i].len = pSession->sendQ.DirectDequeueSize();
+            }
+
+            PRO_BEGIN("WSASend");
+            //DWORD wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
+            DWORD wsaSendRet = WSASend(pSession->sock, wsaBuf, 200, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
+            PRO_END("WSASend");
             if (wsaSendRet == SOCKET_ERROR)
             {
                 if (WSAGetLastError() != ERROR_IO_PENDING)
@@ -290,6 +310,14 @@ void WorkerThread()
                     printf("Error: WSASend() %d\n", WSAGetLastError());
                     return;
                 }
+                if (WSAGetLastError() == ERROR_IO_PENDING)
+                {
+                    printf("send: IO_PENDING\n");
+                }
+            }
+            else
+            {
+                printf("send: FAST IO\n");
             }
 
             // WSARecv
@@ -313,7 +341,8 @@ void WorkerThread()
 
         if (pMyOverlapped->type == SEND)
         {
-            pSession->sendQ.MoveFront(cbTransferred);
+            //pSession->sendQ.MoveFront(cbTransferred);
+            pSession->sendQ.MoveFront(cbTransferred/200);
 
             /*
             if (InterlockedExchange(&sendCheck, FALSE) == TRUE)
