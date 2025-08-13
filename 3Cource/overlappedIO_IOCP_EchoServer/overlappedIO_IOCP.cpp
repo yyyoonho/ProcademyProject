@@ -265,10 +265,6 @@ void WorkerThread()
             InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
 
             printf("\n[TCP 서버] 클라이언트 종료: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
-
-            DecreaseIO_Count(pSession);
-
-            continue;
         }
 
         if (pMyOverlapped->type == RECV)
@@ -383,6 +379,8 @@ void DecreaseIO_Count(Session* pSession)
             if (iter->second == pSession)
             {
                 printf("[Session Release] session id: %d\n", iter->first);
+
+                delete iter->second;
 
                 sessionMap.erase(iter);
                 break;
