@@ -1,11 +1,11 @@
 #pragma once
 
-struct Header
+struct stHeader
 {
 	unsigned short len;
 };
 
-struct Message
+struct stMessage
 {
 	__int64 msg;
 };

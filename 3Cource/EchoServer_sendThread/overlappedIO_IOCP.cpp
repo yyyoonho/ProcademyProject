@@ -21,7 +21,11 @@
 using namespace std;
 
 #define PORT 6000
-#define BUFSIZE 500
+#define BUFSIZE 10
+
+/*디버깅용 변수*/
+int acceptTotal;
+
 
 class Session;
 
@@ -94,8 +98,8 @@ void WorkerThread();
 void RecvPost(Session* pSession);
 void SendPost(Session* pSession);
 
-void OnMessage(DWORD sessionID, char buf[], int len);
-void SendPacket(DWORD sessionID, char buf[], int len);
+void OnMessage(DWORD sessionID, stMessage msg);
+void SendPacket(DWORD sessionID, stMessage msg);
 
 void IncreaseIO_Count(Session* pSession);
 void DecreaseIO_Count(Session* pSession);
@@ -107,6 +111,9 @@ int main()
     // sessionMap 락 생성
     InitializeSRWLock(&sessionMapLock);
 
+    Init();
+    hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&AcceptThread, NULL, NULL, NULL);
+
     // IOCP 생성
     hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 4);
     if (hIOCP == NULL)
@@ -117,14 +124,12 @@ int main()
     GetSystemInfo(&si);
 
     HANDLE hThread;
-    for (int i = 0; i < (int)si.dwNumberOfProcessors * 2; i++)
+    //for (int i = 0; i < (int)si.dwNumberOfProcessors * 2; i++)
+    for (int i = 0; i < 1; i++)
     {
         hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&WorkerThread, NULL, NULL, NULL);
         workerThreadHandles.push_back(hThread);
     }
-
-    Init();
-    hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&AcceptThread, NULL, NULL, NULL);
 
     while (1)
     {
@@ -161,12 +166,6 @@ void Init()
         return;
     }
 
-    SOCKADDR_IN serverAddr;
-    memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(PORT);
-    serverAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-
     int optVal = 0;
     setSockOptRet = setsockopt(listenSocket, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, sizeof(optVal));
     if (setSockOptRet == SOCKET_ERROR)
@@ -174,6 +173,12 @@ void Init()
         printf("ERROR: setsockopt() %d\n", GetLastError());
         return;
     }
+
+    SOCKADDR_IN serverAddr;
+    memset(&serverAddr, 0, sizeof(SOCKADDR_IN));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(PORT);
+    serverAddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 
     bindRet = bind(listenSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr));
     if (bindRet == SOCKET_ERROR)
@@ -197,18 +202,22 @@ void AcceptThread()
         SOCKADDR_IN clientAddr;
         memset(&clientAddr, 0, sizeof(SOCKADDR_IN));
         int clientAddrSize = sizeof(clientAddr);
-        SOCKET clientSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
 
+        SOCKET clientSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
         if (clientSocket == INVALID_SOCKET)
         {
             printf("Error: accept() %d\n", WSAGetLastError());
             return;
         }
 
+        acceptTotal++;
+        printf("AcceptTotal: %d\n", acceptTotal);
+
         // 세션 생성 및 세팅
         Session* newSession = new Session;
 
         newSession->sock = clientSocket;
+        newSession->sessionID = ++g_sessionID;
 
         memset(&(newSession->recvMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
         newSession->recvMyOverlapped.pSession = newSession;
@@ -222,10 +231,7 @@ void AcceptThread()
 
         newSession->sendQ.Resize(20000);
 
-        newSession->sessionID = ++g_sessionID;
-
         InitializeSRWLock(&newSession->sessionLock);
-
 
         AcquireSRWLockExclusive(&sessionMapLock);
         sessionMap.insert({ newSession->sessionID, newSession });
@@ -251,7 +257,7 @@ void WorkerThread()
         // 비동기 IO 완료통지 대기
         DWORD cbTransferred = NULL;
         Session* pSession = NULL;
-        myOverlapped* pMyOverlapped;
+        myOverlapped* pMyOverlapped = NULL;
 
         SOCKADDR_IN clientAddr;
         int addrLen = sizeof(clientAddr);
@@ -280,27 +286,45 @@ void WorkerThread()
         {
             pSession->recvQ.MoveRear(cbTransferred);
 
-            char strBuf[BUFSIZE + 1];
-            int ret = pSession->recvQ.Dequeue(strBuf, BUFSIZE);
-            strBuf[ret] = NULL;
+            while (1)
+            {
+                stHeader header;
+                stMessage msg;
 
-            getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
-            InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
-            printf("[TCP/%ls: %d] %s\n", addrBuf, ntohs(clientAddr.sin_port), strBuf);
+                if (pSession->recvQ.GetUseSize() < sizeof(stHeader))
+                {
+                    // 비동기IO: Recv 요청 후 break
+                    RecvPost(pSession);
+                    break;
+                }
 
-            // 비동기IO: Send 요청
-            // 이제 컨텐츠 단에서 요청
-            OnMessage(pSession->sessionID, strBuf, ret);
+                pSession->recvQ.Peek((char*)&header, sizeof(stHeader));
+                short payLoadLen = header.len;
 
-            // 비동기IO: Recv 요청
-            RecvPost(pSession);
+                if (pSession->recvQ.GetUseSize() < sizeof(stHeader) + payLoadLen)
+                {
+                    // 비동기IO: Recv 요청 후 break
+                    RecvPost(pSession);
+                    break;
+                }
+
+                pSession->recvQ.MoveFront(sizeof(stHeader));
+                pSession->recvQ.Dequeue((char*)&msg, payLoadLen);
+
+                printf("msg: %d\n", msg.msg);
+
+                // 비동기IO: Send 요청
+                // 이제 컨텐츠 단에서 요청
+                OnMessage(pSession->sessionID, msg);
+            }
+
         }
 
         else if (pMyOverlapped->type == SEND)
         {
-            InterlockedExchange(&pSession->checkSend, TRUE);
-
             pSession->sendQ.MoveFront(cbTransferred);
+
+            InterlockedExchange(&pSession->checkSend, TRUE);
 
             // 비동기IO: Send 요청
             SendPost(pSession);
@@ -324,9 +348,12 @@ void RecvPost(Session* pSession)
     DWORD wsaRecvRet = WSARecv(pSession->sock, &wsaBuf, 1, &sendBytes, &flags, (LPWSAOVERLAPPED)&pSession->recvMyOverlapped, NULL);
     if (wsaRecvRet == SOCKET_ERROR)
     {
-        if (WSAGetLastError() != ERROR_IO_PENDING && WSAGetLastError() != 0)
+        if (WSAGetLastError() != ERROR_IO_PENDING)
         {
-            DecreaseIO_Count(pSession);
+            if (WSAGetLastError() != 0)
+            {
+                DecreaseIO_Count(pSession);
+            }
 
             printf("Error: WSARecv() %d\n", WSAGetLastError());
             return;
@@ -336,45 +363,44 @@ void RecvPost(Session* pSession)
 
 void SendPost(Session* pSession)
 {
-    if (pSession->sendQ.GetUseSize() > 0 && InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
+    if (pSession->sendQ.GetUseSize() > 0)
     {
-        DWORD sendBytes;
-
-        WSABUF wsaBuf;
-        wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
-        wsaBuf.len = pSession->sendQ.DirectDequeueSize();
-
-        IncreaseIO_Count(pSession);
-
-        DWORD wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
-
-        if (wsaSendRet == SOCKET_ERROR)
+        if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
         {
-            if (WSAGetLastError() != ERROR_IO_PENDING && WSAGetLastError() != 0)
-            {
-                DecreaseIO_Count(pSession);
+            DWORD sendBytes;
 
-                printf("Error: WSASend() %d\n", WSAGetLastError());
-                return;
+            WSABUF wsaBuf;
+            wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
+            wsaBuf.len = pSession->sendQ.DirectDequeueSize();
+
+            IncreaseIO_Count(pSession);
+
+            DWORD wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
+
+            if (wsaSendRet == SOCKET_ERROR)
+            {
+                if (WSAGetLastError() != ERROR_IO_PENDING && WSAGetLastError() != 0)
+                {
+                    DecreaseIO_Count(pSession);
+
+                    printf("Error: WSASend() %d\n", WSAGetLastError());
+                    return;
+                }
             }
         }
-    }
-    else
-    {
-        return;
     }
 
 }
 
-void OnMessage(DWORD sessionID, char buf[], int len)
+void OnMessage(DWORD sessionID, stMessage msg)
 {
     // 컨텐츠 코드
-    SendPacket(sessionID, buf, len);
+    SendPacket(sessionID, msg);
 
     return;
 }
 
-void SendPacket(DWORD sessionID, char buf[], int len)
+void SendPacket(DWORD sessionID, stMessage msg)
 {
     Session* pSession = NULL;
 
@@ -397,7 +423,11 @@ void SendPacket(DWORD sessionID, char buf[], int len)
     ReleaseSRWLockShared(&sessionMapLock);
 
 
-    pSession->sendQ.Enqueue(buf, len);
+    stHeader header;
+    header.len = sizeof(stMessage);
+
+    pSession->sendQ.Enqueue((char*)&header, sizeof(stHeader));
+    pSession->sendQ.Enqueue((char*)&msg, sizeof(stMessage));
 
     SendPost(pSession);
 
@@ -426,6 +456,8 @@ void DecreaseIO_Count(Session* pSession)
         ReleaseSRWLockExclusive(&pSession->sessionLock);
 
         ReleaseSRWLockExclusive(&sessionMapLock);
+
+        closesocket(pSession->sock);
 
         delete pSession;
     }
