@@ -124,8 +124,8 @@ int main()
     GetSystemInfo(&si);
 
     HANDLE hThread;
-    //for (int i = 0; i < (int)si.dwNumberOfProcessors * 2; i++)
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < (int)si.dwNumberOfProcessors * 2; i++)
+    //for (int i = 0; i < 1; i++)
     {
         hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&WorkerThread, NULL, NULL, NULL);
         workerThreadHandles.push_back(hThread);
@@ -210,9 +210,6 @@ void AcceptThread()
             return;
         }
 
-        acceptTotal++;
-        printf("AcceptTotal: %d\n", acceptTotal);
-
         // 세션 생성 및 세팅
         Session* newSession = new Session;
 
@@ -240,7 +237,7 @@ void AcceptThread()
         getpeername(clientSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
         WCHAR addrBuf[40];
         InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
-        printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
+        //printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
 
         // 소켓 <-> IOCP 연결
         CreateIoCompletionPort((HANDLE)newSession->sock, hIOCP, (ULONG_PTR)newSession, NULL);
@@ -279,7 +276,7 @@ void WorkerThread()
             getpeername(pSession->sock, (SOCKADDR*)&clientAddr, &addrLen);
             InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
 
-            printf("\n[TCP 서버] 클라이언트 종료신호 (FIN or SRT): IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
+            //printf("\n[TCP 서버] 클라이언트 종료신호 (FIN or SRT): IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
         }
 
         else if (pMyOverlapped->type == RECV)
@@ -311,13 +308,10 @@ void WorkerThread()
                 pSession->recvQ.MoveFront(sizeof(stHeader));
                 pSession->recvQ.Dequeue((char*)&msg, payLoadLen);
 
-                printf("msg: %d\n", msg.msg);
-
                 // 비동기IO: Send 요청
                 // 이제 컨텐츠 단에서 요청
                 OnMessage(pSession->sessionID, msg);
             }
-
         }
 
         else if (pMyOverlapped->type == SEND)
@@ -327,7 +321,10 @@ void WorkerThread()
             InterlockedExchange(&pSession->checkSend, TRUE);
 
             // 비동기IO: Send 요청
+            // 락도 걸었다.
+            AcquireSRWLockExclusive(&pSession->sessionLock);
             SendPost(pSession);
+            ReleaseSRWLockExclusive(&pSession->sessionLock);
         }
 
         DecreaseIO_Count(pSession);
@@ -446,7 +443,7 @@ void DecreaseIO_Count(Session* pSession)
     if (ret == 0)
     {
         // Session Release
-        printf("[Session Release] session id: %d\n", pSession->sessionID);
+        //printf("[Session Release] session id: %d\n", pSession->sessionID);
 
         AcquireSRWLockExclusive(&sessionMapLock);
 
