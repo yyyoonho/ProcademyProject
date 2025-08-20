@@ -10,6 +10,7 @@
 #include <thread>
 #include <list>
 #include <vector>
+#include <queue>
 #include <map>
 #include <unordered_map>
 #include <conio.h>
@@ -59,10 +60,18 @@ struct Session
     LONG checkSend = TRUE;
 
     SRWLOCK sessionLock;
-
+    CRITICAL_SECTION sessionCS;
 };
 
 /**************************************************************/
+
+// EchoThread
+HANDLE hEchoThread;
+
+queue<stMessageForMsgQ> msgQ;
+SRWLOCK msgQLock;
+CRITICAL_SECTION msgQCS;
+HANDLE hEvent_msgQ;
 
 // 네트워크 전역변수
 DWORD wsaStartupRet;
@@ -86,11 +95,13 @@ vector<HANDLE> workerThreadHandles;
 
 // SRWLock
 SRWLOCK sessionMapLock;
+CRITICAL_SECTION sessionMapCS;
 
 // 함수 선언
 void Init();
 void AcceptThread();
 void WorkerThread();
+void EchoThread();
 
 void RecvPost(Session* pSession);
 void SendPost(Session* pSession);
@@ -107,6 +118,17 @@ int main()
 
     // sessionMap 락 생성
     InitializeSRWLock(&sessionMapLock);
+    InitializeCriticalSection(&sessionMapCS);
+    
+    // msgQ 락 생성
+    InitializeSRWLock(&msgQLock);
+    InitializeCriticalSection(&msgQCS);
+
+    // hEvent_msgQ 이벤트 생성
+    hEvent_msgQ = CreateEvent(NULL, FALSE, FALSE, NULL);
+    // EchoThread 생성
+    hEchoThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&EchoThread, NULL, NULL, NULL);
+
 
     Init();
     hAcceptThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&AcceptThread, NULL, NULL, NULL);
@@ -226,10 +248,15 @@ void AcceptThread()
         newSession->sendQ.Resize(20000);
 
         InitializeSRWLock(&newSession->sessionLock);
+        InitializeCriticalSection(&newSession->sessionCS);
 
-        AcquireSRWLockExclusive(&sessionMapLock);
+        //AcquireSRWLockExclusive(&sessionMapLock);
+        EnterCriticalSection(&sessionMapCS);
+
         sessionMap.insert({ newSession->sessionID, newSession });
-        ReleaseSRWLockExclusive(&sessionMapLock);
+
+        //ReleaseSRWLockExclusive(&sessionMapLock);
+        LeaveCriticalSection(&sessionMapCS);
 
         getpeername(clientSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
         WCHAR addrBuf[40];
@@ -315,18 +342,59 @@ void WorkerThread()
         {
             pSession->sendQ.MoveFront(cbTransferred);
 
-            
-            AcquireSRWLockExclusive(&pSession->sessionLock);
+            EnterCriticalSection(&pSession->sessionCS);
+
             InterlockedExchange(&pSession->checkSend, TRUE);
 
             // 비동기IO: Send 요청
             // 락도 걸었다.
             
+            //AcquireSRWLockExclusive(&pSession->sessionLock);
+            //EnterCriticalSection(&pSession->sessionCS);
+
             SendPost(pSession);
-            ReleaseSRWLockExclusive(&pSession->sessionLock);
+
+            //ReleaseSRWLockExclusive(&pSession->sessionLock);
+            LeaveCriticalSection(&pSession->sessionCS);
         }
 
         DecreaseIO_Count(pSession);
+    }
+}
+
+void EchoThread()
+{
+    while (1)
+    {
+        WaitForSingleObject(hEvent_msgQ, INFINITE);
+
+        // TODO: 메시지 디큐
+        stMessageForMsgQ job;
+        
+        //AcquireSRWLockExclusive(&msgQLock);
+        EnterCriticalSection(&msgQCS);
+        if (msgQ.size() > 0)
+        {
+            job = msgQ.front();
+            msgQ.pop();
+        }
+        else
+        {
+            //ReleaseSRWLockExclusive(&msgQLock);
+            LeaveCriticalSection(&msgQCS);
+            continue;
+        }
+
+        if (msgQ.size() > 0)
+        {
+            SetEvent(hEvent_msgQ);
+        }
+            
+        //ReleaseSRWLockExclusive(&msgQLock);
+        LeaveCriticalSection(&msgQCS);
+
+        // TODO: sendPacket;
+        SendPacket(job.sessionId, job.msg);
     }
 }
 
@@ -391,7 +459,17 @@ void SendPost(Session* pSession)
 void OnMessage(DWORD sessionID, stMessage msg)
 {
     // 컨텐츠 코드
-    SendPacket(sessionID, msg);
+    //SendPacket(sessionID, msg);
+
+    // TODO: EchoThead에 일감던지기
+    //AcquireSRWLockExclusive(&msgQLock);
+    EnterCriticalSection(&msgQCS);
+
+    msgQ.push(stMessageForMsgQ{ sessionID, msg });
+    SetEvent(hEvent_msgQ);
+
+    //ReleaseSRWLockExclusive(&msgQLock);
+    LeaveCriticalSection(&msgQCS);
 
     return;
 }
@@ -400,7 +478,8 @@ void SendPacket(DWORD sessionID, stMessage msg)
 {
     Session* pSession = NULL;
 
-    AcquireSRWLockShared(&sessionMapLock);
+    //AcquireSRWLockShared(&sessionMapLock);
+    EnterCriticalSection(&sessionMapCS);
 
     unordered_map<DWORD64, Session*>::iterator iter;
     iter = sessionMap.find(sessionID);
@@ -414,9 +493,11 @@ void SendPacket(DWORD sessionID, stMessage msg)
 
     pSession = iter->second;
 
-    AcquireSRWLockExclusive(&pSession->sessionLock);
+    //AcquireSRWLockExclusive(&pSession->sessionLock);
+    EnterCriticalSection(&pSession->sessionCS);
 
-    ReleaseSRWLockShared(&sessionMapLock);
+    //ReleaseSRWLockShared(&sessionMapLock);
+    LeaveCriticalSection(&sessionMapCS);
 
 
     stHeader header;
@@ -427,7 +508,8 @@ void SendPacket(DWORD sessionID, stMessage msg)
 
     SendPost(pSession);
 
-    ReleaseSRWLockExclusive(&pSession->sessionLock);
+    //ReleaseSRWLockExclusive(&pSession->sessionLock);
+    LeaveCriticalSection(&pSession->sessionCS);
 
 }
 
@@ -444,14 +526,18 @@ void DecreaseIO_Count(Session* pSession)
         // Session Release
         //printf("[Session Release] session id: %d\n", pSession->sessionID);
 
-        AcquireSRWLockExclusive(&sessionMapLock);
+        //AcquireSRWLockExclusive(&sessionMapLock);
+        EnterCriticalSection(&sessionMapCS);
 
         sessionMap.erase(pSession->sessionID);
 
-        AcquireSRWLockExclusive(&pSession->sessionLock);
-        ReleaseSRWLockExclusive(&pSession->sessionLock);
+        //AcquireSRWLockExclusive(&pSession->sessionLock);
+        EnterCriticalSection(&pSession->sessionCS);
+        //ReleaseSRWLockExclusive(&pSession->sessionLock);
+        LeaveCriticalSection(&pSession->sessionCS);
 
-        ReleaseSRWLockExclusive(&sessionMapLock);
+        //ReleaseSRWLockExclusive(&sessionMapLock);
+        LeaveCriticalSection(&sessionMapCS);
 
         closesocket(pSession->sock);
 
