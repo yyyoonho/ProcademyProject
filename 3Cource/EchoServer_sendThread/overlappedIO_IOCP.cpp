@@ -23,6 +23,10 @@ using namespace std;
 #define PORT 6000
 #define BUFSIZE 10
 
+LONG gate1 = 0;
+
+int debug4;
+int debug5;
 
 class Session;
 
@@ -122,7 +126,7 @@ int main()
 
     HANDLE hThread;
     //for (int i = 0; i < (int)si.dwNumberOfProcessors * 2; i++)
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 2; i++)
     {
         hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&WorkerThread, NULL, NULL, NULL);
         workerThreadHandles.push_back(hThread);
@@ -315,14 +319,14 @@ void WorkerThread()
         {
             pSession->sendQ.MoveFront(cbTransferred);
 
-            
             AcquireSRWLockExclusive(&pSession->sessionLock);
+
             InterlockedExchange(&pSession->checkSend, TRUE);
 
             // 비동기IO: Send 요청
             // 락도 걸었다.
-            
             SendPost(pSession);
+
             ReleaseSRWLockExclusive(&pSession->sessionLock);
         }
 
@@ -359,8 +363,19 @@ void RecvPost(Session* pSession)
 
 void SendPost(Session* pSession)
 {
-    if (pSession->sendQ.GetUseSize() > 0)
+    int debug1 = 0;
+    int debug2 = 0;
+    int debug3 = 0;
+
+    //if (pSession->sendQ.GetUseSize() > 0)
+    if ((debug1 = pSession->sendQ.DirectDequeueSize()) > 0)
     {
+        debug2 = pSession->sendQ.DirectDequeueSize();
+        if (debug2 == 0)
+        {
+            int a = 3;
+        }
+
         if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
         {
             DWORD sendBytes;
@@ -369,12 +384,23 @@ void SendPost(Session* pSession)
             wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
             wsaBuf.len = pSession->sendQ.DirectDequeueSize();
 
+            debug3 = pSession->sendQ.DirectDequeueSize();
+
+            // TODO: 나중에 세션에 대한 락이 없어지면 이렇게 해결해야할듯 싶다.
+            if (wsaBuf.len == 0)
+            {
+                InterlockedExchange(&pSession->checkSend, TRUE);
+                return;
+            }
+
             IncreaseIO_Count(pSession);
 
             DWORD wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
-
+            DWORD tmp2 = WSAGetLastError();
             if (wsaSendRet == SOCKET_ERROR)
             {
+                DWORD tmp = WSAGetLastError();
+
                 if (WSAGetLastError() != ERROR_IO_PENDING && WSAGetLastError() != 0)
                 {
                     DecreaseIO_Count(pSession);
@@ -425,6 +451,8 @@ void SendPacket(DWORD sessionID, stMessage msg)
     pSession->sendQ.Enqueue((char*)&header, sizeof(stHeader));
     pSession->sendQ.Enqueue((char*)&msg, sizeof(stMessage));
 
+    debug4 = pSession->sendQ.DirectDequeueSize();
+
     SendPost(pSession);
 
     ReleaseSRWLockExclusive(&pSession->sessionLock);
@@ -448,10 +476,10 @@ void DecreaseIO_Count(Session* pSession)
 
         sessionMap.erase(pSession->sessionID);
 
+        ReleaseSRWLockExclusive(&sessionMapLock);
+
         AcquireSRWLockExclusive(&pSession->sessionLock);
         ReleaseSRWLockExclusive(&pSession->sessionLock);
-
-        ReleaseSRWLockExclusive(&sessionMapLock);
 
         closesocket(pSession->sock);
 
