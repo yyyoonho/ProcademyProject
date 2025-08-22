@@ -93,6 +93,7 @@ void WorkerThread();
 
 void RecvPost(Session* pSession);
 void SendPost(Session* pSession);
+void SendProc(Session* pSession);
 
 void OnMessage(DWORD sessionID, stMessage msg);
 void SendPacket(DWORD sessionID, stMessage msg);
@@ -317,8 +318,15 @@ void WorkerThread()
             AcquireSRWLockExclusive(&pSession->sessionLock);
 
             // 비동기IO: Send 요청
-            // 락도 걸었다.
-            SendPost(pSession);
+            if (pSession->sendQ.DirectDequeueSize() > 0)
+            {
+                SendProc(pSession);
+            }
+            else
+            {
+                InterlockedExchange(&pSession->checkSend, TRUE);
+            }
+            
 
             ReleaseSRWLockExclusive(&pSession->sessionLock);
         }
@@ -358,6 +366,17 @@ void SendPost(Session* pSession)
 {
     if (pSession->sendQ.DirectDequeueSize() > 0)
     {
+        if (InterlockedExchange(&pSession->checkSend, false) == true)
+        {
+            SendProc(pSession);
+        }
+    }
+}
+
+void SendProc(Session* pSession)
+{
+    if (pSession->sendQ.DirectDequeueSize() > 0)
+    {
         DWORD sendBytes;
 
         WSABUF wsaBuf;
@@ -365,11 +384,13 @@ void SendPost(Session* pSession)
         wsaBuf.len = pSession->sendQ.DirectDequeueSize();
 
         // TODO: 나중에 세션에 대한 락이 없어지면 이렇게 해결해야할듯 싶다.
-        /*if (wsaBuf.len == 0)
+        if (wsaBuf.len == 0)
         {
-            InterlockedExchange(&pSession->checkSend, TRUE);
-            return;
-        }*/
+            DebugBreak();
+
+            //InterlockedExchange(&pSession->checkSend, TRUE);
+            //return;
+        }
 
         IncreaseIO_Count(pSession);
 
@@ -387,10 +408,6 @@ void SendPost(Session* pSession)
                 return;
             }
         }
-    }
-    else
-    {
-        InterlockedExchange(&pSession->checkSend, TRUE);
     }
 }
 
@@ -431,10 +448,8 @@ void SendPacket(DWORD sessionID, stMessage msg)
     pSession->sendQ.Enqueue((char*)&header, sizeof(stHeader));
     pSession->sendQ.Enqueue((char*)&msg, sizeof(stMessage));
 
-    if (InterlockedExchange(&pSession->checkSend, false) == true)
-    {
-        SendPost(pSession);
-    }
+    SendPost(pSession);
+
     ReleaseSRWLockExclusive(&pSession->sessionLock);
 
 }
