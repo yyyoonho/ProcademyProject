@@ -39,6 +39,9 @@ void SerializePacket::Clear()
 {
     _writePos = _readPos = 0;
     _size = 0;
+
+    _isHeaderPushed = false;
+    _pushedHeaderSize = 0;
 }
 
 int SerializePacket::GetBufferSize()
@@ -395,13 +398,20 @@ int SerializePacket::Putdata(char* chpSrc, int iSrcSize)
     return iSrcSize;
 }
 
-void SerializePacket::PushHeader(char* header, int headerSize)
+bool SerializePacket::PushHeader(char* header, int headerSize)
 {
-    memcpy_s(_buf - headerSize, sizeof(stTCPHeader), header, headerSize);
+    //memcpy_s(_buf - headerSize, sizeof(stTCPHeader), header, headerSize);
+
+    if (headerSize > sizeof(stTCPHeader))
+        return false;
+
+    memcpy_s(_buf - headerSize, headerSize, header, headerSize);
     _size += headerSize;
 
     _isHeaderPushed = true;
     _pushedHeaderSize = headerSize;
+
+    return true;
 }
 
 /*

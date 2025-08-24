@@ -61,7 +61,7 @@ public:
 	int GetData(char* chpDest, int iSize);
 	int Putdata(char* chpSrc, int iSrcSize);
 
-	void PushHeader(char* header, int headerSize);
+	bool PushHeader(char* header, int headerSize);
 
 protected:
 	char* _original;
@@ -74,6 +74,6 @@ protected:
 	int _size;
 
 	bool _isHeaderPushed = false;
-	int _pushedHeaderSize;
+	int _pushedHeaderSize = 0;
 
 };
