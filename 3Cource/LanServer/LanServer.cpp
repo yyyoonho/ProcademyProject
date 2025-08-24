@@ -60,6 +60,7 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 void CLanServer::Stop()
 {
 	SetEvent(_hEvent_Quit);
+	PostQueuedCompletionStatus(_hIOCP, NULL, NULL, NULL);
 }
 
 int CLanServer::GetSessionCount()
@@ -111,6 +112,8 @@ bool CLanServer::SendPacket(INT64 sessionID, SerializePacket* pSPacket)
 	// TODO: 직렬화버퍼를 하나 더 선언하는걸 고치자.
 	SerializePacket headerSPacket;
 	headerSPacket.Putdata((char*)&header, sizeof(stHeader));
+
+	InterlockedIncrement(&_sendMessageTPS);
 
 	pSession->sendQ.Enqueue(headerSPacket.GetBufferPtr(), headerSPacket.GetDataSize());
 	pSession->sendQ.Enqueue(pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
@@ -328,6 +331,8 @@ void CLanServer::WorkerThread()
 				int ret = pSession->recvQ.Dequeue(sPacket.GetBufferPtr(), payLoadLen);
 				sPacket.MoveWritePos(ret);
 
+				InterlockedIncrement(&_recvMessageTPS);
+
 				// 비동기IO: Send 요청
 				// 이제 컨텐츠 단에서 요청
 				OnMessage(pSession->sessionID, &sPacket);
@@ -378,6 +383,8 @@ void CLanServer::AcceptThread()
 			printf("Error: accept() %d\n", WSAGetLastError());
 			return;
 		}
+
+		InterlockedIncrement(&_acceptTPS);
 
 		// OnConnectionRequest
 		OnConnectionRequest(clientAddr);
