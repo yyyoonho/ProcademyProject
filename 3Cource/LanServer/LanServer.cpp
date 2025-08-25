@@ -108,16 +108,11 @@ bool CLanServer::SendPacket(INT64 sessionID, SerializePacket* pSPacket)
 
 	stHeader header;
 	header.len = pSPacket->GetDataSize();
-	
-	// TODO: 직렬화버퍼를 하나 더 선언하는걸 고치자.
-	SerializePacket headerSPacket;
-	headerSPacket.Putdata((char*)&header, sizeof(stHeader));
+	pSPacket->PushHeader((char*)&header, sizeof(stHeader));
 
 	InterlockedIncrement(&_sendMessageTPS);
 
-	pSession->sendQ.Enqueue(headerSPacket.GetBufferPtr(), headerSPacket.GetDataSize());
 	pSession->sendQ.Enqueue(pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
-
 	SendPost(pSession);
 
 	ReleaseSRWLockExclusive(&pSession->sessionLock);

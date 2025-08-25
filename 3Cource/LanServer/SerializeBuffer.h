@@ -1,5 +1,10 @@
 #pragma once
 
+struct stTCPHeader
+{
+	BYTE _header[5];
+};
+
 class SerializePacket
 {
 public:
@@ -56,7 +61,10 @@ public:
 	int GetData(char* chpDest, int iSize);
 	int Putdata(char* chpSrc, int iSrcSize);
 
+	bool PushHeader(char* header, int headerSize);
+
 protected:
+	char* _original;
 	char* _buf;
 
 	int _writePos;
@@ -65,6 +73,7 @@ protected:
 	int _capacity;
 	int _size;
 
-private:
-	CRITICAL_SECTION cs;
+	bool _isHeaderPushed = false;
+	int _pushedHeaderSize = 0;
+
 };
