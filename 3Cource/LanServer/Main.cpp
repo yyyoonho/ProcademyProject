@@ -30,7 +30,7 @@ void MonitoringThread()
 
 int main()
 {
-	bool serverSet = server1.Start(L"127.0.0.1", 6000, 5, 8, TRUE, 10000);
+	bool serverSet = server1.Start(L"127.0.0.1", 6000, 2, 2, TRUE, 10000);
 	if (serverSet == false)
 	{
 		printf("server start error\n");

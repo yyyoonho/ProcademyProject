@@ -77,6 +77,8 @@ void CLanServer::SendPost(Session* pSession)
 {
 	if (pSession->sendQ.DirectDequeueSize() > 0)
 	{
+		// 여기서 0됨
+
 		if (InterlockedExchange(&pSession->checkSend, false) == true)
 		{
 			SendProc(pSession);
@@ -102,7 +104,7 @@ bool CLanServer::SendPacket(INT64 sessionID, SerializePacket* pSPacket)
 
 	pSession = iter->second;
 
-	AcquireSRWLockExclusive(&pSession->sessionLock);
+	//AcquireSRWLockExclusive(&pSession->sessionLock);
 
 	ReleaseSRWLockShared(&_sessionMapLock);
 
@@ -111,11 +113,11 @@ bool CLanServer::SendPacket(INT64 sessionID, SerializePacket* pSPacket)
 	pSPacket->PushHeader((char*)&header, sizeof(stHeader));
 
 	InterlockedIncrement(&_sendMessageTPS);
-
 	pSession->sendQ.Enqueue(pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
+
 	SendPost(pSession);
 
-	ReleaseSRWLockExclusive(&pSession->sessionLock);
+	//ReleaseSRWLockExclusive(&pSession->sessionLock);
 
 	return false;
 }
@@ -192,7 +194,7 @@ void CLanServer::RecvProc(Session* pSession)
 
 void CLanServer::SendProc(Session* pSession)
 {
-	if (pSession->sendQ.DirectDequeueSize() > 0)
+	//if (pSession->sendQ.DirectDequeueSize() > 0)
 	{
 		DWORD sendBytes;
 
@@ -200,13 +202,11 @@ void CLanServer::SendProc(Session* pSession)
 		wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
 		wsaBuf.len = pSession->sendQ.DirectDequeueSize();
 
-		// TODO: 나중에 세션에 대한 락이 없어지면 이렇게 해결해야할듯 싶다.
 		if (wsaBuf.len == 0)
 		{
-			DebugBreak();
-
+			int a = 3;
+			
 			//InterlockedExchange(&pSession->checkSend, TRUE);
-			//return;
 		}
 
 		IncreaseIO_Count(pSession);
@@ -246,8 +246,8 @@ void CLanServer::DecreaseIO_Count(Session* pSession)
 
 		ReleaseSRWLockExclusive(&_sessionMapLock);
 
-		AcquireSRWLockExclusive(&pSession->sessionLock);
-		ReleaseSRWLockExclusive(&pSession->sessionLock);
+		//AcquireSRWLockExclusive(&pSession->sessionLock);
+		//ReleaseSRWLockExclusive(&pSession->sessionLock);
 
 		closesocket(pSession->sock);
 		OnRelease(pSession->sessionID);
@@ -338,7 +338,7 @@ void CLanServer::WorkerThread()
 		{
 			pSession->sendQ.MoveFront(cbTransferred);
 
-			AcquireSRWLockExclusive(&pSession->sessionLock);
+			//AcquireSRWLockExclusive(&pSession->sessionLock);
 
 			// 비동기IO: Send 요청
 			if (pSession->sendQ.DirectDequeueSize() > 0)
@@ -351,7 +351,7 @@ void CLanServer::WorkerThread()
 			}
 
 
-			ReleaseSRWLockExclusive(&pSession->sessionLock);
+			//ReleaseSRWLockExclusive(&pSession->sessionLock);
 		}
 
 		DecreaseIO_Count(pSession);
@@ -402,7 +402,7 @@ void CLanServer::AcceptThread()
 
 		newSession->sendQ.Resize(20000);
 
-		InitializeSRWLock(&newSession->sessionLock);
+		//InitializeSRWLock(&newSession->sessionLock);
 
 		AcquireSRWLockExclusive(&_sessionMapLock);
 		_sessionMap.insert({ newSession->sessionID, newSession });
