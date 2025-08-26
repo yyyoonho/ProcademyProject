@@ -9,15 +9,15 @@ bool CEchoServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
 	return true;
 }
 
-void CEchoServer::OnAccept(INT64 sessionID)
+void CEchoServer::OnAccept(DWORD64 sessionID)
 {
 }
 
-void CEchoServer::OnRelease(INT64 sessionID)
+void CEchoServer::OnRelease(DWORD64 sessionID)
 {
 }
 
-void CEchoServer::OnMessage(INT64 sessionID, SerializePacket* pSPacket)
+void CEchoServer::OnMessage(DWORD64 sessionID, SerializePacket* pSPacket)
 {
 	// 데이터 추출
 	stMessage msg;

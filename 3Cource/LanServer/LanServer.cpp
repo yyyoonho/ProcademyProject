@@ -1,6 +1,5 @@
 ﻿#include "stdafx.h"
 #include "LanServer.h"
-#include "Struct.h"
 
 using namespace std;
 
@@ -21,10 +20,18 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	_isNagle = isNagle;
 	_maximumSessionCount = maximumSessionCount;
 
-	
-	InitializeSRWLock(&_sessionMapLock);
 	_hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
+	InitializeSRWLock(&_releaseStackLock);
+
+	for (int i = 9999; i >= 0; i--)
+	{
+		_sessionArray[i].recvQ.Resize(20000);
+		_sessionArray[i].sendQ.Resize(20000);
+		InitializeSRWLock(&_sessionArray[i].sendQLock);
+
+		_releaseIdxStack.push(i);
+	}
 
 	bool ret = NetInit();
 	if (ret == false)
@@ -68,7 +75,7 @@ int CLanServer::GetSessionCount()
 	return _sessionCount;
 }
 
-bool CLanServer::Disconnect(INT64 sessionID)
+bool CLanServer::Disconnect(DWORD64 sessionID)
 {
 	return false;
 }
@@ -86,27 +93,19 @@ void CLanServer::SendPost(Session* pSession)
 	}
 }
 
-bool CLanServer::SendPacket(INT64 sessionID, SerializePacket* pSPacket)
+bool CLanServer::SendPacket(DWORD64 sessionID, SerializePacket* pSPacket)
 {
+	unsigned int idx = GetIdxFromSessionID(sessionID);
+
 	Session* pSession = NULL;
+	pSession = &_sessionArray[idx];
 
-	AcquireSRWLockShared(&_sessionMapLock);
-
-	unordered_map<INT64, Session*>::iterator iter;
-	iter = _sessionMap.find(sessionID);
-
-	if (iter == _sessionMap.end())
+	if (sessionID != pSession->sessionID)
 	{
-		printf("Error: SendPacket() Can not find a session by ID(Key) in sessionMap\n");
-
 		return false;
 	}
 
-	pSession = iter->second;
-
-	//AcquireSRWLockExclusive(&pSession->sessionLock);
-
-	ReleaseSRWLockShared(&_sessionMapLock);
+	AcquireSRWLockExclusive(&pSession->sendQLock);
 
 	stHeader header;
 	header.len = pSPacket->GetDataSize();
@@ -117,9 +116,9 @@ bool CLanServer::SendPacket(INT64 sessionID, SerializePacket* pSPacket)
 
 	SendPost(pSession);
 
-	//ReleaseSRWLockExclusive(&pSession->sessionLock);
+	ReleaseSRWLockExclusive(&pSession->sendQLock);
 
-	return false;
+	return true;
 }
 
 bool CLanServer::NetInit()
@@ -240,20 +239,36 @@ void CLanServer::DecreaseIO_Count(Session* pSession)
 	{
 		// Session Release
 
-		AcquireSRWLockExclusive(&_sessionMapLock);
-
-		_sessionMap.erase(pSession->sessionID);
-
-		ReleaseSRWLockExclusive(&_sessionMapLock);
-
-		//AcquireSRWLockExclusive(&pSession->sessionLock);
-		//ReleaseSRWLockExclusive(&pSession->sessionLock);
-
 		closesocket(pSession->sock);
-		OnRelease(pSession->sessionID);
+		
+		unsigned int idx = GetIdxFromSessionID(pSession->sessionID);
 
-		delete pSession;
+		AcquireSRWLockExclusive(&_releaseStackLock);
+
+		_releaseIdxStack.push(idx);
+
+		ReleaseSRWLockExclusive(&_releaseStackLock);
+
+		OnRelease(pSession->sessionID);
 	}
+}
+
+unsigned int CLanServer::GetIdxFromSessionID(DWORD64 sessionID)
+{
+	unsigned int idx = (sessionID & 0xffff000000000000) >> 48;
+
+	return idx;
+}
+
+void CLanServer::SetIdxToSessionID(DWORD64* pSessionID, unsigned int idx)
+{
+	DWORD64 sessionID = *pSessionID;
+
+	DWORD64 shiftedIdx = (DWORD64)idx << 48;
+
+	*pSessionID = sessionID | shiftedIdx;
+
+	return;
 }
 
 void CLanServer::WorkerThreadRun(LPVOID* lParam)
@@ -338,7 +353,7 @@ void CLanServer::WorkerThread()
 		{
 			pSession->sendQ.MoveFront(cbTransferred);
 
-			//AcquireSRWLockExclusive(&pSession->sessionLock);
+			AcquireSRWLockExclusive(&pSession->sendQLock);
 
 			// 비동기IO: Send 요청
 			if (pSession->sendQ.DirectDequeueSize() > 0)
@@ -351,7 +366,7 @@ void CLanServer::WorkerThread()
 			}
 
 
-			//ReleaseSRWLockExclusive(&pSession->sessionLock);
+			ReleaseSRWLockExclusive(&pSession->sendQLock);
 		}
 
 		DecreaseIO_Count(pSession);
@@ -385,28 +400,27 @@ void CLanServer::AcceptThread()
 		OnConnectionRequest(clientAddr);
 
 		// 세션 생성 및 세팅
-		Session* newSession = new Session;
+		AcquireSRWLockExclusive(&_releaseStackLock);
 
-		newSession->sock = clientSocket;
-		newSession->sessionID = ++_g_sessionID;
+		int idx = _releaseIdxStack.top();
+		_releaseIdxStack.pop();
 
-		memset(&(newSession->recvMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
-		newSession->recvMyOverlapped.pSession = newSession;
-		newSession->recvMyOverlapped.type = RECV;
+		ReleaseSRWLockExclusive(&_releaseStackLock);
 
-		newSession->recvQ.Resize(20000);
+		_sessionArray[idx].sock = clientSocket;
+		_sessionArray[idx].sessionID = ++_g_sessionID;
 
-		memset(&(newSession->sendMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
-		newSession->sendMyOverlapped.pSession = newSession;
-		newSession->sendMyOverlapped.type = SEND;
+		SetIdxToSessionID(&_sessionArray[idx].sessionID, idx);
 
-		newSession->sendQ.Resize(20000);
+		unsigned int tmp = GetIdxFromSessionID(_sessionArray[idx].sessionID);
 
-		//InitializeSRWLock(&newSession->sessionLock);
+		memset(&(_sessionArray[idx].recvMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
+		_sessionArray[idx].recvMyOverlapped.pSession = &_sessionArray[idx];
+		_sessionArray[idx].recvMyOverlapped.type = RECV;
 
-		AcquireSRWLockExclusive(&_sessionMapLock);
-		_sessionMap.insert({ newSession->sessionID, newSession });
-		ReleaseSRWLockExclusive(&_sessionMapLock);
+		memset(&(_sessionArray[idx].sendMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
+		_sessionArray[idx].sendMyOverlapped.pSession = &_sessionArray[idx];
+		_sessionArray[idx].sendMyOverlapped.type = SEND;
 
 		getpeername(clientSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
 		WCHAR addrBuf[40];
@@ -414,13 +428,13 @@ void CLanServer::AcceptThread()
 		//printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
 
 		// 소켓 <-> IOCP 연결
-		CreateIoCompletionPort((HANDLE)newSession->sock, _hIOCP, (ULONG_PTR)newSession, NULL);
+		CreateIoCompletionPort((HANDLE)_sessionArray[idx].sock, _hIOCP, (ULONG_PTR)&_sessionArray[idx], NULL);
 
 		// OnAccept
-		OnAccept(newSession->sessionID);
+		OnAccept(_sessionArray[idx].sessionID);
 
 		// 비동기 IO 걸어두기
-		RecvProc(newSession);
+		RecvProc(&_sessionArray[idx]);
 	}
 }
 

@@ -20,9 +20,9 @@ public:
 	void Stop();
 	int GetSessionCount();
 
-	bool Disconnect(INT64 sessionID);
+	bool Disconnect(DWORD64 sessionID);
 
-	bool SendPacket(INT64 sessionID, SerializePacket* pSPacket);
+	bool SendPacket(DWORD64 sessionID, SerializePacket* pSPacket);
 	
 private:
 	// 클래스 내부 함수
@@ -34,6 +34,9 @@ private:
 
 	void IncreaseIO_Count(Session* pSession);
 	void DecreaseIO_Count(Session* pSession);
+
+	unsigned int GetIdxFromSessionID(DWORD64 sessionID);
+	void SetIdxToSessionID(DWORD64* pSessionID, unsigned int idx);
 
 private:
 	// 쓰레드 함수
@@ -47,9 +50,9 @@ private:
 public:
 	// 핸들링 함수
 	virtual bool OnConnectionRequest(SOCKADDR_IN clientAddr) = 0;
-	virtual void OnAccept(INT64 sessionID) = 0;
-	virtual void OnRelease(INT64 sessionID) = 0;
-	virtual void OnMessage(INT64 sessionID, SerializePacket* pSPacket) = 0;
+	virtual void OnAccept(DWORD64 sessionID) = 0;
+	virtual void OnRelease(DWORD64 sessionID) = 0;
+	virtual void OnMessage(DWORD64 sessionID, SerializePacket* pSPacket) = 0;
 	virtual void OnError(int errorCode, WCHAR* errorComment) = 0;
 
 	// 모니터링 함수
@@ -75,8 +78,11 @@ private:
 
 	SOCKET _listenSocket;
 	DWORD64 _g_sessionID = 0;
+
 public:
-	std::unordered_map<INT64, Session*> _sessionMap;
+	Session _sessionArray[20000];
+	std::stack<unsigned int> _releaseIdxStack;
+	SRWLOCK _releaseStackLock;
 
 private:
 	// 멤버변수: 네트워크 리턴값체크
@@ -84,10 +90,6 @@ private:
 	DWORD bindRet;
 	DWORD listenRet;
 	DWORD setSockOptRet;
-
-public:
-	// 멤버변수: 동기화객체
-	SRWLOCK _sessionMapLock;
 
 private:
 	// 멤버변수: 이벤트

@@ -15,10 +15,13 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <stack>
 #include <conio.h>
 
 #include "RingBuffer.h"
 #include "CustomProfiler.h"
 #include "SerializeBuffer.h"
+
+#include "Struct.h"
 
 #include "Protocol.h"

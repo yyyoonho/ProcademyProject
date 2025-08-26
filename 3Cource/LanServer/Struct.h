@@ -27,13 +27,12 @@ struct Session
 
     LONG IO_Count = 0;
 
-    INT64 sessionID;
+    DWORD64 sessionID;
 
     // Send 1회로 제한
     // TRUE -> send 호출 가능
     // FALSE -> send 호출 불가능.
     LONG checkSend = TRUE;
 
-    SRWLOCK sessionLock;
-
+    SRWLOCK sendQLock;
 };
