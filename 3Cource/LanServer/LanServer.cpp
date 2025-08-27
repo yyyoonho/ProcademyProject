@@ -24,7 +24,7 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 
 	InitializeSRWLock(&_releaseStackLock);
 
-	for (int i = 9999; i >= 0; i--)
+	for (int i = 19999; i >= 0; i--)
 	{
 		_sessionArray[i].recvQ.Resize(20000);
 		_sessionArray[i].sendQ.Resize(20000);
@@ -399,7 +399,7 @@ void CLanServer::AcceptThread()
 		// OnConnectionRequest
 		OnConnectionRequest(clientAddr);
 
-		// 세션 생성 및 세팅
+		// 세션 할당 및 초기화
 		AcquireSRWLockExclusive(&_releaseStackLock);
 
 		int idx = _releaseIdxStack.top();
@@ -421,6 +421,11 @@ void CLanServer::AcceptThread()
 		memset(&(_sessionArray[idx].sendMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
 		_sessionArray[idx].sendMyOverlapped.pSession = &_sessionArray[idx];
 		_sessionArray[idx].sendMyOverlapped.type = SEND;
+
+		_sessionArray[idx].recvQ.ClearBuffer();
+		_sessionArray[idx].sendQ.ClearBuffer();
+
+		_sessionArray[idx].checkSend = TRUE;
 
 		getpeername(clientSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
 		WCHAR addrBuf[40];
