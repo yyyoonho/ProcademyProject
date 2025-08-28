@@ -3,7 +3,16 @@
 class CEchoServer : public CLanServer
 {
 public:
-	// CLanServer을(를) 통해 상속됨
+	virtual bool Start(const WCHAR* ipAddress,
+		unsigned short port,
+		unsigned short workerThreadCount,
+		unsigned short coreSkip,
+		bool isNagle,
+		unsigned int maximumSessionCount) override;
+
+	virtual void Stop() override;
+
+public:
 	virtual bool OnConnectionRequest(SOCKADDR_IN clientAddr) override;
 
 	virtual void OnAccept(DWORD64 sessionID) override;
@@ -14,4 +23,20 @@ public:
 
 	virtual void OnError(int errorCode, WCHAR* errorComment) override;
 
+private:
+	static void ContentThreadRun(LPVOID* lParam);
+	void ContentThread();
+
+private:
+	// 멤버 변수: 콘텐츠 큐, 이벤트
+	RingBuffer _contentQueue;
+	HANDLE _hEvent_contentQueue;
+
+	SRWLOCK _contentQueueLock;
+
+	HANDLE _hThread_EchoThread;
+
+private:
+	// 멤버변수: 이벤트
+	HANDLE _hEvent_Quit;
 };

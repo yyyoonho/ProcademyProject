@@ -9,7 +9,7 @@ public:
 	virtual ~CLanServer();
 
 public:
-	bool Start(
+	virtual bool Start(
 		const WCHAR* ipAddress, 
 		unsigned short port, 
 		unsigned short workerThreadCount, 
@@ -17,7 +17,7 @@ public:
 		bool isNagle, 
 		unsigned int maximumSessionCount);
 
-	void Stop();
+	virtual void Stop();
 	int GetSessionCount();
 
 	bool Disconnect(DWORD64 sessionID);
@@ -80,6 +80,7 @@ private:
 	DWORD64 _g_sessionID = 0;
 
 public:
+	// 멤버 변수: 세션배열관리
 	Session _sessionArray[20000];
 	std::stack<unsigned int> _releaseIdxStack;
 	SRWLOCK _releaseStackLock;

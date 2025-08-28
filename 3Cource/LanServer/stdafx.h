@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <stack>
 #include <conio.h>
+#include <queue>
 
 #include "RingBuffer.h"
 #include "CustomProfiler.h"
