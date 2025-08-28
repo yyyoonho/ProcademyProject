@@ -316,7 +316,6 @@ void CLanServer::WorkerThread()
 			while (1)
 			{
 				stHeader header;
-				stMessage msg;
 
 				if (pSession->recvQ.GetUseSize() < sizeof(stHeader))
 				{

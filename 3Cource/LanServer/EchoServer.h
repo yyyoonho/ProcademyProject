@@ -1,5 +1,7 @@
 #pragma once
 
+#define ECHOTHREADCOUNT 3
+
 class CEchoServer : public CLanServer
 {
 public:
@@ -29,12 +31,13 @@ private:
 
 private:
 	// 멤버 변수: 콘텐츠 큐, 이벤트
-	RingBuffer _contentQueue;
-	HANDLE _hEvent_contentQueue;
+	RingBuffer _contentQueue[ECHOTHREADCOUNT];
+	HANDLE _hEvent_contentQueue[ECHOTHREADCOUNT];
 
-	SRWLOCK _contentQueueLock;
+	SRWLOCK _contentQueueLock[ECHOTHREADCOUNT];
 
-	HANDLE _hThread_EchoThread;
+	HANDLE _hThread_EchoThread[ECHOTHREADCOUNT];
+	std::unordered_map<DWORD, int> threadQueueMap;
 
 private:
 	// 멤버변수: 이벤트

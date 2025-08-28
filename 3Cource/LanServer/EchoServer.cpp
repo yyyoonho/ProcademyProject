@@ -12,23 +12,33 @@ bool CEchoServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 		return false;
 	}
 
-	_contentQueue.Resize(20000);
-	_hEvent_contentQueue = CreateEvent(NULL, FALSE, FALSE, NULL);
+	for(int i=0; i< ECHOTHREADCOUNT; i++)
+	{
+		_contentQueue[i].Resize(90000);
+		_hEvent_contentQueue[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-	InitializeSRWLock(&_contentQueueLock);
+		InitializeSRWLock(&_contentQueueLock[i]);
+	}
 
 	_hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
+	
+	for (int i = 0; i < ECHOTHREADCOUNT; i++)
+	{
+		_hThread_EchoThread[i] = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&CEchoServer::ContentThreadRun, this, NULL, NULL);
+		if (_hThread_EchoThread[i] == NULL)
+			return false;
 
-	_hThread_EchoThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&CEchoServer::ContentThreadRun, this, NULL, NULL);
+		threadQueueMap.insert({ GetThreadId(_hThread_EchoThread[i]), i });
+	
+	}
 
 	return true;
 }
 
 void CEchoServer::Stop()
 {
-	CLanServer::Stop();
-
 	SetEvent(_hEvent_Quit);
+	CLanServer::Stop();
 }
 
 bool CEchoServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
@@ -46,14 +56,16 @@ void CEchoServer::OnRelease(DWORD64 sessionID)
 
 void CEchoServer::OnMessage(DWORD64 sessionID, SerializePacket* pSPacket)
 {
-	AcquireSRWLockExclusive(&_contentQueueLock);
+	int threadNumber = sessionID % ECHOTHREADCOUNT;
 
-	_contentQueue.Enqueue((char*)&sessionID, sizeof(DWORD64));
-	_contentQueue.Enqueue((char*)pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
+	AcquireSRWLockExclusive(&_contentQueueLock[threadNumber]);
 
-	SetEvent(_hEvent_contentQueue);
+	_contentQueue[threadNumber].Enqueue((char*)&sessionID, sizeof(DWORD64));
+	_contentQueue[threadNumber].Enqueue(pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
 
-	ReleaseSRWLockExclusive(&_contentQueueLock);
+	SetEvent(_hEvent_contentQueue[threadNumber]);
+
+	ReleaseSRWLockExclusive(&_contentQueueLock[threadNumber]);
 
 	return;
 }
@@ -70,7 +82,9 @@ void CEchoServer::ContentThreadRun(LPVOID* lParam)
 
 void CEchoServer::ContentThread()
 {
-	HANDLE hEventArr[2] = { _hEvent_Quit, _hEvent_contentQueue };
+	DWORD idx = threadQueueMap[GetCurrentThreadId()];
+
+	HANDLE hEventArr[2] = { _hEvent_Quit, _hEvent_contentQueue[idx]};
 
 	while (1)
 	{
@@ -84,18 +98,17 @@ void CEchoServer::ContentThread()
 		DWORD64 sessionID;
 		stMessage msg;
 
-		AcquireSRWLockExclusive(&_contentQueueLock);
+		AcquireSRWLockExclusive(&_contentQueueLock[idx]);
 
-		_contentQueue.Dequeue((char*)&sessionID, sizeof(DWORD64));
-		_contentQueue.Dequeue((char*)&msg, sizeof(stMessage));
+		_contentQueue[idx].Dequeue((char*)&sessionID, sizeof(DWORD64));
+		_contentQueue[idx].Dequeue((char*)&msg, sizeof(stMessage));
 		
-		if (_contentQueue.GetUseSize() > 0)
+		if (_contentQueue[idx].GetUseSize() > 0)
 		{
-			SetEvent(_hEvent_contentQueue);
+			SetEvent(_hEvent_contentQueue[idx]);
 		}
 
-		ReleaseSRWLockExclusive(&_contentQueueLock);
-
+		ReleaseSRWLockExclusive(&_contentQueueLock[idx]);
 
 		// 직렬화버퍼에 데이터 삽입
 		SerializePacket newSPacket;
