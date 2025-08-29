@@ -257,6 +257,8 @@ void CLanServer::DecreaseIO_Count(Session* pSession)
 
 		ReleaseSRWLockExclusive(&_releaseStackLock);
 
+		InterlockedDecrement(&_sessionCount);
+
 		OnRelease(pSession->sessionID);
 	}
 }
@@ -448,6 +450,8 @@ void CLanServer::AcceptThread()
 		WCHAR addrBuf[40];
 		InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
 		//printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
+
+		InterlockedIncrement(&_sessionCount);
 
 		// 소켓 <-> IOCP 연결
 		CreateIoCompletionPort((HANDLE)_sessionArray[idx].sock, _hIOCP, (ULONG_PTR)&_sessionArray[idx], NULL);
