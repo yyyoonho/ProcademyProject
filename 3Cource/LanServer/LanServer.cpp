@@ -201,13 +201,6 @@ void CLanServer::SendProc(Session* pSession)
 		wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
 		wsaBuf.len = pSession->sendQ.DirectDequeueSize();
 
-		if (wsaBuf.len == 0)
-		{
-			int a = 3;
-			
-			//InterlockedExchange(&pSession->checkSend, TRUE);
-		}
-
 		IncreaseIO_Count(pSession);
 
 		DWORD wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
