@@ -13,6 +13,9 @@ struct myOverlapped
     WSAOVERLAPPED overlapped;
     DWORD type;
     Session* pSession;
+
+    SerializePacket* sendSerializePacketArr[100];
+    int sPacketCount;
 };
 
 struct Session
@@ -23,7 +26,7 @@ struct Session
     myOverlapped sendMyOverlapped;
 
     RingBuffer recvQ;
-    RingBuffer sendQ;
+    RingBuffer sendQ; // Now This sendQ is Q for SerializeBuffer Pointer.
 
     LONG IO_Count = 0;
 

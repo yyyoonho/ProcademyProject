@@ -111,8 +111,9 @@ bool CLanServer::SendPacket(DWORD64 sessionID, SerializePacket* pSPacket)
 	header.len = pSPacket->GetDataSize();
 	pSPacket->PushHeader((char*)&header, sizeof(stHeader));
 
+	pSession->sendQ.Enqueue((char*)&pSPacket, sizeof(SerializePacket*));
+
 	InterlockedIncrement(&_sendMessageTPS);
-	pSession->sendQ.Enqueue(pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
 
 	SendPost(pSession);
 
@@ -195,22 +196,29 @@ void CLanServer::SendProc(Session* pSession)
 {
 	//if (pSession->sendQ.DirectDequeueSize() > 0)
 	{
-		DWORD sendBytes;
-
-		WSABUF wsaBuf;
-		wsaBuf.buf = pSession->sendQ.GetFrontBufferPtr();
-		wsaBuf.len = pSession->sendQ.DirectDequeueSize();
-
-		if (wsaBuf.len == 0)
+		WSABUF wsaBuf[100];
+		int sPacketCount = 0;
+		for (int i = 0; i < 100; i++)
 		{
-			int a = 3;
-			
-			//InterlockedExchange(&pSession->checkSend, TRUE);
+			if (pSession->sendQ.GetUseSize() <=  0)
+				break;
+
+			SerializePacket* pSPacket = NULL;
+			pSession->sendQ.Dequeue((char*)&pSPacket, sizeof(SerializePacket*));
+
+			wsaBuf[i].buf = pSPacket->GetBufferPtr();
+			wsaBuf[i].len = pSPacket->GetDataSize();
+
+			pSession->sendMyOverlapped.sendSerializePacketArr[i] = pSPacket;
+
+			sPacketCount++;
 		}
+
+		pSession->sendMyOverlapped.sPacketCount = sPacketCount;
 
 		IncreaseIO_Count(pSession);
 
-		DWORD wsaSendRet = WSASend(pSession->sock, &wsaBuf, 1, &sendBytes, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
+		DWORD wsaSendRet = WSASend(pSession->sock, wsaBuf, sPacketCount, NULL, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
 		DWORD tmp2 = WSAGetLastError();
 		if (wsaSendRet == SOCKET_ERROR)
 		{
@@ -248,6 +256,8 @@ void CLanServer::DecreaseIO_Count(Session* pSession)
 		_releaseIdxStack.push(idx);
 
 		ReleaseSRWLockExclusive(&_releaseStackLock);
+
+		InterlockedDecrement(&_sessionCount);
 
 		OnRelease(pSession->sessionID);
 	}
@@ -350,7 +360,12 @@ void CLanServer::WorkerThread()
 
 		else if (pMyOverlapped->type == SEND)
 		{
-			pSession->sendQ.MoveFront(cbTransferred);
+			//pSession->sendQ.MoveFront(cbTransferred);
+			
+			for (int i = 0; i < pMyOverlapped->sPacketCount; i++)
+			{
+				delete pMyOverlapped->sendSerializePacketArr[i];
+			}
 
 			AcquireSRWLockExclusive(&pSession->sendQLock);
 
@@ -420,6 +435,11 @@ void CLanServer::AcceptThread()
 		memset(&(_sessionArray[idx].sendMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
 		_sessionArray[idx].sendMyOverlapped.pSession = &_sessionArray[idx];
 		_sessionArray[idx].sendMyOverlapped.type = SEND;
+		for (int i = 0; i < 100; i++)
+		{
+			_sessionArray[idx].sendMyOverlapped.sendSerializePacketArr[i] = NULL;
+		}
+		_sessionArray[idx].sendMyOverlapped.sPacketCount = 0;
 
 		_sessionArray[idx].recvQ.ClearBuffer();
 		_sessionArray[idx].sendQ.ClearBuffer();
@@ -430,6 +450,8 @@ void CLanServer::AcceptThread()
 		WCHAR addrBuf[40];
 		InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
 		//printf("\n[TCP 서버] 클라이언트 접속: IP주소=%ls, 포트번호=%d\n", addrBuf, ntohs(clientAddr.sin_port));
+
+		InterlockedIncrement(&_sessionCount);
 
 		// 소켓 <-> IOCP 연결
 		CreateIoCompletionPort((HANDLE)_sessionArray[idx].sock, _hIOCP, (ULONG_PTR)&_sessionArray[idx], NULL);

@@ -111,9 +111,9 @@ void CEchoServer::ContentThread()
 		ReleaseSRWLockExclusive(&_contentQueueLock[idx]);
 
 		// 직렬화버퍼에 데이터 삽입
-		SerializePacket newSPacket;
-		newSPacket.Putdata((char*)&msg, sizeof(stMessage));
+		SerializePacket* newSPacket = new SerializePacket;
+		newSPacket->Putdata((char*)&msg, sizeof(stMessage));
 
-		SendPacket(sessionID, &newSPacket);
+		SendPacket(sessionID, newSPacket);
 	}
 }

@@ -20,6 +20,8 @@ void MonitoringThread()
 		}
 
 		printf("-----------------------------------\n");
+		printf("sessionCount : %d\n\n", server1.GetSessionCount());
+
 		printf("acceptTPS : %d\n", server1.GetAcceptTPS());
 		printf("recvMessageTPS : %d\n", server1.GetRecvMessageTPS());
 		printf("sendMessageTPS : %d\n", server1.GetSendMessageTPS());
