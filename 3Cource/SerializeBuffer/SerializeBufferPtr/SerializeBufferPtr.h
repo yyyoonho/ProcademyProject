@@ -37,14 +37,20 @@ public:
 	SerializePacketPtr(const SerializePacketPtr& other);
 
 	SerializePacketPtr& operator=(const SerializePacketPtr& other);
+	SerializePacketPtr& operator=(std::nullptr_t);
 
 	~SerializePacketPtr();
 
 public:
 	void GetRawPtr(OUT RawPtr* pRaw);
+	bool IsValid();
+	int GetRefCount();
 
 public:
 	static SerializePacket* MakeSerializePacket();
+
+private:
+	void DecreaseRefCount();
 
 public:
 	void Clear();
@@ -90,6 +96,6 @@ public:
 	void PushHeader(char* header, int headerSize);
 
 private:
-	SerializePacket* _ptr;
-	RefCountBlock* _RCBPtr;
+	SerializePacket* _ptr = NULL;
+	RefCountBlock* _RCBPtr = NULL;
 };

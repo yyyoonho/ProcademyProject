@@ -34,9 +34,13 @@ SerializePacketPtr::SerializePacketPtr()
 
 SerializePacketPtr::SerializePacketPtr(SerializePacket* ptr)
 {
-    _ptr = ptr;
-    _RCBPtr = new RefCountBlock;
-    InterlockedIncrement(&_RCBPtr->count);
+    if (ptr != NULL)
+    {
+        _ptr = ptr;
+        _RCBPtr = new RefCountBlock;
+
+        InterlockedIncrement(&_RCBPtr->count);
+    }
 }
 
 SerializePacketPtr::SerializePacketPtr(const SerializePacketPtr& other)
@@ -49,33 +53,31 @@ SerializePacketPtr::SerializePacketPtr(const SerializePacketPtr& other)
 
 SerializePacketPtr& SerializePacketPtr::operator=(const SerializePacketPtr& other)
 {
-    LONG ret = InterlockedDecrement(&_RCBPtr->count);
-    if (ret == 0)
+    if (this != &other)
     {
-        SerializePacket::SPacketMP.Free(_ptr);
+        DecreaseRefCount();
 
-        _ptr = NULL;
-        _RCBPtr = NULL;
+        InterlockedIncrement(&other._RCBPtr->count);
+        _ptr = other._ptr;
+        _RCBPtr = other._RCBPtr;
     }
 
-    InterlockedIncrement(&other._RCBPtr->count);
-    _ptr = other._ptr;
-    _RCBPtr = other._RCBPtr;
+    return *this;
+}
+
+SerializePacketPtr& SerializePacketPtr::operator=(std::nullptr_t)
+{
+    DecreaseRefCount();
+
+    _ptr = NULL;
+    _RCBPtr = NULL;
 
     return *this;
 }
 
 SerializePacketPtr::~SerializePacketPtr()
 {
-    if (InterlockedDecrement(&_RCBPtr->count) == 0)
-    {
-        // 찐 소멸
-        SerializePacket::SPacketMP.Free(_ptr);
-        delete _RCBPtr;
-
-        _ptr = NULL;
-        _RCBPtr = NULL;
-    }
+    DecreaseRefCount();
 }
 
 void SerializePacketPtr::GetRawPtr(OUT RawPtr* pRaw)
@@ -84,9 +86,40 @@ void SerializePacketPtr::GetRawPtr(OUT RawPtr* pRaw)
     pRaw->_RCBPtr = _RCBPtr;
 }
 
+bool SerializePacketPtr::IsValid()
+{
+    return _ptr!= NULL;
+}
+
+int SerializePacketPtr::GetRefCount()
+{
+    if (_RCBPtr != NULL)
+    {
+        return _RCBPtr->count;
+    }
+
+    return -1;
+}
+
 SerializePacket* SerializePacketPtr::MakeSerializePacket()
 {
     return SerializePacket::SPacketMP.Alloc();
+}
+
+
+void SerializePacketPtr::DecreaseRefCount()
+{
+    if (_ptr != NULL)
+    {
+        if (InterlockedDecrement(&_RCBPtr->count) == 0)
+        {
+            SerializePacket::SPacketMP.Free(_ptr);
+            delete _RCBPtr;
+
+            _ptr = NULL;
+            _RCBPtr = NULL;
+        }
+    }
 }
 
 void SerializePacketPtr::Clear()
