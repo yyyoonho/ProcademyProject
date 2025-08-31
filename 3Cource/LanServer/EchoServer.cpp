@@ -48,7 +48,8 @@ bool CEchoServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
 
 void CEchoServer::OnAccept(DWORD64 sessionID)
 {
-	SerializePacket* newPacket = new SerializePacket;
+	//SerializePacket* newPacket = new SerializePacket;
+	SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
 
 	stHeader header;
 	stMessage loginMessage;
@@ -56,24 +57,25 @@ void CEchoServer::OnAccept(DWORD64 sessionID)
 	header.len = sizeof(loginMessage);
 	loginMessage.msg = 0x7fffffffffffffff;
 
-	newPacket->PushHeader((char*)&header, sizeof(stHeader));
-	newPacket->Putdata((char*)&loginMessage, sizeof(stMessage));
+	pPacket.PushHeader((char*)&header, sizeof(stHeader));
+	pPacket.Putdata((char*)&loginMessage, sizeof(stMessage));
 
-	SendPacket(sessionID, newPacket);
+	SendPacket(sessionID, pPacket);
 }
 
 void CEchoServer::OnRelease(DWORD64 sessionID)
 {
 }
 
-void CEchoServer::OnMessage(DWORD64 sessionID, SerializePacket* pSPacket)
+void CEchoServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
 	int threadNumber = sessionID % ECHOTHREADCOUNT;
 
 	AcquireSRWLockExclusive(&_contentQueueLock[threadNumber]);
 
 	_contentQueue[threadNumber].Enqueue((char*)&sessionID, sizeof(DWORD64));
-	_contentQueue[threadNumber].Enqueue(pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
+	//_contentQueue[threadNumber].Enqueue(pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
+	_contentQueue[threadNumber].Enqueue(pPacket.GetBufferPtr(), pPacket.GetDataSize());
 
 	SetEvent(_hEvent_contentQueue[threadNumber]);
 
@@ -123,9 +125,11 @@ void CEchoServer::ContentThread()
 		ReleaseSRWLockExclusive(&_contentQueueLock[idx]);
 
 		// 직렬화버퍼에 데이터 삽입
-		SerializePacket* newSPacket = new SerializePacket;
-		newSPacket->Putdata((char*)&msg, sizeof(stMessage));
+		//SerializePacket* newSPacket = new SerializePacket;
+		SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
+		//newSPacket->Putdata((char*)&msg, sizeof(stMessage));
+		pPacket.Putdata((char*)&msg, sizeof(stMessage));
 
-		SendPacket(sessionID, newSPacket);
+		SendPacket(sessionID, pPacket);
 	}
 }

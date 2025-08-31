@@ -22,7 +22,7 @@ public:
 
 	bool Disconnect(DWORD64 sessionID);
 
-	bool SendPacket(DWORD64 sessionID, SerializePacket* pSPacket);
+	bool SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket);
 	
 private:
 	// 클래스 내부 함수
@@ -52,7 +52,7 @@ public:
 	virtual bool OnConnectionRequest(SOCKADDR_IN clientAddr) = 0;
 	virtual void OnAccept(DWORD64 sessionID) = 0;
 	virtual void OnRelease(DWORD64 sessionID) = 0;
-	virtual void OnMessage(DWORD64 sessionID, SerializePacket* pSPacket) = 0;
+	virtual void OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket) = 0;
 	virtual void OnError(int errorCode, WCHAR* errorComment) = 0;
 
 	// 모니터링 함수

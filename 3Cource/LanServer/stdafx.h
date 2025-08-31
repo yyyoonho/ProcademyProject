@@ -5,6 +5,7 @@
 #pragma comment(lib, "RingBuffer.lib")
 #pragma comment(lib, "CustomProfiler.lib")
 #pragma comment(lib, "SerializeBuffer.lib")
+#pragma comment(lib, "SerializeBufferPtr.lib")
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -22,7 +23,10 @@
 
 #include "RingBuffer.h"
 #include "CustomProfiler.h"
+
+#include "MemoryPool.h"
 #include "SerializeBuffer.h"
+#include "SerializeBufferPtr.h"
 
 #include "Struct.h"
 

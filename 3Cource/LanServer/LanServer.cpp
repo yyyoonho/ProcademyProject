@@ -27,7 +27,7 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	for (int i = 19999; i >= 0; i--)
 	{
 		_sessionArray[i].recvQ.Resize(20000);
-		_sessionArray[i].sendQ.Resize(20000);
+		//_sessionArray[i].sendQ.Resize(20000);
 		InitializeSRWLock(&_sessionArray[i].sendQLock);
 
 		_releaseIdxStack.push(i);
@@ -82,7 +82,7 @@ bool CLanServer::Disconnect(DWORD64 sessionID)
 
 void CLanServer::SendPost(Session* pSession)
 {
-	if (pSession->sendQ.DirectDequeueSize() > 0)
+	if (pSession->sendQ.size() > 0)
 	{
 		// 여기서 0됨
 
@@ -93,7 +93,7 @@ void CLanServer::SendPost(Session* pSession)
 	}
 }
 
-bool CLanServer::SendPacket(DWORD64 sessionID, SerializePacket* pSPacket)
+bool CLanServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
 	unsigned int idx = GetIdxFromSessionID(sessionID);
 
@@ -108,10 +108,13 @@ bool CLanServer::SendPacket(DWORD64 sessionID, SerializePacket* pSPacket)
 	AcquireSRWLockExclusive(&pSession->sendQLock);
 
 	stHeader header;
-	header.len = pSPacket->GetDataSize();
-	pSPacket->PushHeader((char*)&header, sizeof(stHeader));
+	//header.len = pSPacket->GetDataSize();
+	header.len = pPacket.GetDataSize();
+	//pSPacket->PushHeader((char*)&header, sizeof(stHeader));
+	pPacket.PushHeader((char*)&header, sizeof(stHeader));
 
-	pSession->sendQ.Enqueue((char*)&pSPacket, sizeof(SerializePacket*));
+	//pSession->sendQ.Enqueue((char*)&pSPacket, sizeof(SerializePacket*));
+	pSession->sendQ.push(pPacket);
 
 	InterlockedIncrement(&_sendMessageTPS);
 
@@ -200,16 +203,21 @@ void CLanServer::SendProc(Session* pSession)
 		int sPacketCount = 0;
 		for (int i = 0; i < 100; i++)
 		{
-			if (pSession->sendQ.GetUseSize() <=  0)
+			if (pSession->sendQ.size() <=  0)
 				break;
 
-			SerializePacket* pSPacket = NULL;
-			pSession->sendQ.Dequeue((char*)&pSPacket, sizeof(SerializePacket*));
+			//SerializePacket* pSPacket = NULL;
+			SerializePacketPtr pPacket;
+			//pSession->sendQ.Dequeue((char*)&pSPacket, sizeof(SerializePacket*));
+			pPacket = pSession->sendQ.front();
+			pSession->sendQ.pop();
 
-			wsaBuf[i].buf = pSPacket->GetBufferPtr();
-			wsaBuf[i].len = pSPacket->GetDataSize();
+			//wsaBuf[i].buf = pSPacket->GetBufferPtr();
+			//wsaBuf[i].len = pSPacket->GetDataSize();
+			wsaBuf[i].buf = pPacket.GetBufferPtr();
+			wsaBuf[i].len = pPacket.GetDataSize();
 
-			pSession->sendMyOverlapped.sendSerializePacketArr[i] = pSPacket;
+			pSession->sendMyOverlapped.sendSerializePacketPtrArr[i] = pPacket;
 
 			sPacketCount++;
 		}
@@ -346,15 +354,18 @@ void CLanServer::WorkerThread()
 
 				pSession->recvQ.MoveFront(sizeof(header));
 
-				SerializePacket sPacket;
-				int ret = pSession->recvQ.Dequeue(sPacket.GetBufferPtr(), payLoadLen);
-				sPacket.MoveWritePos(ret);
+				//SerializePacket sPacket;
+				SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
+				//int ret = pSession->recvQ.Dequeue(sPacket.GetBufferPtr(), payLoadLen);
+				//sPacket.MoveWritePos(ret);
+				int ret = pSession->recvQ.Dequeue(pPacket.GetBufferPtr(), payLoadLen);
+				pPacket.MoveWritePos(ret);
 
 				InterlockedIncrement(&_recvMessageTPS);
 
 				// 비동기IO: Send 요청
 				// 이제 컨텐츠 단에서 요청
-				OnMessage(pSession->sessionID, &sPacket);
+				OnMessage(pSession->sessionID, pPacket);
 			}
 		}
 
@@ -364,13 +375,13 @@ void CLanServer::WorkerThread()
 			
 			for (int i = 0; i < pMyOverlapped->sPacketCount; i++)
 			{
-				delete pMyOverlapped->sendSerializePacketArr[i];
+				pMyOverlapped->sendSerializePacketPtrArr[i] = NULL;
 			}
 
 			AcquireSRWLockExclusive(&pSession->sendQLock);
 
 			// 비동기IO: Send 요청
-			if (pSession->sendQ.DirectDequeueSize() > 0)
+			if (pSession->sendQ.size() > 0)
 			{
 				SendProc(pSession);
 			}
@@ -435,14 +446,20 @@ void CLanServer::AcceptThread()
 		memset(&(_sessionArray[idx].sendMyOverlapped.overlapped), 0, sizeof(WSAOVERLAPPED));
 		_sessionArray[idx].sendMyOverlapped.pSession = &_sessionArray[idx];
 		_sessionArray[idx].sendMyOverlapped.type = SEND;
+
 		for (int i = 0; i < 100; i++)
 		{
-			_sessionArray[idx].sendMyOverlapped.sendSerializePacketArr[i] = NULL;
+			_sessionArray[idx].sendMyOverlapped.sendSerializePacketPtrArr[i] = NULL;
 		}
+
 		_sessionArray[idx].sendMyOverlapped.sPacketCount = 0;
 
 		_sessionArray[idx].recvQ.ClearBuffer();
-		_sessionArray[idx].sendQ.ClearBuffer();
+		//_sessionArray[idx].sendQ.ClearBuffer();
+		while (!_sessionArray[idx].sendQ.empty())
+		{
+			_sessionArray[idx].sendQ.pop();
+		}
 
 		_sessionArray[idx].checkSend = TRUE;
 

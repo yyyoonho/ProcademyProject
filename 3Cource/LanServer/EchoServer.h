@@ -21,7 +21,7 @@ public:
 
 	virtual void OnRelease(DWORD64 sessionID) override;
 
-	virtual void OnMessage(DWORD64 sessionID, SerializePacket* SPacket) override;
+	virtual void OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket) override;
 
 	virtual void OnError(int errorCode, WCHAR* errorComment) override;
 
