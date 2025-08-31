@@ -4,6 +4,8 @@
 
 using namespace std;
 
+DWORD64 tmp11;
+
 bool CEchoServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount)
 {
 	bool ret = CLanServer::Start(ipAddress, port, workerThreadCount, coreSkip, isNagle, maximumSessionCount);
@@ -50,6 +52,7 @@ void CEchoServer::OnAccept(DWORD64 sessionID)
 {
 	//SerializePacket* newPacket = new SerializePacket;
 	SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
+	pPacket.Clear();
 
 	stHeader header;
 	stMessage loginMessage;
@@ -127,6 +130,8 @@ void CEchoServer::ContentThread()
 		// 직렬화버퍼에 데이터 삽입
 		//SerializePacket* newSPacket = new SerializePacket;
 		SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
+		pPacket.Clear();
+
 		//newSPacket->Putdata((char*)&msg, sizeof(stMessage));
 		pPacket.Putdata((char*)&msg, sizeof(stMessage));
 

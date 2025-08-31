@@ -2,7 +2,6 @@
 #include "LanServer.h"
 
 using namespace std;
-
 CLanServer::CLanServer()
 {
 }
@@ -108,8 +107,10 @@ bool CLanServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	AcquireSRWLockExclusive(&pSession->sendQLock);
 
 	stHeader header;
+
 	//header.len = pSPacket->GetDataSize();
 	header.len = pPacket.GetDataSize();
+
 	//pSPacket->PushHeader((char*)&header, sizeof(stHeader));
 	pPacket.PushHeader((char*)&header, sizeof(stHeader));
 
@@ -356,6 +357,8 @@ void CLanServer::WorkerThread()
 
 				//SerializePacket sPacket;
 				SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
+				pPacket.Clear();
+
 				//int ret = pSession->recvQ.Dequeue(sPacket.GetBufferPtr(), payLoadLen);
 				//sPacket.MoveWritePos(ret);
 				int ret = pSession->recvQ.Dequeue(pPacket.GetBufferPtr(), payLoadLen);
