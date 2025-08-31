@@ -48,6 +48,18 @@ bool CEchoServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
 
 void CEchoServer::OnAccept(DWORD64 sessionID)
 {
+	SerializePacket* newPacket = new SerializePacket;
+
+	stHeader header;
+	stMessage loginMessage;
+
+	header.len = sizeof(loginMessage);
+	loginMessage.msg = 0x7fffffffffffffff;
+
+	newPacket->PushHeader((char*)&header, sizeof(stHeader));
+	newPacket->Putdata((char*)&loginMessage, sizeof(stMessage));
+
+	SendPacket(sessionID, newPacket);
 }
 
 void CEchoServer::OnRelease(DWORD64 sessionID)
