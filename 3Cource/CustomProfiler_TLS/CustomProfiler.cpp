@@ -70,6 +70,8 @@ void ProfileBegin(const char* targetName)
 		strcpy_s(profilePtr[idx].tagName, 64, targetName);
 		profilePtr[idx].max = INT64_MIN;
 		profilePtr[idx].min = INT64_MAX;
+		profilePtr[idx].call = 0;
+		profilePtr[idx].total = 0;
 
 		profilePtr[idx].threadID = GetCurrentThreadId();
 
@@ -145,7 +147,7 @@ void ProfileDataOutText(char* szFileName)
 		"%-12s | %-20s | %15s | %15s | %15s | %10s\n",
 		"ThreadID", "Name", "Average (㎲)", "Min (㎲)", "Max (㎲)", "Call");
 	fprintf(fp,
-		"-----------------------------------------------------------------------------------------\n");
+		"----------------------------------------------------------------------------------------------------------------------------------\n");
 
 	AcquireSRWLockExclusive(&listLock);
 
