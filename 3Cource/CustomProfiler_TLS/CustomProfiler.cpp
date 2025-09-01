@@ -7,22 +7,6 @@ using namespace std;
 
 #define MICROSEC 1000000
 
-struct stProfile
-{
-	char tagName[64];
-	LARGE_INTEGER start;
-
-	__int64 call;
-	__int64 total;
-	__int64 max;
-	__int64 min;
-
-	bool isUsing = false;
-
-	int profileArrSize = 0;
-};
-
-
 int tlsIndex = -1;
 
 list<stProfile*> profileList;
@@ -86,6 +70,9 @@ void ProfileBegin(const char* targetName)
 		strcpy_s(profilePtr[idx].tagName, 64, targetName);
 		profilePtr[idx].max = INT64_MIN;
 		profilePtr[idx].min = INT64_MAX;
+
+		profilePtr[idx].threadID = GetCurrentThreadId();
+
 		profilePtr[0].profileArrSize++;
 	}
 
@@ -174,7 +161,7 @@ void ProfileDataOutText(char* szFileName)
 			if (profilePtr[i].call == -1 || profilePtr[i].call == -2)
 			{
 				fprintf(fp, "%-12u | %-20s | %15s | %15s | %15s | %10d\n",
-					GetCurrentThreadId(),
+					profilePtr[i].threadID,
 					profilePtr[i].tagName,
 					"-", "-", "-", profilePtr[i].call);
 				continue;
@@ -203,7 +190,7 @@ void ProfileDataOutText(char* szFileName)
 			double avgTime = average * MICROSEC / frequency.QuadPart;
 
 			fprintf(fp, "%-12u | %-20s | %15.4f | %15.4f | %15.4f | %10lld\n",
-				GetCurrentThreadId(),
+				profilePtr[i].threadID,
 				profilePtr[i].tagName,
 				avgTime,
 				minTime,
