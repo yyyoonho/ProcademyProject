@@ -7,6 +7,7 @@ using namespace std;
 
 #define MICROSEC 1000000
 
+
 int tlsIndex = -1;
 
 list<stProfile*> profileList;
@@ -49,14 +50,20 @@ void ProfileBegin(const char* targetName)
 			continue;
 
 		idx = i;
-		if (profilePtr[idx].isUsing == true)
+
+		if (profilePtr[idx].state == PROFILESTATE::PROFILE_RESET)
+		{
+			break;
+		}
+		if (profilePtr[idx].state == PROFILESTATE::PROFILE_ERROR)
+		{
+			return;
+		}
+		if (profilePtr[idx].state == PROFILESTATE::PROFILE_BEGIN)
 		{
 			// Begin - Begin 시, call에 -1 등록.
 			profilePtr[idx].call = -1;
-			return;
-		}
-		if (profilePtr[idx].call == -2)
-		{
+			profilePtr[idx].state = PROFILESTATE::PROFILE_ERROR;
 			return;
 		}
 
@@ -67,8 +74,10 @@ void ProfileBegin(const char* targetName)
 	{
 		idx = profilePtr[0].profileArrSize;
 
+		AcquireSRWLockExclusive(&profilePtr[idx].profileResetLock);
+
 		strcpy_s(profilePtr[idx].tagName, 64, targetName);
-		profilePtr[idx].max = INT64_MIN;
+		profilePtr[idx].max = 0;
 		profilePtr[idx].min = INT64_MAX;
 		profilePtr[idx].call = 0;
 		profilePtr[idx].total = 0;
@@ -76,16 +85,23 @@ void ProfileBegin(const char* targetName)
 		profilePtr[idx].threadID = GetCurrentThreadId();
 
 		profilePtr[0].profileArrSize++;
+
+		ReleaseSRWLockExclusive(&profilePtr[idx].profileResetLock);
 	}
 
-	QueryPerformanceCounter(&profilePtr[idx].start);
+	AcquireSRWLockExclusive(&profilePtr[idx].profileResetLock);
 
-	profilePtr[idx].isUsing = true;
+	QueryPerformanceCounter(&profilePtr[idx].start);
+	profilePtr[idx].state = PROFILESTATE::PROFILE_BEGIN;
+
+	ReleaseSRWLockExclusive(&profilePtr[idx].profileResetLock);
 }
 
 void ProfileEnd(const char* targetName)
 {
 	stProfile* profilePtr = (stProfile*)TlsGetValue(tlsIndex);
+	if (profilePtr == NULL)
+		return;
 
 	int idx = -1;
 	for (int i = 0; i < profilePtr[0].profileArrSize; i++)
@@ -94,14 +110,26 @@ void ProfileEnd(const char* targetName)
 			continue;
 
 		idx = i;
-		if (profilePtr[idx].isUsing == false)
+
+		AcquireSRWLockExclusive(&profilePtr[idx].profileResetLock);
+
+		if (profilePtr[idx].state == PROFILESTATE::PROFILE_RESET)
+		{
+			ReleaseSRWLockExclusive(&profilePtr[idx].profileResetLock);
+			return;
+		}
+		if (profilePtr[idx].state == PROFILESTATE::PROFILE_ERROR)
+		{
+			ReleaseSRWLockExclusive(&profilePtr[idx].profileResetLock);
+			return;
+		}
+		if (profilePtr[idx].state == PROFILESTATE::PROFILE_END)
 		{
 			// End - End 시, call에 -2 등록.
 			profilePtr[idx].call = -2;
-			return;
-		}
-		if (profilePtr[idx].call == -1)
-		{
+			profilePtr[idx].state = PROFILESTATE::PROFILE_ERROR;
+
+			ReleaseSRWLockExclusive(&profilePtr[idx].profileResetLock);
 			return;
 		}
 
@@ -119,7 +147,7 @@ void ProfileEnd(const char* targetName)
 
 	profilePtr[idx].call++;
 
-	__int64 timeDiff = (end.QuadPart - profilePtr[idx].start.QuadPart);
+	DWORD64 timeDiff = (end.QuadPart - profilePtr[idx].start.QuadPart);
 	profilePtr[idx].total += timeDiff;
 
 	if (profilePtr[idx].max < timeDiff)
@@ -128,7 +156,9 @@ void ProfileEnd(const char* targetName)
 	if (profilePtr[idx].min > timeDiff)
 		profilePtr[idx].min = timeDiff;
 
-	profilePtr[idx].isUsing = false;
+	profilePtr[idx].state = PROFILESTATE::PROFILE_END;
+
+	ReleaseSRWLockExclusive(&profilePtr[idx].profileResetLock);
 }
 
 void ProfileDataOutText(char* szFileName)
@@ -170,9 +200,9 @@ void ProfileDataOutText(char* szFileName)
 			}
 
 			double average = 0;
-			__int64 maxSum = profilePtr[i].max;
-			__int64 minSum = profilePtr[i].min;
-			__int64 call = profilePtr[i].call;
+			DWORD64 maxSum = profilePtr[i].max;
+			DWORD64 minSum = profilePtr[i].min;
+			DWORD64 call = profilePtr[i].call;
 
 			if (call == 0)
 				return;
@@ -199,6 +229,8 @@ void ProfileDataOutText(char* szFileName)
 				maxTime,
 				call);
 		}
+		fprintf(fp,
+			"----------------------------------------------------------------------------------------------------------------------------------\n");
 
 	}
 
@@ -212,24 +244,32 @@ void ProfileDataOutText(char* szFileName)
 
 void ProfileReset()
 {
+	AcquireSRWLockExclusive(&listLock);
+
 	list<stProfile*>::iterator iter;
 	for (iter = profileList.begin(); iter != profileList.end(); ++iter)
 	{
 		stProfile* tmp = *iter;
-
 		int profileArrSize = tmp[0].profileArrSize;
 
 		for (int i = 0; i < profileArrSize; i++)
 		{
+			AcquireSRWLockExclusive(&tmp[i].profileResetLock);
+
 			tmp[i].start.QuadPart = 0;
+
 			tmp[i].call = 0;
 			tmp[i].total = 0;
-			tmp[i].max = INT64_MIN;
+			tmp[i].max = 0;
 			tmp[i].min = INT64_MAX;
-			tmp[i].isUsing = false;
-		}
 
+			tmp[i].state = PROFILESTATE::PROFILE_RESET;
+
+			ReleaseSRWLockExclusive(&tmp[i].profileResetLock);
+		}
 	}
+
+	ReleaseSRWLockExclusive(&listLock);
 }
 
 void ProfilerInput()
@@ -245,4 +285,26 @@ void ProfilerInput()
 	{
 		ProfileReset();
 	}
+}
+
+stProfile::stProfile()
+{
+	tagName[0] = NULL;
+	start.QuadPart = 0;
+
+	call = 0;
+	total = 0;
+	max = 0;
+	min = INT64_MAX;
+
+	state = PROFILESTATE::PROFILE_RESET;
+
+	profileArrSize = 0;
+	threadID = 0;
+
+	InitializeSRWLock(&profileResetLock);
+}
+
+stProfile::~stProfile()
+{
 }

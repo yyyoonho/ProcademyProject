@@ -14,18 +14,32 @@ void ProfilerInput();
 #define PRO_END(TagName)  
 #endif
 
-struct stProfile
+enum class PROFILESTATE
 {
+	PROFILE_BEGIN,
+	PROFILE_END,
+	PROFILE_RESET,
+	PROFILE_ERROR,
+};
+
+class stProfile
+{
+public:
+	stProfile();
+	~stProfile();
+	
 	char tagName[64];
 	LARGE_INTEGER start;
 
-	__int64 call;
-	__int64 total;
-	__int64 max;
-	__int64 min;
+	DWORD64 call;
+	DWORD64 total;
+	DWORD64 max;
+	DWORD64 min;
 
-	bool isUsing = false;
+	PROFILESTATE state;
 
-	int profileArrSize = 0;
+	int profileArrSize;
 	DWORD threadID;
+
+	SRWLOCK profileResetLock;
 };
