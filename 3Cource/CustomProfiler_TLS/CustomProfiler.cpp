@@ -8,7 +8,7 @@ using namespace std;
 #define MICROSEC 1000000
 
 
-int tlsIndex = -1;
+LONG g_TlsIndex = -1;
 
 list<stProfile*> profileList;
 SRWLOCK listLock;
@@ -17,26 +17,28 @@ LARGE_INTEGER frequency;
 
 void ProfileBegin(const char* targetName)
 {
-	if (tlsIndex == -1)
+	if (g_TlsIndex == -1)
 	{
-		tlsIndex = TlsAlloc();
-		if (tlsIndex == TLS_OUT_OF_INDEXES)
+		if (InterlockedCompareExchange(&g_TlsIndex, TlsAlloc(), -1) == -1)
 		{
-			printf("Error: TlsAlloc() %d\n", GetLastError());
-			return;
+			if (g_TlsIndex == TLS_OUT_OF_INDEXES)
+			{
+				printf("Error: TlsAlloc() %d\n", GetLastError());
+				return;
+			}
+
+			InitializeSRWLock(&listLock);
+
+			QueryPerformanceFrequency(&frequency);
 		}
-
-		InitializeSRWLock(&listLock);
-
-		QueryPerformanceFrequency(&frequency);
 	}
 
-	stProfile* profilePtr = (stProfile*)TlsGetValue(tlsIndex);
+	stProfile* profilePtr = (stProfile*)TlsGetValue(g_TlsIndex);
 
 	if (profilePtr == NULL)
 	{
 		profilePtr = new stProfile[10];
-		TlsSetValue(tlsIndex, (LPVOID)profilePtr);
+		TlsSetValue(g_TlsIndex, (LPVOID)profilePtr);
 
 		AcquireSRWLockExclusive(&listLock);
 		profileList.push_back(profilePtr);
@@ -99,7 +101,7 @@ void ProfileBegin(const char* targetName)
 
 void ProfileEnd(const char* targetName)
 {
-	stProfile* profilePtr = (stProfile*)TlsGetValue(tlsIndex);
+	stProfile* profilePtr = (stProfile*)TlsGetValue(g_TlsIndex);
 	if (profilePtr == NULL)
 		return;
 
@@ -221,7 +223,7 @@ void ProfileDataOutText(char* szFileName)
 			double maxTime = (double)profilePtr[i].max * MICROSEC / frequency.QuadPart;
 			double avgTime = average * MICROSEC / frequency.QuadPart;
 
-			fprintf(fp, "%-12u | %-20s | %15.4f | %15.4f | %15.4f | %10lld\n",
+			fprintf(fp, "%-12u | %-20s | %15.4f | %15.4f | %15.1f | %10lld\n",
 				profilePtr[i].threadID,
 				profilePtr[i].tagName,
 				avgTime,

@@ -15,7 +15,10 @@ void ThreadFunc()
 		PRO_BEGIN("TEST");
 
 		count++;
-		//Sleep(1);
+		for (int i = 0; i < 1000; i++)
+		{
+			
+		}
 		
 		PRO_END("TEST");
 	}
