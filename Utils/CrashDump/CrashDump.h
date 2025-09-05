@@ -1,36 +1,37 @@
-#pragma once
-
-#ifndef __PROCADEMY_LIB_CRASH_DUMP__
-#define __PROCADEMY_LIB_CRASH_DUMP__
-
+#ifndef _PROCADEMY_LIB_CRASH_DUMP_
+#define _PROCADEMY_LIB_CRASH_DUMP_
+#pragma comment(lib,"Dbghelp.lib")
+#include <Windows.h>
 #include <DbgHelp.h>
+#include <iostream>
 #include <minidumpapiset.h>
 
 namespace procademy
 {
-	class CrashDump
+	class CCrashDump
 	{
 	public:
-		CrashDump()
+		CCrashDump()
 		{
 			_DumpCount = 0;
 
 			_invalid_parameter_handler oldHandler, newHandler;
 			newHandler = myInvalidParameterHandler;
 
-			oldHandler = _set_invalid_parameter_handler(newHandler);
+			oldHandler = _set_invalid_parameter_handler(newHandler); // crt함수에 null포인터등을 넣었을 때
 			_CrtSetReportMode(_CRT_WARN, 0);
 			_CrtSetReportMode(_CRT_ASSERT, 0);
 			_CrtSetReportMode(_CRT_ERROR, 0);
 
 			_CrtSetReportHook(_custom_Report_hook);
 
+			// pure virtual function called 에러 핸들러를 우회
 			_set_purecall_handler(myPurecallHandler);
 
 			SetHandlerDump();
 		}
 
-		static void Crash()
+		static void Crash(void)
 		{
 			int* p = nullptr;
 			*p = 0;
@@ -43,33 +44,26 @@ namespace procademy
 
 			long DumpCount = InterlockedIncrement(&_DumpCount);
 
-			//--------------------------------------
-			// 현재 날짜와 시간을 알아온다.
-			//--------------------------------------
-			WCHAR filename[MAX_PATH];
-
+			WCHAR fileName[MAX_PATH];
 			GetLocalTime(&stNowTime);
-			wsprintf(filename, L"Dump_%d%02d%02d_%02d.%02d.%02d_%d.dmp",
+			wsprintf(fileName, L"Dump_%d%02d%02d_%02d.%02d_%d_%d.dmp",
+				stNowTime.wYear, stNowTime.wMonth, stNowTime.wDay, stNowTime.wHour, stNowTime.wMinute, stNowTime.wSecond, DumpCount);
+			wprintf(L"\n\n\n!!! Crash Error !!! %d.%d.%d / %d:%d:%d\n",
 				stNowTime.wYear, stNowTime.wMonth, stNowTime.wDay, stNowTime.wHour, stNowTime.wMinute, stNowTime.wSecond);
+			wprintf(L"Now Save Dump File...\n");
 
-			wprintf(L"\n\n\n !!! Crash Error !!! %d.%d.%d/ %d:%d:%d\n", stNowTime.wYear, stNowTime.wMonth, stNowTime.wDay, stNowTime.wHour, stNowTime.wMinute, stNowTime.wSecond);
-			wprintf(L"Now Save dump file...\n");
-
-			HANDLE hDumpFile = ::CreateFile(
-				filename,
+			HANDLE hDumpFile = ::CreateFile(fileName,
 				GENERIC_WRITE,
-				FILE_SHARE_WRITE,
+				0,
 				NULL,
 				CREATE_ALWAYS,
-				FILE_ATTRIBUTE_NORMAL,
-				NULL
-			);
+				FILE_ATTRIBUTE_NORMAL, NULL);
 
 			if (hDumpFile != INVALID_HANDLE_VALUE)
 			{
 				_MINIDUMP_EXCEPTION_INFORMATION MinidumpExceptionInformation;
 
-				MinidumpExceptionInformation.ThreadId = ::GetCurrentProcessId();
+				MinidumpExceptionInformation.ThreadId = GetCurrentThreadId();
 				MinidumpExceptionInformation.ExceptionPointers = pExceptionPointer;
 				MinidumpExceptionInformation.ClientPointers = TRUE;
 
@@ -79,12 +73,11 @@ namespace procademy
 					MiniDumpWithFullMemory,
 					&MinidumpExceptionInformation,
 					NULL,
-					NULL
-				);
+					NULL);
 
 				CloseHandle(hDumpFile);
 
-				wprintf(L"CrashDump save Finish!");
+				wprintf(L"CrashDump Save Finish!\n");
 			}
 
 			return EXCEPTION_EXECUTE_HANDLER;
@@ -95,7 +88,7 @@ namespace procademy
 			SetUnhandledExceptionFilter(MyExceptionFilter);
 		}
 
-		static void myInvalidParameterHandler(const wchar_t* expression, const wchar_t* function, const wchar_t* file, unsigned int line, uintptr_t pReserved)
+		static void myInvalidParameterHandler(const wchar_t* expression, const wchar_t* function, const wchar_t* file, unsigned int line, uintptr_t pReserverd)
 		{
 			Crash();
 		}
@@ -106,7 +99,7 @@ namespace procademy
 			return true;
 		}
 
-		static void myPurecallHandler()
+		static void myPurecallHandler(void)
 		{
 			Crash();
 		}
@@ -114,7 +107,7 @@ namespace procademy
 		static long _DumpCount;
 	};
 
-	long CrashDump::_DumpCount = 0;
+	inline long CCrashDump::_DumpCount = 0;
 }
 
-#endif // !__PROCADEMY_LIB_CRASH_DUMP__
+#endif
