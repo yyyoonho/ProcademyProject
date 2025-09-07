@@ -37,5 +37,7 @@ struct Session
     // FALSE -> send 호출 불가능.
     LONG checkSend = TRUE;
 
+    bool loginCheck;
+
     SRWLOCK sendQLock;
 };

@@ -50,7 +50,6 @@ bool CEchoServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
 
 void CEchoServer::OnAccept(DWORD64 sessionID)
 {
-	//SerializePacket* newPacket = new SerializePacket;
 	SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
 	pPacket.Clear();
 

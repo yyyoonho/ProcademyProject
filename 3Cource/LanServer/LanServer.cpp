@@ -330,6 +330,12 @@ void CLanServer::WorkerThread()
 
 		else if (pMyOverlapped->type == RECV)
 		{
+			if (pSession->loginCheck == FALSE)
+			{
+				DecreaseIO_Count(pSession);
+				pSession->loginCheck = TRUE;
+			}
+
 			pSession->recvQ.MoveRear(cbTransferred);
 
 			while (1)
@@ -464,6 +470,8 @@ void CLanServer::AcceptThread()
 			_sessionArray[idx].sendQ.pop();
 		}
 
+		_sessionArray[idx].loginCheck = FALSE;
+
 		_sessionArray[idx].checkSend = TRUE;
 
 		getpeername(clientSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
@@ -477,7 +485,10 @@ void CLanServer::AcceptThread()
 		CreateIoCompletionPort((HANDLE)_sessionArray[idx].sock, _hIOCP, (ULONG_PTR)&_sessionArray[idx], NULL);
 
 		// OnAccept
-		OnAccept(_sessionArray[idx].sessionID);
+		{
+			IncreaseIO_Count(&_sessionArray[idx]);
+			OnAccept(_sessionArray[idx].sessionID);
+		}
 
 		// 비동기 IO 걸어두기
 		RecvProc(&_sessionArray[idx]);
