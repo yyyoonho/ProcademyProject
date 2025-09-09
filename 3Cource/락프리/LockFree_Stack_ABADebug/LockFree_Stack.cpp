@@ -30,13 +30,13 @@ void ThreadFunc()
 
 int main()
 {
-    HANDLE hThreads[2];
-    for (int i = 0; i < 2; i++)
+    HANDLE hThreads[6];
+    for (int i = 0; i < 6; i++)
     {
         hThreads[i] = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&ThreadFunc, NULL, NULL, NULL);
     }
 
-    WaitForMultipleObjects(2, hThreads, NULL, INFINITE);
+    WaitForMultipleObjects(6, hThreads, NULL, INFINITE);
 
     return 0;
 }

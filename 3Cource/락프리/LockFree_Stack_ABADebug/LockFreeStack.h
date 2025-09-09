@@ -1,5 +1,4 @@
 #pragma once
-
 DWORD64 pushAction = 0xdddddddddddddddd;
 DWORD64 popAction = 0xffffffffffffffff;
 
@@ -45,9 +44,6 @@ public:
     void Push(T data)
     {
         Node<T>* newNode = new Node<T>;
-
-        //newNode->data = new T;
-        //*(newNode->data) = data;
         newNode->data = data;
 
         while (1)
@@ -77,12 +73,9 @@ public:
             LONG64 ret = InterlockedCompareExchange64((LONG64*)&_top, (LONG64)newTop, (LONG64)oldTop);
             if ((Node<T>*)ret == oldTop)
             {
-                //*data = *(oldTop->data);
                 *data = oldTop->data;
 
                 DWORD idx = Note(popAction, NULL, (DWORD64)newTop, (DWORD64)oldTop, GetCurrentThreadId());
-
-                //delete oldTop->data;
 
                 delete oldTop;
 
