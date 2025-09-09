@@ -117,7 +117,8 @@ namespace procademy
 
 			while (next != NULL)
 			{
-				Node* targetNode = next;
+				//Node* targetNode = next;
+				Node* targetNode = ((Node*)((DWORD64)next & 0x0000ffffffffffff));
 				next = targetNode->_pNextNode;
 
 				free(targetNode);
@@ -130,7 +131,8 @@ namespace procademy
 
 			while (next != NULL)
 			{
-				Node* targetNode = next;
+				//Node* targetNode = next;
+				Node* targetNode = ((Node*)((DWORD64)next & 0x0000ffffffffffff));
 				next = targetNode->_pNextNode;
 
 				delete targetNode;
@@ -155,56 +157,59 @@ namespace procademy
 	template<typename DATA>
 	inline DATA* MemoryPool<DATA>::Alloc()
 	{
-		DATA* ret;
+		DATA* retData;
 
-		if (_pFreeNode == NULL)
+		Node* oldTop = NULL;
+		Node* newTop = NULL;
+
+		while (1)
 		{
-			Node* newNode = new Node;
-
-			// prev 技泼
-			newNode->_underflowGuard = (Node*)_poolId;
-
-			// overflowGuard 技泼
-			newNode->_pNextNode = (Node*)_poolId;
-
-			_capacity++;
-			_useCount++;
-
-			ret = &(newNode->_data);
-		}
-		else
-		{
-			Node* oldTop = NULL;
-			Node* newTop = NULL;
-
-			while (1)
+			oldTop = _pFreeNode;
+			if (oldTop == NULL)
 			{
-				oldTop = _pFreeNode;
-				newTop = ((Node*)((DWORD64)oldTop & 0x0000ffffffffffff))->_pNextNode;
+				Node* newNode = new Node;
 
-				LONG64 ret = InterlockedCompareExchange64((LONG64*)&_pFreeNode, (LONG64)newTop, (LONG64)oldTop);
-				if ((Node*)ret == oldTop)
+				// prev 技泼
+				newNode->_underflowGuard = (Node*)_poolId;
+
+				// overflowGuard 技泼
+				newNode->_pNextNode = (Node*)_poolId;
+
+				//_capacity++;
+				InterlockedIncrement((LONG*)&_capacity);
+
+				//_useCount++;
+				InterlockedIncrement((LONG*)&_useCount);
+
+				retData = &(newNode->_data);
+
+				break;
+			}
+
+			newTop = ((Node*)((DWORD64)oldTop & 0x0000ffffffffffff))->_pNextNode;
+
+			LONG64 ret = InterlockedCompareExchange64((LONG64*)&_pFreeNode, (LONG64)newTop, (LONG64)oldTop);
+			if ((Node*)ret == oldTop)
+			{
+				oldTop = ((Node*)((DWORD64)oldTop & 0x0000ffffffffffff));
+
+				// overflowGuard 技泼
+				oldTop->_pNextNode = (Node*)_poolId;
+
+				if (_bPlacement == true)
 				{
-					oldTop = ((Node*)((DWORD64)oldTop & 0x0000ffffffffffff));
-
-					break;
+					new(&(oldTop->_data)) DATA();
 				}
+
+				InterlockedIncrement((LONG*)&_useCount);
+
+				retData = &(oldTop->_data);
+
+				break;
 			}
-
-			// overflowGuard 技泼
-			oldTop->_pNextNode = (Node*)_poolId;
-
-			if (_bPlacement == true)
-			{
-				new(&(oldTop->_data)) DATA();
-			}
-
-			InterlockedIncrement((LONG*)&_useCount);
-
-			ret = &(oldTop->_data);
 		}
 
-		return ret;
+		return retData;
 	}
 
 	template<typename DATA>
