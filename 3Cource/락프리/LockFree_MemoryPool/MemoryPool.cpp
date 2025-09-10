@@ -6,20 +6,38 @@
 
 using namespace std;
 
-procademy::MemoryPool<int> mp(0, false);
+class CTest
+{
+public:
+    CTest()
+    {
+        a = 0;
+    }
+
+public:
+    int a;
+};
+
+procademy::MemoryPool<CTest> mp(0, TRUE);
 
 void ThreadFunc()
 {
     while (1)
     {
-        int* arr[1000];
+        CTest* arr[10000];
 
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 10000; i++)
         {
             arr[i] = mp.Alloc();
+
+            LONG ret = InterlockedIncrement((LONG*)&arr[i]->a);
+            if (ret == 2)
+            {
+                int a = 3;
+            }
         }
 
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 10000; i++)
         {
             mp.Free(arr[i]);
         }
@@ -41,6 +59,7 @@ void MonitorFunc()
 int main()
 {
 
+    int b = 3;
 
     HANDLE hThread[7];
     for (int i = 0; i < 6; i++)

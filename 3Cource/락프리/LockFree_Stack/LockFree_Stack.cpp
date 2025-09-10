@@ -3,6 +3,8 @@
 #include <iostream>
 
 #include "CCrashDump.h"
+#include "MemoryPool.h"
+
 #include "LockFreeStack.h"
 
 using namespace std;
@@ -28,15 +30,32 @@ void ThreadFunc()
     }
 }
 
+void MonitorThreadFunc()
+{
+    while (1)
+    {
+        printf("==================================\n");
+        printf("Capacity: %d\n", g_Stack.mp.GetCapacity());
+        printf("UseCount: %d\n", g_Stack.mp.GetUseCount());
+        printf("==================================\n");
+
+        Sleep(1000);
+    }
+}
+
 int main()
 {
-    HANDLE hThreads[6];
-    for (int i = 0; i < 6; i++)
+    HANDLE hThreads[4];
+    for (int i = 0; i < 4; i++)
     {
         hThreads[i] = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&ThreadFunc, NULL, NULL, NULL);
     }
 
-    WaitForMultipleObjects(6, hThreads, NULL, INFINITE);
+    HANDLE monitorThread;
+    monitorThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThreadFunc, NULL, NULL, NULL);
+
+    WaitForMultipleObjects(4, hThreads, TRUE, INFINITE);
+    WaitForSingleObject(monitorThread, INFINITE);
 
     return 0;
 }

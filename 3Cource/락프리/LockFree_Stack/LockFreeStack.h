@@ -11,10 +11,16 @@ template <typename T>
 class LockFreeStack
 {
 public:
+    LockFreeStack();
+
+public:
     Node<T>* _top = NULL;
 
     void Push(T data);
     void Pop(T* data);
+
+public:
+    procademy::MemoryPool<Node<T>> mp;
 
 private:
     /*
@@ -25,9 +31,16 @@ private:
 };
 
 template<typename T>
+inline LockFreeStack<T>::LockFreeStack() : mp(0,false)
+{
+    return;
+}
+
+template<typename T>
 inline void LockFreeStack<T>::Push(T data)
 {
-    Node<T>* newNode = new Node<T>;
+    //Node<T>* newNode = new Node<T>;
+    Node<T>* newNode = mp.Alloc();
     newNode->data = data;
 
     DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode);
@@ -62,7 +75,12 @@ inline void LockFreeStack<T>::Pop(T* data)
             oldTop = ((Node<T>*)((DWORD64)oldTop & 0x0000ffffffffffff));
             *data = oldTop->data;
 
-            delete oldTop;
+            //delete oldTop;
+            bool ret = mp.Free(oldTop);
+            if (ret == false)
+            {
+                int a = 3;
+            }
 
             break;
         }
