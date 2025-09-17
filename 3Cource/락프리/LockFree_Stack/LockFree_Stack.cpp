@@ -37,6 +37,7 @@ void MonitorThreadFunc()
         printf("==================================\n");
         printf("Capacity: %d\n", g_Stack.mp.GetCapacity());
         printf("UseCount: %d\n", g_Stack.mp.GetUseCount());
+        printf("StackSize: %d\n", g_Stack.Size());
         printf("==================================\n");
 
         Sleep(1000);

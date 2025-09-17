@@ -19,6 +19,8 @@ public:
     void Push(T data);
     void Pop(T* data);
 
+    int Size();
+
 public:
     procademy::MemoryPool<Node<T>> mp;
 
@@ -28,6 +30,8 @@ private:
         Node 주소의 상위 2바이트 = 16비트를 id로 사용.
     */
     unsigned short _uniqueCode = 0;
+
+    int _useSize = 0;
 };
 
 template<typename T>
@@ -58,6 +62,8 @@ inline void LockFreeStack<T>::Push(T data)
         }
     }
 
+    InterlockedIncrement((LONG*)&_useSize);
+
     return;
 }
 
@@ -86,5 +92,13 @@ inline void LockFreeStack<T>::Pop(T* data)
         }
     }
 
+    InterlockedDecrement((LONG*)&_useSize);
+
     return;
+}
+
+template<typename T>
+inline int LockFreeStack<T>::Size()
+{
+    return _useSize;
 }
