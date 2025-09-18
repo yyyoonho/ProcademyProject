@@ -1,20 +1,19 @@
 #pragma once
 
 template <typename T>
-struct Node
-{
-    T data;
-    Node* next;
-};
-
-template <typename T>
 class LockFreeStack
 {
 public:
     LockFreeStack();
 
 public:
-    Node<T>* _top = NULL;
+    struct Node
+    {
+        T data;
+        Node* next;
+    };
+
+    Node* _top = NULL;
 
     void Push(T data);
     void Pop(T* data);
@@ -22,7 +21,7 @@ public:
     int Size();
 
 public:
-    procademy::MemoryPool<Node<T>> mp;
+    procademy::MemoryPool<Node> mp;
 
 private:
     /*
@@ -43,20 +42,19 @@ inline LockFreeStack<T>::LockFreeStack() : mp(0,false)
 template<typename T>
 inline void LockFreeStack<T>::Push(T data)
 {
-    //Node<T>* newNode = new Node<T>;
-    Node<T>* newNode = mp.Alloc();
+    Node* newNode = mp.Alloc();
     newNode->data = data;
 
     DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode);
-    newNode = (Node<T>*)((DWORD64)newNode | (uID << 48));
+    newNode = (Node*)((DWORD64)newNode | (uID << 48));
 
     while (1)
     {
-        Node<T>* oldTop = _top;
-        ((Node<T>*)((DWORD64)newNode & 0x0000ffffffffffff))->next = oldTop;
+        Node* oldTop = _top;
+        ((Node*)((DWORD64)newNode & 0x0000ffffffffffff))->next = oldTop;
 
         LONG64 ret = InterlockedCompareExchange64((LONG64*)&_top, (LONG64)newNode, (LONG64)oldTop);
-        if ((Node<T>*)ret == oldTop)
+        if ((Node*)ret == oldTop)
         {
             break;
         }
@@ -72,13 +70,13 @@ inline void LockFreeStack<T>::Pop(T* data)
 {
     while (1)
     {
-        Node<T>* oldTop = _top;
-        Node<T>* newTop = ((Node<T>*)((DWORD64)oldTop & 0x0000ffffffffffff))->next;
+        Node* oldTop = _top;
+        Node* newTop = ((Node*)((DWORD64)oldTop & 0x0000ffffffffffff))->next;
 
         LONG64 ret = InterlockedCompareExchange64((LONG64*)&_top, (LONG64)newTop, (LONG64)oldTop);
-        if ((Node<T>*)ret == oldTop)
+        if ((Node*)ret == oldTop)
         {
-            oldTop = ((Node<T>*)((DWORD64)oldTop & 0x0000ffffffffffff));
+            oldTop = ((Node*)((DWORD64)oldTop & 0x0000ffffffffffff));
             *data = oldTop->data;
 
             //delete oldTop;
