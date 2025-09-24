@@ -77,19 +77,21 @@ bool LockFreeQueue<T>::Enqueue(T data)
     if (_useSize >= maximumQSize)
         return false;
 
+    DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode);
+
     Node* newNode = mp.Alloc();
     newNode->data = data;
-    newNode->next = (Node*)0x1234567890000000;
-
-    DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode);
+    newNode->next = (Node*)uID;
+    
     newNode = (Node*)((DWORD64)newNode | (uID << 48));
 
     while (1)
     {
         Node* oldTail = _tail;
+        DWORD64 oldTailNext = ((DWORD64)oldTail & 0xffff000000000000) >> 48;
 
-        PVOID ret = InterlockedCompareExchangePointer((PVOID*)&((Node*)((DWORD64)oldTail & 0x0000ffffffffffff))->next, newNode, NULL);
-        if (ret == NULL)
+        PVOID ret = InterlockedCompareExchangePointer((PVOID*)&((Node*)((DWORD64)oldTail & 0x0000ffffffffffff))->next, newNode, (PVOID)oldTailNext);
+        if (ret == (PVOID)oldTailNext)
         {
             // µð¹ö±ë
             int idx = (int)InterlockedIncrement((LONG*)&noteIdx);
@@ -99,11 +101,6 @@ bool LockFreeQueue<T>::Enqueue(T data)
             if (ret2 != oldTail)
             {
                 DebugBreak();
-            }
-            else
-            {
-                ((Node*)((DWORD64)newNode & 0x0000ffffffffffff))->next = NULL;
-                //newNode->next = NULL;
             }
 
             break;
@@ -128,6 +125,9 @@ bool LockFreeQueue<T>::Dequeue(T* data)
     {
         Node* oldHead = _head;
         Node* newHead = ((Node*)((DWORD64)oldHead & 0x0000ffffffffffff))->next;
+
+        if ((DWORD64)newHead < MAXWORD)
+            continue;
 
         *data = ((Node*)((DWORD64)newHead & 0x0000ffffffffffff))->data;
 
