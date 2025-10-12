@@ -14,7 +14,7 @@ struct stNote
 };
 
 int noteIdx = -1;
-stNote* debugNotes = new stNote[1000000];
+stNote* debugNotes = new stNote[10000000];
 
 void Note(int idx, DWORD64 action, DWORD64 deQueueNode, DWORD64 newHead, DWORD64 oldTail, DWORD64 enQueueNode, DWORD64 threadID)
 {
@@ -87,7 +87,6 @@ bool LockFreeQueue<T>::Enqueue(T data)
 
     while (1)
     {
-        // TODO: _tailÀ» ¶¯°Üº¾½Ã´Ù. next°¡ NULLÀÌ ³ª¿Ã¶§±îÁö.
         Node* oldTail;
         while (1)
         {
@@ -104,7 +103,7 @@ bool LockFreeQueue<T>::Enqueue(T data)
         {
             // µð¹ö±ë
             int idx = (int)InterlockedIncrement((LONG*)&noteIdx);
-            //Note(idx, 0xBBBBBBBBBBBBBBBB, NULL, NULL, (DWORD64)oldTail, (DWORD64)newNode, GetCurrentThreadId());
+            Note(idx, 0xBBBBBBBBBBBBBBBB, NULL, NULL, (DWORD64)oldTail, (DWORD64)newNode, GetCurrentThreadId());
 
             PVOID ret2 = InterlockedCompareExchangePointer((PVOID*)&_tail, newNode, oldTail);
             if (ret2 != oldTail)
@@ -134,9 +133,9 @@ bool LockFreeQueue<T>::Dequeue(T* data)
     {
         Node* oldHead = _head;
         Node* newHead = ((Node*)((DWORD64)oldHead & 0x0000ffffffffffff))->next;
-
         if (newHead == NULL)
             continue;
+
         *data = ((Node*)((DWORD64)newHead & 0x0000ffffffffffff))->data;
 
         PVOID ret = InterlockedCompareExchangePointer((PVOID*)&_head, newHead, oldHead);
@@ -144,7 +143,7 @@ bool LockFreeQueue<T>::Dequeue(T* data)
         {
             // µð¹ö±ë
             int idx = (int)InterlockedIncrement((LONG*)&noteIdx);
-            //Note(idx, 0xAAAAAAAAAAAAAAAA, (DWORD64)oldHead, (DWORD64)newHead, NULL, NULL, GetCurrentThreadId());
+            Note(idx, 0xAAAAAAAAAAAAAAAA, (DWORD64)oldHead, (DWORD64)newHead, NULL, NULL, GetCurrentThreadId());
 
             oldHead = ((Node*)((DWORD64)oldHead & 0x0000ffffffffffff));
             mp.Free(oldHead);

@@ -13,7 +13,7 @@ void Thread()
 {
 	while (1)
 	{
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			bool ret = myQueue.Enqueue(i);
 			if (ret == false)
@@ -22,7 +22,7 @@ void Thread()
 			}
 		}
 
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			int tmp;
 			bool ret = myQueue.Dequeue(&tmp);
