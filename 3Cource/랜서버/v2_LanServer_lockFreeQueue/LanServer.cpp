@@ -21,15 +21,14 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 
 	_hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-	InitializeSRWLock(&_releaseStackLock);
+	//InitializeSRWLock(&_releaseStackLock);
 
 	for (int i = 19999; i >= 0; i--)
 	{
 		_sessionArray[i].recvQ.Resize(20000);
-		//_sessionArray[i].sendQ.Resize(20000);
-		//InitializeSRWLock(&_sessionArray[i].sendQLock);
 
-		_releaseIdxStack.push(i);
+		//_releaseIdxStack.push(i);
+		_releaseIdxLockFreeStack.Push(i);
 	}
 
 	bool ret = NetInit();
@@ -250,11 +249,11 @@ void CLanServer::DecreaseIO_Count(Session* pSession)
 		
 		unsigned int idx = GetIdxFromSessionID(pSession->sessionID);
 
-		AcquireSRWLockExclusive(&_releaseStackLock);
+		//AcquireSRWLockExclusive(&_releaseStackLock);
 
-		_releaseIdxStack.push(idx);
+		_releaseIdxLockFreeStack.Push(idx);
 
-		ReleaseSRWLockExclusive(&_releaseStackLock);
+		//ReleaseSRWLockExclusive(&_releaseStackLock);
 
 		InterlockedDecrement(&_sessionCount);
 
@@ -424,12 +423,15 @@ void CLanServer::AcceptThread()
 		OnConnectionRequest(clientAddr);
 
 		// 세션 할당 및 초기화
-		AcquireSRWLockExclusive(&_releaseStackLock);
+		//AcquireSRWLockExclusive(&_releaseStackLock);
 
-		int idx = _releaseIdxStack.top();
-		_releaseIdxStack.pop();
+		//int idx = _releaseIdxStack.top();
+		//_releaseIdxStack.pop();
 
-		ReleaseSRWLockExclusive(&_releaseStackLock);
+		unsigned int idx;
+		_releaseIdxLockFreeStack.Pop(&idx);
+
+		//ReleaseSRWLockExclusive(&_releaseStackLock);
 
 		_sessionArray[idx].sock = clientSocket;
 		_sessionArray[idx].sessionID = ++_g_sessionID;

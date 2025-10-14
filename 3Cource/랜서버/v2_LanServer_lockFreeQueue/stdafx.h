@@ -28,6 +28,7 @@
 #include "SerializeBufferPtr.h"
 
 #include "LockFree_Queue.h"
+#include "LockFreeStack.h"
 
 #include "Struct.h"
 

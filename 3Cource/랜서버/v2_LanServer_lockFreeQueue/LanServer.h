@@ -82,8 +82,9 @@ private:
 public:
 	// 멤버 변수: 세션배열관리
 	Session _sessionArray[20000];
-	std::stack<unsigned int> _releaseIdxStack;
-	SRWLOCK _releaseStackLock;
+	//std::stack<unsigned int> _releaseIdxStack;
+	LockFreeStack<unsigned int> _releaseIdxLockFreeStack;
+	//SRWLOCK _releaseStackLock;
 
 private:
 	// 멤버변수: 네트워크 리턴값체크
