@@ -77,14 +77,9 @@ inline void LockFreeStack<T>::Pop(T* data)
         if ((Node*)ret == oldTop)
         {
             oldTop = ((Node*)((DWORD64)oldTop & 0x0000ffffffffffff));
-            *data = oldTop->data;
 
-            //delete oldTop;
+            *data = oldTop->data;
             bool ret = mp.Free(oldTop);
-            if (ret == false)
-            {
-                int a = 3;
-            }
 
             break;
         }
