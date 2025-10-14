@@ -13,7 +13,7 @@ void Thread()
 {
 	while (1)
 	{
-		for (int i = 0; i < 1; i++)
+		for (int i = 0; i < 100; i++)
 		{
 			bool ret = myQueue.Enqueue(i);
 			if (ret == false)
@@ -43,4 +43,5 @@ int main()
 	}
 
 	WaitForMultipleObjects(3, hThreads, TRUE, INFINITE);
+
 }

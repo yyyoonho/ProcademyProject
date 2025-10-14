@@ -29,6 +29,7 @@ public:
     bool Dequeue(T* data);
 
     int Size();
+    void Clear();
 };
 
 template<typename T>
@@ -131,4 +132,33 @@ template<typename T>
 int LockFreeQueue<T>::Size()
 {
     return _useSize;
+}
+
+template<typename T>
+inline void LockFreeQueue<T>::Clear()
+{
+    Node* oldTail;
+    while (1)
+    {
+        oldTail = _tail;
+
+        if (((Node*)((DWORD64)oldTail & 0x0000ffffffffffff))->next == NULL)
+            break;
+
+        InterlockedCompareExchangePointer((PVOID*)&_tail, ((Node*)((DWORD64)oldTail & 0x0000ffffffffffff))->next, oldTail);
+    }
+
+    while (1)
+    {
+        if (_useSize == 0)
+            break;
+
+        Node* oldHead = ((Node*)((DWORD64)_head & 0x0000ffffffffffff));
+        _head = oldHead->next;
+
+        mp.Free(oldHead);
+
+        _useSize--;
+    }
+
 }
