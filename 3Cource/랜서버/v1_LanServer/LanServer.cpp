@@ -26,7 +26,6 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	for (int i = 19999; i >= 0; i--)
 	{
 		_sessionArray[i].recvQ.Resize(20000);
-		//_sessionArray[i].sendQ.Resize(20000);
 		InitializeSRWLock(&_sessionArray[i].sendQLock);
 
 		_releaseIdxStack.push(i);

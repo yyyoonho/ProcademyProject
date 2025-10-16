@@ -32,6 +32,9 @@ struct RawPtr
 class SerializePacketPtr
 {
 public:
+	static procademy::MemoryPool<RefCountBlock> RcbMP;
+
+public:
 	SerializePacketPtr();
 	SerializePacketPtr(SerializePacket* ptr);
 	SerializePacketPtr(const SerializePacketPtr& other);

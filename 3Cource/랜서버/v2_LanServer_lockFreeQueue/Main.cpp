@@ -32,6 +32,16 @@ void MonitoringThread()
 
 int main()
 {
+	// 4개의 코어만 사용 (예: 코어 0~3)
+	//DWORD_PTR affinityMask = 0xF; // (0b1111) → CPU 0,1,2,3
+
+	//HANDLE hProcess = GetCurrentProcess();
+
+	//if (SetProcessAffinityMask(hProcess, affinityMask))
+	//	std::cout << "CPU affinity set successfully.\n";
+	//else
+	//	std::cout << "Failed to set CPU affinity.\n";
+
 	timeBeginPeriod(1);
 
 	bool serverSet = server1.Start(L"127.0.0.1", 6000, 2, 2, TRUE, 10000);
