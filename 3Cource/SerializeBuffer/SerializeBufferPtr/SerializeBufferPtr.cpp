@@ -19,7 +19,7 @@ void RawPtr::DecreaseRefCount()
     if (InterlockedDecrement(&_RCBPtr->count) == 0)
     {
         SerializePacket::SPacketMP.Free(_ptr);
-        delete _RCBPtr;
+        SerializePacketPtr::RcbMP.Free(_RCBPtr);
 
         _ptr = NULL;
         _RCBPtr = NULL;
@@ -37,7 +37,8 @@ SerializePacketPtr::SerializePacketPtr(SerializePacket* ptr)
     if (ptr != NULL)
     {
         _ptr = ptr;
-        _RCBPtr = new RefCountBlock;
+        //_RCBPtr = new RefCountBlock;
+        _RCBPtr = SerializePacketPtr::RcbMP.Alloc();
 
         InterlockedIncrement(&_RCBPtr->count);
     }
@@ -114,7 +115,8 @@ void SerializePacketPtr::DecreaseRefCount()
         if (InterlockedDecrement(&_RCBPtr->count) == 0)
         {
             SerializePacket::SPacketMP.Free(_ptr);
-            delete _RCBPtr;
+            //delete _RCBPtr;
+            SerializePacketPtr::RcbMP.Free(_RCBPtr);
 
             _ptr = NULL;
             _RCBPtr = NULL;

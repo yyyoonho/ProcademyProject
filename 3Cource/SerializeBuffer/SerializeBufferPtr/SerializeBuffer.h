@@ -8,6 +8,7 @@ struct stTCPHeader
 class SerializePacket
 {
 	friend procademy::MemoryPool<SerializePacket>;
+
 public:
 	static procademy::MemoryPool<SerializePacket> SPacketMP;
 
