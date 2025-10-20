@@ -69,12 +69,11 @@ namespace procademy
 		bool			_bPlacement = false;
 
 		DWORD64			_poolId;
-		unsigned short	_uniqueCode_FullStack = 0;
-		unsigned short	_uniqueCode_EmptyStack = 0;
+		LONG			_uniqueCode_FullStack = 0;
+		LONG			_uniqueCode_EmptyStack = 0;
 
 	private:
 		inline static int	_tlsIdx = TLS_OUT_OF_INDEXES;
-
 	private:
 		LONG			_fullChunkUseCount = 0;
 	public:
@@ -287,9 +286,9 @@ namespace procademy
 		// 현재 oldTop에 FullChunk가 있는 상태
 
 		// EmptyStack 으로 청크 하나 반납하기.
-		DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode_EmptyStack);
-		pTLS_MemoryPool->tlsMain_Chunk = (Chunk*)((DWORD64)pTLS_MemoryPool->tlsMain_Chunk & 0x0000ffffffffffff);
-		pTLS_MemoryPool->tlsMain_Chunk = (Chunk*)((DWORD64)pTLS_MemoryPool->tlsMain_Chunk | (uID << 48));
+		DWORD64 uID = (DWORD64)InterlockedIncrement(&_uniqueCode_EmptyStack) % (USHRT_MAX + 1);
+		pTLS_MemoryPool->tlsMain_Chunk = (Chunk*)((DWORD64)(pTLS_MemoryPool->tlsMain_Chunk) & 0x0000ffffffffffff);
+		pTLS_MemoryPool->tlsMain_Chunk = (Chunk*)((DWORD64)(pTLS_MemoryPool->tlsMain_Chunk) | (uID << 48));
 
 		while (1)
 		{
@@ -302,7 +301,6 @@ namespace procademy
 				break;
 			}
 		}
-
 
 		pTLS_MemoryPool->tlsMain_Chunk = oldTop;
 		pTLS_MemoryPool->tlsMain_Count = CHUNKSIZE;
@@ -340,7 +338,7 @@ namespace procademy
 			Chunk* newChunk = pTLS_MemoryPool->tlsSub_Chunk;
 
 			// ABA: 상위2바이트에 id심기
-			DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode_FullStack);
+			DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode_FullStack) % (USHRT_MAX+1);
 			newChunk = (Chunk*)((DWORD64)newChunk & 0x0000ffffffffffff);
 			newChunk = (Chunk*)((DWORD64)newChunk | (uID << 48));
 

@@ -19,6 +19,8 @@ void ThreadFuncA()
 	{
 		int* arr[100];
 
+		int a = 3;
+
 		for (int i = 0; i < 100; i++)
 		{
 			int* newData = mp.Alloc();
@@ -26,11 +28,12 @@ void ThreadFuncA()
 			arr[i] = newData;
 		}
 
+		int b = 3;
+
 		for (int i = 0; i < 100; i++)
 		{
 			mp.Free(arr[i]);
 		}
-
 	}
 }
 
