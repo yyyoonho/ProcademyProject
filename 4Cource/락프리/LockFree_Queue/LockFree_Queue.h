@@ -45,7 +45,7 @@ private:
 
     int _useSize;
 
-    unsigned short _uniqueCode;
+    LONG _uniqueCode;
 
 private:
     procademy::MemoryPool<Node> mp;
@@ -77,7 +77,7 @@ void LockFreeQueue<T>::Enqueue(T data)
     newNode->data = data;
     newNode->next = NULL;
 
-    DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode);
+    DWORD64 uID = (DWORD64)InterlockedIncrement(&_uniqueCode) % (USHRT_MAX + 1);
     newNode = (Node*)((DWORD64)newNode | (uID << 48));
 
     while (1)

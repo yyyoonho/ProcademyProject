@@ -28,7 +28,7 @@ private:
         0x [0000][0000 .... 0000]
         Node 주소의 상위 2바이트 = 16비트를 id로 사용.
     */
-    unsigned short _uniqueCode = 0;
+    LONG _uniqueCode = 0;
 
     int _useSize = 0;
 };
@@ -45,7 +45,7 @@ inline void LockFreeStack<T>::Push(T data)
     Node* newNode = mp.Alloc();
     newNode->data = data;
 
-    DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode);
+    DWORD64 uID = (DWORD64)InterlockedIncrement(&_uniqueCode) % (USHRT_MAX + 1);
     newNode = (Node*)((DWORD64)newNode | (uID << 48));
 
     while (1)
