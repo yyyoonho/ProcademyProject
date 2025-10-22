@@ -30,7 +30,7 @@ void ThreadFuncB()
 {
 	while (1)
 	{
-		AcquireSRWLockExclusive(&srwLock);
+		/*AcquireSRWLockExclusive(&srwLock);
 
 		int* tmp = NULL;
 
@@ -43,7 +43,7 @@ void ThreadFuncB()
 		if (tmp != NULL)
 			mp.Free(tmp);
 
-		ReleaseSRWLockExclusive(&srwLock);
+		ReleaseSRWLockExclusive(&srwLock);*/
 	}
 }
 
@@ -79,7 +79,7 @@ int main()
 		// TODO: 디버깅 코드
 		printf("---------------------------------\n");
 		printf("fullChunkStackCount: %ld\n", mp.GetFullChunkStackCount());
-		printf("emptyChunkStackCount: %ld\n", mp.GetFullChunkStackCount());
+		printf("emptyChunkStackCount: %ld\n", mp.GetEmptyChunkStackCount());
 		printf("QSize: %d\n", Q.size());
 		printf("---------------------------------\n");
 	}
