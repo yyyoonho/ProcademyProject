@@ -33,7 +33,7 @@ void MonitoringThread()
 int main()
 {
 	// 4개의 코어만 사용 (예: 코어 0~3)
-	//DWORD_PTR affinityMask = 0xF; // (0b1111) → CPU 0,1,2,3
+	//DWORD_PTR affinityMask = 0x3; // (0b1111) → CPU 0,1,2,3
 
 	//HANDLE hProcess = GetCurrentProcess();
 

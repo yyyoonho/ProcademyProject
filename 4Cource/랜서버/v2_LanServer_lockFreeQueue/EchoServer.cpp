@@ -75,7 +75,6 @@ void CEchoServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
 	AcquireSRWLockExclusive(&_contentQueueLock[threadNumber]);
 
 	_contentQueue[threadNumber].Enqueue((char*)&sessionID, sizeof(DWORD64));
-	//_contentQueue[threadNumber].Enqueue(pSPacket->GetBufferPtr(), pSPacket->GetDataSize());
 	_contentQueue[threadNumber].Enqueue(pPacket.GetBufferPtr(), pPacket.GetDataSize());
 
 	SetEvent(_hEvent_contentQueue[threadNumber]);

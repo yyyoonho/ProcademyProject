@@ -2,6 +2,9 @@
 #include "LanServer.h"
 
 using namespace std;
+
+INT64 tmpA = 0;
+
 CLanServer::CLanServer()
 {
 }
@@ -15,6 +18,7 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	_ipAddress = ipAddress;
 	_port = port;
 	_workerThreadCount = workerThreadCount;
+	//_workerThreadCount = 2;
 	_coreSkip = coreSkip;
 	_isNagle = isNagle;
 	_maximumSessionCount = maximumSessionCount;
@@ -25,7 +29,6 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	{
 		_sessionArray[i].recvQ.Resize(20000);
 
-		//_releaseIdxStack.push(i);
 		_releaseIdxLockFreeStack.Push(i);
 	}
 
@@ -49,7 +52,7 @@ bool CLanServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		return false;
 
 	HANDLE hThread;
-	for (int i = 0; i < workerThreadCount; i++)
+	for (int i = 0; i < _workerThreadCount; i++)
 	{
 		hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&CLanServer::WorkerThreadRun, this, NULL, NULL);
 		if (hThread == NULL)
@@ -80,9 +83,9 @@ void CLanServer::SendPost(Session* pSession)
 {
 	if (pSession->LockFreeSendQ.Size() > 0)
 	{
-		// 여기서 0됨
+		// 여기서 0이 된다.
 
-		if (InterlockedExchange(&pSession->checkSend, false) == true)
+		if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
 		{
 			SendProc(pSession);
 		}
@@ -104,8 +107,6 @@ bool CLanServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	stHeader header;
 	header.len = pPacket.GetDataSize();
 	pPacket.PushHeader((char*)&header, sizeof(stHeader));
-
-	//pSession->LockFreeSendQ.Enqueue(pPacket);
 
 	RawPtr packetRawPtr;
 	pPacket.GetRawPtr(&packetRawPtr);
@@ -202,9 +203,6 @@ void CLanServer::SendProc(Session* pSession)
 		RawPtr packet;
 		pSession->LockFreeSendQ.Dequeue(&packet);
 
-		//wsaBuf[i].buf = pPacket.GetBufferPtr();
-		//wsaBuf[i].len = packet.GetDataSize();
-
 		wsaBuf[i].buf = packet._ptr->GetBufferPtr();
 		wsaBuf[i].len = packet._ptr->GetDataSize();
 
@@ -214,8 +212,11 @@ void CLanServer::SendProc(Session* pSession)
 	}
 
 	if (sPacketCount == 0)
+	{
+		InterlockedExchange(&pSession->checkSend, TRUE);
 		return;
-
+	}
+		
 	pSession->sendMyOverlapped.sPacketCount = sPacketCount;
 
 	IncreaseIO_Count(pSession);
