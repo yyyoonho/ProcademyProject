@@ -476,7 +476,7 @@ void CLanServer::AcceptThread()
 		// OnAccept
 		{
 			IncreaseIO_Count(&_sessionArray[idx]);
-			//OnAccept(_sessionArray[idx].sessionID);
+			OnAccept(_sessionArray[idx].sessionID);
 		}
 
 		// 비동기 IO 걸어두기

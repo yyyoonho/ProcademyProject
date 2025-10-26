@@ -6,6 +6,7 @@
 #pragma comment(lib, "CustomProfiler.lib")
 #pragma comment(lib, "SerializeBuffer.lib")
 #pragma comment(lib, "SerializeBufferPtr.lib")
+
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
@@ -24,6 +25,8 @@
 #include "CustomProfiler.h"
 
 #include "MemoryPool.h"
+#include "TLS_MemoryPool.h"
+
 #include "SerializeBuffer.h"
 #include "SerializeBufferPtr.h"
 

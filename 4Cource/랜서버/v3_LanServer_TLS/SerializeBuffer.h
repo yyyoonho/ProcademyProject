@@ -7,9 +7,10 @@ struct stTCPHeader
 
 class SerializePacket
 {
-	friend procademy::MemoryPool<SerializePacket>;
+	friend procademy::MemoryPool_TLS<SerializePacket>;
+
 public:
-	static procademy::MemoryPool<SerializePacket> SPacketMP;
+	static procademy::MemoryPool_TLS<SerializePacket> SPacketMP;
 
 public:
 	enum en_PACKET
@@ -81,7 +82,4 @@ protected:
 
 	bool isHeaderPushed = false;
 	int pushedHeaderSize;
-
-private:
-	CRITICAL_SECTION cs;
 };

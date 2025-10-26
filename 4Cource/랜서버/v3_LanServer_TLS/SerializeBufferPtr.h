@@ -32,7 +32,7 @@ struct RawPtr
 class SerializePacketPtr
 {
 public:
-	static procademy::MemoryPool<RefCountBlock> RcbMP;
+	static procademy::MemoryPool_TLS<RefCountBlock> RcbMP;
 
 public:
 	SerializePacketPtr();

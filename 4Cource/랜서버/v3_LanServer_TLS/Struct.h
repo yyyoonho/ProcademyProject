@@ -26,7 +26,6 @@ struct Session
     myOverlapped sendMyOverlapped;
 
     RingBuffer recvQ;
-    //LockFreeQueue<SerializePacketPtr> LockFreeSendQ; // Now This sendQ is Q for SerializeBuffer Pointer.
     LockFreeQueue<RawPtr> LockFreeSendQ; // Now This sendQ is Q for SerializeBuffer Pointer.
 
     LONG IO_Count = 0;
