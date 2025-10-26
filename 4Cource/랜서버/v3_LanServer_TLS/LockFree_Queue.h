@@ -22,7 +22,7 @@ private:
     LONG _uniqueCode;
 
 private:
-    procademy::MemoryPool<Node> mp;
+    procademy::MemoryPool_TLS<Node> mp;
 
 public:
     bool Enqueue(T data);
