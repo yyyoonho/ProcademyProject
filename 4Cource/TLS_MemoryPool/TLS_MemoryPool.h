@@ -1,7 +1,7 @@
 #pragma once
 #include <new.h>
 
-#define LOG_MEMORYPOOL
+//#define LOG_MEMORYPOOL
 
 #define CHUNKSIZE 500
 
@@ -12,7 +12,7 @@ int testCount = 0;
 namespace procademy
 {
 	template <typename DATA>
-	class MemoryPool
+	class MemoryPool_TLS
 	{
 	private:
 		struct Node
@@ -28,10 +28,10 @@ namespace procademy
 			Chunk*	_pNextChunk = NULL;
 		};
 
-		class TLS_MemoryPool
+		class TlsAllocator
 		{
 		public:
-			TLS_MemoryPool(DWORD64 poolId, bool bPlacement)
+			TlsAllocator(DWORD64 poolId, bool bPlacement)
 			{
 				_tlsPoolId = poolId;
 				_bPlacement = bPlacement;
@@ -56,8 +56,8 @@ namespace procademy
 		};
 
 	public:
-		MemoryPool(int iChunkNum, bool bPlacement = false);
-		virtual ~MemoryPool();
+		MemoryPool_TLS(int iChunkNum, bool bPlacement = false);
+		virtual ~MemoryPool_TLS();
 
 		void			Init();
 
@@ -89,7 +89,7 @@ namespace procademy
 
 
 	template<typename DATA>
-	inline MemoryPool<DATA>::MemoryPool(int iChunkNum, bool bPlacement)
+	inline MemoryPool_TLS<DATA>::MemoryPool_TLS(int iChunkNum, bool bPlacement)
 	{
 		if (_tlsIdx == TLS_OUT_OF_INDEXES)
 		{
@@ -177,13 +177,13 @@ namespace procademy
 	}
 
 	template<typename DATA>
-	inline MemoryPool<DATA>::~MemoryPool()
+	inline MemoryPool_TLS<DATA>::~MemoryPool_TLS()
 	{
 
 	}
 
 	template<typename DATA>
-	inline void MemoryPool<DATA>::Init()
+	inline void MemoryPool_TLS<DATA>::Init()
 	{
 		srand((unsigned int)time(NULL));
 
@@ -196,43 +196,43 @@ namespace procademy
 	}
 
 	template<typename DATA>
-	inline DATA* MemoryPool<DATA>::Alloc()
+	inline DATA* MemoryPool_TLS<DATA>::Alloc()
 	{
 		// TLS 세팅 및 얻기
 		if (TlsGetValue(_tlsIdx) == 0)
 		{
-			TLS_MemoryPool* pTLS_MemoryPool = new TLS_MemoryPool(_poolId, _bPlacement);
-			TlsSetValue(_tlsIdx, (LPVOID)pTLS_MemoryPool);
+			TlsAllocator* pTlsAllocator = new TlsAllocator(_poolId, _bPlacement);
+			TlsSetValue(_tlsIdx, (LPVOID)pTlsAllocator);
 
-			pTLS_MemoryPool->tlsMain_Chunk = new Chunk;
-			pTLS_MemoryPool->tlsSub_Chunk = new Chunk;
+			pTlsAllocator->tlsMain_Chunk = new Chunk;
+			pTlsAllocator->tlsSub_Chunk = new Chunk;
 		}
 
-		TLS_MemoryPool* pTLS_MemoryPool = (TLS_MemoryPool*)TlsGetValue(_tlsIdx);
+		TlsAllocator* pTlsAllocator = (TlsAllocator*)TlsGetValue(_tlsIdx);
 		DATA* pData = NULL;
 
 
 		// 1. TLS 메인스택에서 꺼내기
-		if (pTLS_MemoryPool->tlsMain_Count > 0)
+		if (pTlsAllocator->tlsMain_Count > 0)
 		{
-			pData = pTLS_MemoryPool->MyTLSAlloc();
+			pData = pTlsAllocator->MyTLSAlloc();
 		}
 
 		// 2. TLS 서브스택과 스왑 후 꺼내기
 		else
 		{
-			if (pTLS_MemoryPool->tlsSub_Count > 0)
+			if (pTlsAllocator->tlsSub_Count > 0)
 			{
-				Chunk* tmp = pTLS_MemoryPool->tlsMain_Chunk;
-				int tmpSize = pTLS_MemoryPool->tlsMain_Count;
+				Chunk* tmp = pTlsAllocator->tlsMain_Chunk;
+				int tmpSize = pTlsAllocator->tlsMain_Count;
 
-				pTLS_MemoryPool->tlsMain_Chunk = pTLS_MemoryPool->tlsSub_Chunk;
-				pTLS_MemoryPool->tlsMain_Count = pTLS_MemoryPool->tlsSub_Count;
+				pTlsAllocator->tlsMain_Chunk = pTlsAllocator->tlsSub_Chunk;
+				pTlsAllocator->tlsMain_Count = pTlsAllocator->tlsSub_Count;
 
-				pTLS_MemoryPool->tlsSub_Chunk = tmp;
-				pTLS_MemoryPool->tlsSub_Count = tmpSize;
+				pTlsAllocator->tlsSub_Chunk = tmp;
+				pTlsAllocator->tlsSub_Count = tmpSize;
 
-				pData = pTLS_MemoryPool->MyTLSAlloc();
+				pData = pTlsAllocator->MyTLSAlloc();
 			}
 		}
 
@@ -302,15 +302,15 @@ namespace procademy
 
 		// EmptyStack 으로 청크 하나 반납하기.
 		DWORD64 uID = (DWORD64)InterlockedIncrement(&_uniqueCode_EmptyStack) % (USHRT_MAX + 1);
-		pTLS_MemoryPool->tlsMain_Chunk = (Chunk*)((DWORD64)(pTLS_MemoryPool->tlsMain_Chunk) & 0x0000ffffffffffff);
-		pTLS_MemoryPool->tlsMain_Chunk = (Chunk*)((DWORD64)(pTLS_MemoryPool->tlsMain_Chunk) | (uID << 48));
+		pTlsAllocator->tlsMain_Chunk = (Chunk*)((DWORD64)(pTlsAllocator->tlsMain_Chunk) & 0x0000ffffffffffff);
+		pTlsAllocator->tlsMain_Chunk = (Chunk*)((DWORD64)(pTlsAllocator->tlsMain_Chunk) | (uID << 48));
 
 		while (1)
 		{
 			Chunk* oldTop = _pEmptyChunk;
-			((Chunk*)((DWORD64)pTLS_MemoryPool->tlsMain_Chunk & 0x0000ffffffffffff))->_pNextChunk = oldTop;
+			((Chunk*)((DWORD64)pTlsAllocator->tlsMain_Chunk & 0x0000ffffffffffff))->_pNextChunk = oldTop;
 
-			LONG64 ret = InterlockedCompareExchange64((LONG64*)&_pEmptyChunk, (LONG64)pTLS_MemoryPool->tlsMain_Chunk, (LONG64)oldTop);
+			LONG64 ret = InterlockedCompareExchange64((LONG64*)&_pEmptyChunk, (LONG64)pTlsAllocator->tlsMain_Chunk, (LONG64)oldTop);
 			if ((Chunk*)ret == oldTop)
 			{
 #ifdef LOG_MEMORYPOOL
@@ -321,40 +321,40 @@ namespace procademy
 			}
 		}
 
-		pTLS_MemoryPool->tlsMain_Chunk = oldTop;
-		pTLS_MemoryPool->tlsMain_Count = CHUNKSIZE;
+		pTlsAllocator->tlsMain_Chunk = oldTop;
+		pTlsAllocator->tlsMain_Count = CHUNKSIZE;
 
 
 		// 4. 장전 끝났으면 다시 TLS에서 Alloc
-		pData = pTLS_MemoryPool->MyTLSAlloc();
+		pData = pTlsAllocator->MyTLSAlloc();
 
 		return pData;
 	}
 
 	template<typename DATA>
-	inline bool MemoryPool<DATA>::Free(DATA* pData)
+	inline bool MemoryPool_TLS<DATA>::Free(DATA* pData)
 	{
 		// TLS 세팅 및 얻기
 		if (TlsGetValue(_tlsIdx) == 0)
 		{
-			TLS_MemoryPool* pTLS_MemoryPool = new TLS_MemoryPool(_poolId, _bPlacement);
-			TlsSetValue(_tlsIdx, (LPVOID)pTLS_MemoryPool);
+			TlsAllocator* pTlsAllocator = new TlsAllocator(_poolId, _bPlacement);
+			TlsSetValue(_tlsIdx, (LPVOID)pTlsAllocator);
 
-			pTLS_MemoryPool->tlsMain_Chunk = new Chunk;
-			pTLS_MemoryPool->tlsSub_Chunk = new Chunk;
+			pTlsAllocator->tlsMain_Chunk = new Chunk;
+			pTlsAllocator->tlsSub_Chunk = new Chunk;
 		}
 
-		TLS_MemoryPool* pTLS_MemoryPool = (TLS_MemoryPool*)TlsGetValue(_tlsIdx);
+		TlsAllocator* pTlsAllocator = (TlsAllocator*)TlsGetValue(_tlsIdx);
 
 		// 1. TLS 메인 스택으로 반납
 		// 2. TLS 메인 스택이 다 찼으면 TLS 서브 스택으로 반납
-		pTLS_MemoryPool->MyTLSFree(pData);
+		pTlsAllocator->MyTLSFree(pData);
 
 
 		// 3. 서브 스택이 꽉찼으면 서브 청크를 메인 메모리풀로 반납
-		if (pTLS_MemoryPool->tlsSub_Count >= CHUNKSIZE)
+		if (pTlsAllocator->tlsSub_Count >= CHUNKSIZE)
 		{
-			Chunk* newChunk = pTLS_MemoryPool->tlsSub_Chunk;
+			Chunk* newChunk = pTlsAllocator->tlsSub_Chunk;
 
 			// ABA: 상위2바이트에 id심기
 			DWORD64 uID = (DWORD64)InterlockedIncrement((LONG*)&_uniqueCode_FullStack) % (USHRT_MAX+1);
@@ -409,29 +409,29 @@ namespace procademy
 				}
 			}
 
-			pTLS_MemoryPool->tlsSub_Chunk = oldTop;
-			pTLS_MemoryPool->tlsSub_Chunk->_pNextChunk = NULL;
-			pTLS_MemoryPool->tlsSub_Count = 0;
+			pTlsAllocator->tlsSub_Chunk = oldTop;
+			pTlsAllocator->tlsSub_Chunk->_pNextChunk = NULL;
+			pTlsAllocator->tlsSub_Count = 0;
 		}
 
 		return true;
 	}
 
 	template<typename DATA>
-	inline LONG MemoryPool<DATA>::GetFullChunkStackCount()
+	inline LONG MemoryPool_TLS<DATA>::GetFullChunkStackCount()
 	{
 		return _fullChunkStackCount;
 	}
 
 	template<typename DATA>
-	inline LONG MemoryPool<DATA>::GetEmptyChunkStackCount()
+	inline LONG MemoryPool_TLS<DATA>::GetEmptyChunkStackCount()
 	{
 		return _emptyChunkStackCount;
 	}
 
 
 	template<typename DATA>
-	DATA* MemoryPool<DATA>::TLS_MemoryPool::MyTLSAlloc()
+	DATA* MemoryPool_TLS<DATA>::TlsAllocator::MyTLSAlloc()
 	{
 		Node* allocNode = tlsMain_Chunk->_pFreeNode;
 		tlsMain_Count--;
@@ -454,7 +454,7 @@ namespace procademy
 	}
 
 	template<typename DATA>
-	bool MemoryPool<DATA>::TLS_MemoryPool::MyTLSFree(DATA* pData)
+	bool MemoryPool_TLS<DATA>::TlsAllocator::MyTLSFree(DATA* pData)
 	{
 		Node* tmpNode = (Node*)((BYTE*)pData - sizeof(Node*));
 

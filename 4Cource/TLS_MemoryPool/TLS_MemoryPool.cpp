@@ -9,7 +9,7 @@ using namespace std;
 
 
 
-procademy::MemoryPool<int> mp(0, false);
+procademy::MemoryPool_TLS<int> mp(0, false);
 SRWLOCK srwLock;
 queue<int*> Q;
 
@@ -23,6 +23,8 @@ void ThreadFuncA()
 		Q.push(tmp);
 
 		ReleaseSRWLockExclusive(&srwLock);
+
+		Sleep(0);
 	}
 }
 
@@ -30,7 +32,7 @@ void ThreadFuncB()
 {
 	while (1)
 	{
-		/*AcquireSRWLockExclusive(&srwLock);
+		AcquireSRWLockExclusive(&srwLock);
 
 		int* tmp = NULL;
 
@@ -43,7 +45,7 @@ void ThreadFuncB()
 		if (tmp != NULL)
 			mp.Free(tmp);
 
-		ReleaseSRWLockExclusive(&srwLock);*/
+		ReleaseSRWLockExclusive(&srwLock);
 	}
 }
 
