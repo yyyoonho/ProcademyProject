@@ -10,7 +10,7 @@ class SerializePacket
 	friend procademy::MemoryPool_TLS<SerializePacket>;
 
 public:
-	static procademy::MemoryPool_TLS<SerializePacket> SPacketMP;
+	inline static procademy::MemoryPool_TLS<SerializePacket> SPacketMP{ 0,false };
 
 public:
 	enum en_PACKET
@@ -68,7 +68,7 @@ public:
 	int GetData(char* chpDest, int iSize);
 	int Putdata(char* chpSrc, int iSrcSize);
 
-	void PushHeader(char* header, int headerSize);
+	bool PushHeader(char* header, int headerSize);
 
 protected:
 	char* _original;
@@ -80,6 +80,7 @@ protected:
 	int _capacity;
 	int _size;
 
-	bool isHeaderPushed = false;
-	int pushedHeaderSize;
+	bool _isHeaderPushed = false;
+	int _pushedHeaderSize = 0;
+
 };

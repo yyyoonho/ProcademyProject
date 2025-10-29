@@ -13,7 +13,7 @@ void Thread()
 {
 	while (1)
 	{
-		for (int i = 0; i < 100; i++)
+		for (int i = 0; i < 1000; i++)
 		{
 			bool ret = myQueue.Enqueue(i);
 			if (ret == false)
@@ -22,7 +22,7 @@ void Thread()
 			}
 		}
 
-		for (int i = 0; i < 100; i++)
+		for (int i = 0; i < 1000; i++)
 		{
 			int tmp;
 			bool ret = myQueue.Dequeue(&tmp);
@@ -36,12 +36,12 @@ void Thread()
 
 int main()
 {
-	HANDLE hThreads[3];
-	for (int i = 0; i < 3; i++)
+	HANDLE hThreads[6];
+	for (int i = 0; i < 6; i++)
 	{
 		hThreads[i] = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&Thread, NULL, NULL, NULL);
 	}
 
-	WaitForMultipleObjects(3, hThreads, TRUE, INFINITE);
+	WaitForMultipleObjects(6, hThreads, TRUE, INFINITE);
 
 }

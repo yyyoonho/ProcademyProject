@@ -3,11 +3,9 @@
 
 //#define LOG_MEMORYPOOL
 
-#define CHUNKSIZE 500
+#define CHUNKSIZE 50
 
 using namespace std;
-
-int testCount = 0;
 
 namespace procademy
 {

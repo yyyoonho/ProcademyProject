@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "Windows.h"
-//#include "MemoryPool.h"
 #include "TLS_MemoryPool.h"
 #include "SerializeBuffer.h"
 #include "SerializeBufferPtr.h"

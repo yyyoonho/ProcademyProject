@@ -7,10 +7,10 @@ struct stTCPHeader
 
 class SerializePacket
 {
-	friend procademy::MemoryPool<SerializePacket>;
+	friend procademy::MemoryPool_TLS<SerializePacket>;
 
 public:
-	static procademy::MemoryPool<SerializePacket> SPacketMP;
+	inline static procademy::MemoryPool_TLS<SerializePacket> SPacketMP{ 0,false };
 
 public:
 	enum en_PACKET
