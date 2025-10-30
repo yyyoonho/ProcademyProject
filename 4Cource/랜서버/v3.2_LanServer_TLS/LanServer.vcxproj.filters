@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="소스 파일\NetLib">
+      <UniqueIdentifier>{ecf840e1-25f1-4847-9608-5685a241e2b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetLib\Header">
+      <UniqueIdentifier>{baf37f0d-f39b-46b0-9203-01bbe785054e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetLib\Struct">
+      <UniqueIdentifier>{dc1bfe70-1743-4006-8138-e112ba34ac2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetLib\BaseServer">
+      <UniqueIdentifier>{b9b484ac-908c-4035-b2ff-2f90155e9f69}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\EchoServer">
+      <UniqueIdentifier>{dc107f3b-78a9-485b-8afa-52cad5ea3ef5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Protocol">
+      <UniqueIdentifier>{12e887e3-9733-46dd-bae7-14f3c8e73817}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>소스 파일\NetLib\Header</Filter>
+    </ClCompile>
+    <ClCompile Include="LanServer.cpp">
+      <Filter>소스 파일\NetLib\BaseServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="EchoServer.cpp">
+      <Filter>소스 파일\EchoServer</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>소스 파일\NetLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>소스 파일\Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="Struct.h">
+      <Filter>소스 파일\NetLib\Struct</Filter>
+    </ClInclude>
+    <ClInclude Include="LanServer.h">
+      <Filter>소스 파일\NetLib\BaseServer</Filter>
+    </ClInclude>
+    <ClInclude Include="EchoServer.h">
+      <Filter>소스 파일\EchoServer</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
