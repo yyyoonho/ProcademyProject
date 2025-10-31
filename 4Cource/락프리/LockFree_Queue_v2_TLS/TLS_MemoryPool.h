@@ -3,7 +3,7 @@
 
 //#define LOG_MEMORYPOOL
 
-#define CHUNKSIZE 50
+#define CHUNKSIZE 500
 
 using namespace std;
 
