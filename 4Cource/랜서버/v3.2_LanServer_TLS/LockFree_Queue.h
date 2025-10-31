@@ -22,7 +22,7 @@ private:
     LONG _uniqueCode;
 
 private:
-    procademy::MemoryPool<Node> mp;
+    inline static procademy::MemoryPool_TLS<Node> mp{ 0,false };
 
 public:
     bool Enqueue(T data);
@@ -30,10 +30,11 @@ public:
 
     int Size();
     void Clear();
+
 };
 
 template<typename T>
-LockFreeQueue<T>::LockFreeQueue() : mp(0, false)
+LockFreeQueue<T>::LockFreeQueue()
 {
     _uniqueCode = 0;
     _useSize = 0;

@@ -84,8 +84,6 @@ void CLanServer::SendPost(Session* pSession)
 {
 	if (pSession->LockFreeSendQ.Size() > 0)
 	{
-		// 2번
-
 		if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
 		{
 			SendProc(pSession);
@@ -117,7 +115,6 @@ bool CLanServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	pPacket.GetRawPtr(&packetRawPtr);
 
 	packetRawPtr.IncreaseRefCount();
-	// 1번
 	pSession->LockFreeSendQ.Enqueue(packetRawPtr);
 
 	InterlockedIncrement(&_sendMessageTPS);
