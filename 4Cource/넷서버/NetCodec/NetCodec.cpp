@@ -11,9 +11,13 @@
 
 using namespace std;
 
-BYTE fixedKey = 0xa9;
+BYTE GetRandomKey()
+{
 
-void EncodingPacket(SerializePacketPtr sPacketPtr)
+	return 0;
+}
+
+bool EncodingPacket(SerializePacketPtr sPacketPtr)
 {
 	// TODO: 랜덤키 생성
 	BYTE randomKey = 0x31;
@@ -34,7 +38,7 @@ void EncodingPacket(SerializePacketPtr sPacketPtr)
 	unsigned short payloadLen = sPacketPtr.GetDataSize();
 	if (payloadLen <= 0)
 	{
-		DebugBreak();
+		return false;
 	}
 
 	header.code = 0xbb;
@@ -69,13 +73,60 @@ void EncodingPacket(SerializePacketPtr sPacketPtr)
 		*(target + i) = D;
 	}
 
+	char* t = sPacketPtr.GetBufferPtr();
+
+	return true;
+}
+
+bool DecodingPacket(SerializePacketPtr sPacketPtr, stNetHeader netHeader)
+{
+	unsigned char* target = (unsigned char*)sPacketPtr.GetBufferPtr();
+
+	BYTE randomKey = netHeader.randomKey;
+
+	// 1단계 디코딩
+	unsigned char E = 0;
+	for (int i = 0; i < sPacketPtr.GetDataSize(); i++)
+	{
+		unsigned char tmpE = *(target + i);
+
+		unsigned char P = (*(target + i)) ^ (E + fixedKey + (i + 1));
+		*(target + i) = P;
+
+		E = tmpE;
+	}
+
+	// 2단계 디코딩
+	unsigned char P = 0;
+	for (int i = 0; i < sPacketPtr.GetDataSize(); i++)
+	{
+		unsigned char tmpP = *(target + i);
+
+		unsigned char D = (*(target + i)) ^ (P + randomKey + (i + 1));
+		*(target + i) = D;
+
+		P = tmpP;
+	}
+
+	// 체크섬 확인
+	BYTE originCheckSum = netHeader.checkSum;
+	BYTE checkSum = 0;
+	for (int i = 0; i < sPacketPtr.GetDataSize(); i++)
+	{
+		checkSum += *(target + i);
+	}
+
+	if (originCheckSum == checkSum)
+		return true;
+	else
+		return false;
 }
 
 int main()
 {
+	
 	unsigned char* tmp = new unsigned char[55];
 	strcpy_s((char*)tmp, 55, "aaaaaaaaaabbbbbbbbbbcccccccccc1234567890abcdefghijklmn");
-	//strcpy_s((char*)tmp, 5, "abcd");
 
 	SerializePacketPtr p1 = SerializePacketPtr::MakeSerializePacket();
 	p1.Clear();
@@ -83,7 +134,18 @@ int main()
 
 	EncodingPacket(p1);
 
-	int b = 3;
+	char* t = p1.GetBufferPtr();
+
+	stNetHeader header;
+	int len = p1.GetData((char*)&header, sizeof(stNetHeader));
+
+	SerializePacketPtr p2 = SerializePacketPtr::MakeSerializePacket();
+	p2.Clear();
+	p2.Putdata(p1.GetBufferPtr() + 5, p1.GetDataSize());
+
+	bool ret = DecodingPacket(p2, header);
+
+	cout << ret << endl;
 
 	return 0;
 }

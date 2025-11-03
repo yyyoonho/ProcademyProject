@@ -56,14 +56,16 @@ int Net_SerializePacket::GetDataSize()
 
 char* Net_SerializePacket::GetBufferPtr()
 {
-    if (_isHeaderPushed)
+    /*if (_isHeaderPushed)
     {
         return _buf - _pushedHeaderSize;
     }
     else
     {
         return _buf;
-    }
+    }*/
+
+    return _buf;
 }
 
 int Net_SerializePacket::MoveWritePos(int size)
@@ -404,12 +406,14 @@ bool Net_SerializePacket::PushHeader(char* header, int headerSize)
     if (headerSize > sizeof(stNetHeader))
         return false;
 
-    //memcpy_s(_buf - headerSize, headerSize, header, headerSize);
-    memcpy_s(_buf - sizeof(stNetHeader), headerSize, header, headerSize);
+    memcpy_s(_buf - headerSize, headerSize, header, headerSize);
     _size += headerSize;
 
     _isHeaderPushed = true;
     _pushedHeaderSize = headerSize;
+
+    _buf = _buf - headerSize;
+    _writePos = _writePos + headerSize;
 
     return true;
 }

@@ -1,8 +1,16 @@
 #pragma once
 
-struct stNetHeader
+union stNetHeader
 {
-	BYTE _header[5];
+	struct
+	{
+		BYTE code;
+		BYTE len[2];
+		BYTE randomKey;
+		BYTE checkSum;
+	};
+
+	BYTE raw[5]; // 전체를 한 번에 접근하기 위한 배열
 };
 
 class Net_SerializePacket
