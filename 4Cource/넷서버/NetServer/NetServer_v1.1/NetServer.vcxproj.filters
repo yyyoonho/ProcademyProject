@@ -27,6 +27,9 @@
     <Filter Include="소스 파일\Protocol">
       <UniqueIdentifier>{12e887e3-9733-46dd-bae7-14f3c8e73817}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\NetLib\NetCodec">
+      <UniqueIdentifier>{b805ec18-f5d3-4a27-978c-cebc626cc972}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -40,6 +43,9 @@
     </ClCompile>
     <ClCompile Include="EchoServer.cpp">
       <Filter>소스 파일\EchoServer</Filter>
+    </ClCompile>
+    <ClCompile Include="NetCodec.cpp">
+      <Filter>소스 파일\NetLib\NetCodec</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -57,6 +63,9 @@
     </ClInclude>
     <ClInclude Include="EchoServer.h">
       <Filter>소스 파일\EchoServer</Filter>
+    </ClInclude>
+    <ClInclude Include="NetCodec.h">
+      <Filter>소스 파일\NetLib\NetCodec</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

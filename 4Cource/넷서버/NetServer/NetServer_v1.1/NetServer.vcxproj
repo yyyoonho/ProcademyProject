@@ -131,6 +131,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EchoServer.cpp" />
+    <ClCompile Include="NetCodec.cpp" />
     <ClCompile Include="NetServer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -139,6 +140,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EchoServer.h" />
+    <ClInclude Include="NetCodec.h" />
     <ClInclude Include="NetServer.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="stdafx.h" />
