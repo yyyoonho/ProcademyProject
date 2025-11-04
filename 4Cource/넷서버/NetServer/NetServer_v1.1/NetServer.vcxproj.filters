@@ -10,39 +10,33 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="소스 파일\NetLib">
-      <UniqueIdentifier>{8312d5a0-1669-46dd-9266-e9216478e4aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="소스 파일\NetLib\BaseServer">
-      <UniqueIdentifier>{a562b4e1-ae56-45c3-99a3-ff1c4c3e4ff9}</UniqueIdentifier>
+      <UniqueIdentifier>{ecf840e1-25f1-4847-9608-5685a241e2b3}</UniqueIdentifier>
     </Filter>
     <Filter Include="소스 파일\NetLib\Header">
-      <UniqueIdentifier>{396e419a-1135-4d32-bf32-a0c2e270a34e}</UniqueIdentifier>
+      <UniqueIdentifier>{baf37f0d-f39b-46b0-9203-01bbe785054e}</UniqueIdentifier>
     </Filter>
     <Filter Include="소스 파일\NetLib\Struct">
-      <UniqueIdentifier>{69b49469-b40c-4643-ad12-2b81c4c11c15}</UniqueIdentifier>
+      <UniqueIdentifier>{dc1bfe70-1743-4006-8138-e112ba34ac2b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="소스 파일\Protocol">
-      <UniqueIdentifier>{f57f74e5-6605-471d-8dae-4634caa580ec}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="소스 파일\NetLib\Codec">
-      <UniqueIdentifier>{a264d9cc-fde6-4f50-b80b-2837dec6ac5b}</UniqueIdentifier>
+    <Filter Include="소스 파일\NetLib\BaseServer">
+      <UniqueIdentifier>{b9b484ac-908c-4035-b2ff-2f90155e9f69}</UniqueIdentifier>
     </Filter>
     <Filter Include="소스 파일\EchoServer">
-      <UniqueIdentifier>{b3b591da-1411-401c-b2ba-55ec3d5926ff}</UniqueIdentifier>
+      <UniqueIdentifier>{dc107f3b-78a9-485b-8afa-52cad5ea3ef5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Protocol">
+      <UniqueIdentifier>{12e887e3-9733-46dd-bae7-14f3c8e73817}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NetServer.cpp">
-      <Filter>소스 파일\NetLib\BaseServer</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>소스 파일\NetLib\Header</Filter>
     </ClCompile>
+    <ClCompile Include="NetServer.cpp">
+      <Filter>소스 파일\NetLib\BaseServer</Filter>
+    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="NetCodec.cpp">
-      <Filter>소스 파일\NetLib\Codec</Filter>
     </ClCompile>
     <ClCompile Include="EchoServer.cpp">
       <Filter>소스 파일\EchoServer</Filter>
@@ -52,17 +46,14 @@
     <ClInclude Include="stdafx.h">
       <Filter>소스 파일\NetLib\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Struct.h">
-      <Filter>소스 파일\NetLib\Struct</Filter>
-    </ClInclude>
     <ClInclude Include="Protocol.h">
       <Filter>소스 파일\Protocol</Filter>
     </ClInclude>
+    <ClInclude Include="Struct.h">
+      <Filter>소스 파일\NetLib\Struct</Filter>
+    </ClInclude>
     <ClInclude Include="NetServer.h">
       <Filter>소스 파일\NetLib\BaseServer</Filter>
-    </ClInclude>
-    <ClInclude Include="NetCodec.h">
-      <Filter>소스 파일\NetLib\Codec</Filter>
     </ClInclude>
     <ClInclude Include="EchoServer.h">
       <Filter>소스 파일\EchoServer</Filter>

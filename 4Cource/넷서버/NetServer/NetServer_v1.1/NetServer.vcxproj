@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{17edaa27-53a5-453f-bc38-f0b121c1ae2e}</ProjectGuid>
+    <ProjectGuid>{0b2bff07-b327-45ec-8b3e-5d2ed7abb3a1}</ProjectGuid>
     <RootNamespace>NetServer</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -118,9 +118,9 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
       <Optimization>Disabled</Optimization>
       <PrecompiledHeader>Use</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,16 +131,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EchoServer.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="NetCodec.cpp" />
     <ClCompile Include="NetServer.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EchoServer.h" />
-    <ClInclude Include="NetCodec.h" />
     <ClInclude Include="NetServer.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="stdafx.h" />

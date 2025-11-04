@@ -21,7 +21,7 @@ struct myOverlapped
 struct alignas(8) IOReleasePair
 {
     LONG IO_Count = 0;
-    LONG releaseCheck = FALSE;
+    LONG releaseCheck;
 };
 
 struct Session

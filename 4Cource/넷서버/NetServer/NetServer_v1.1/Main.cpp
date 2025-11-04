@@ -53,7 +53,7 @@ int main()
 
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-	hMonitoringThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitoringThread, NULL, NULL, NULL);
+	hMonitoringThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type) & MonitoringThread, NULL, NULL, NULL);
 	if (hMonitoringThread == NULL)
 	{
 		printf("hMonitoringThread create error\n");

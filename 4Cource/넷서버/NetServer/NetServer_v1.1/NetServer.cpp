@@ -88,10 +88,6 @@ void CNetServer::SendPost(Session* pSession)
 		{
 			SendProc(pSession);
 		}
-		else
-		{
-			int a = 3;
-		}
 	}
 }
 
@@ -182,8 +178,6 @@ bool CNetServer::NetInit()
 		printf("Error: listen()\n");
 		return false;
 	}
-
-	return true;
 }
 
 void CNetServer::RecvProc(Session* pSession)
@@ -238,7 +232,7 @@ void CNetServer::SendProc(Session* pSession)
 		InterlockedExchange(&pSession->checkSend, TRUE);
 		return;
 	}
-
+		
 	pSession->sendMyOverlapped.sPacketCount = sPacketCount;
 
 	IncreaseIO_Count(pSession);
@@ -277,7 +271,7 @@ void CNetServer::DecreaseIO_Count(Session* pSession)
 
 		IOReleasePair expected = { 0, FALSE };
 		IOReleasePair desired = { 0, TRUE };
-
+		
 		LONG64 result = InterlockedCompareExchange64((LONG64*)&pSession->IOCountNReleaseCheck, *((LONG64*)&desired), *((LONG64*)&expected));
 		IOReleasePair oldValue = *((IOReleasePair*)&result);
 		if (oldValue.IO_Count != expected.IO_Count || oldValue.releaseCheck != expected.releaseCheck)
@@ -286,7 +280,7 @@ void CNetServer::DecreaseIO_Count(Session* pSession)
 		}
 
 		closesocket(pSession->sock);
-
+		
 		unsigned int idx = GetIdxFromSessionID(pSession->sessionID);
 		_releaseIdxLockFreeStack.Push(idx);
 
@@ -490,7 +484,7 @@ void CNetServer::AcceptThread()
 		_sessionArray[idx].sendMyOverlapped.sPacketCount = 0;
 
 		_sessionArray[idx].recvQ.ClearBuffer();
-		if (_sessionArray[idx].LockFreeSendQ.Size() > 0)
+		if(_sessionArray[idx].LockFreeSendQ.Size() > 0)
 		{
 			_sessionArray[idx].LockFreeSendQ.Clear();
 		}
@@ -499,6 +493,7 @@ void CNetServer::AcceptThread()
 
 		_sessionArray[idx].checkSend = TRUE;
 
+		//_sessionArray[idx].releaseCheck = FALSE;
 		_sessionArray[idx].IOCountNReleaseCheck.releaseCheck = FALSE;
 
 		getpeername(clientSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
