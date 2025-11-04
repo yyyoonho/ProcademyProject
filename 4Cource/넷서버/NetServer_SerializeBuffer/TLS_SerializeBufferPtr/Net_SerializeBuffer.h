@@ -80,6 +80,7 @@ public:
 
 protected:
 	char* _original;
+	char* _originalBuf;
 	char* _buf;
 
 	int _writePos;

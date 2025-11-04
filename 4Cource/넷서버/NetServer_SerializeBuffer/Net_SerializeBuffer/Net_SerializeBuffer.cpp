@@ -10,6 +10,7 @@ Net_SerializePacket::Net_SerializePacket()
 {
     _original = new char[sizeof(stNetHeader) + eBUFFER_DEFAULT];
     _buf = _original + sizeof(stNetHeader);
+    _originalBuf = _buf;
 
     _writePos = 0;
     _readPos = 0;
@@ -22,6 +23,7 @@ Net_SerializePacket::Net_SerializePacket(int bufferSize)
 {
     _original = new char[sizeof(stNetHeader) + bufferSize];
     _buf = _buf + sizeof(stNetHeader);
+    _originalBuf = _buf;
 
     _writePos = 0;
     _readPos = 0;
@@ -39,6 +41,7 @@ void Net_SerializePacket::Clear()
 {
     _writePos = _readPos = 0;
     _size = 0;
+    _buf = _originalBuf;
 
     _isHeaderPushed = false;
     _pushedHeaderSize = 0;
