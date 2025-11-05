@@ -153,7 +153,7 @@ inline void LockFreeQueue<T>::Clear()
     {
         oldTail = _tail;
 
-        if (((Node*)((DWORD64)oldTail & 0x0000ffffffffffff))->next == NULL)
+        if (((Node*)((DWORD64)oldTail & 0x0000ffffffffffff))->next == (Node*)_uniqueQueueCode)
             break;
 
         InterlockedCompareExchangePointer((PVOID*)&_tail, ((Node*)((DWORD64)oldTail & 0x0000ffffffffffff))->next, oldTail);
