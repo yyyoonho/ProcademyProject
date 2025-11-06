@@ -180,7 +180,7 @@ bool CNetServer::NetInit()
 	}
 }
 
-void CNetServer::RecvProc(Session* pSession)
+bool CNetServer::RecvProc(Session* pSession)
 {
 	DWORD sendBytes;
 	DWORD flags = 0;
@@ -194,17 +194,18 @@ void CNetServer::RecvProc(Session* pSession)
 	DWORD wsaRecvRet = WSARecv(pSession->sock, &wsaBuf, 1, &sendBytes, &flags, (LPWSAOVERLAPPED)&pSession->recvMyOverlapped, NULL);
 	if (wsaRecvRet == SOCKET_ERROR)
 	{
-		if (WSAGetLastError() != ERROR_IO_PENDING)
+		if (WSAGetLastError() != ERROR_IO_PENDING && WSAGetLastError() != 0)
 		{
-			if (WSAGetLastError() != 0)
-			{
-				DecreaseIO_Count(pSession);
-			}
+			DecreaseIO_Count(pSession);
 
-			printf("Error: WSARecv() %d\n", WSAGetLastError());
-			return;
+			if (WSAGetLastError() != 10054)
+				printf("Error: WSARecv() %d\n", WSAGetLastError());
+
+			return false;
 		}
 	}
+
+	return true;
 }
 
 void CNetServer::SendProc(Session* pSession)
@@ -247,7 +248,9 @@ void CNetServer::SendProc(Session* pSession)
 		{
 			DecreaseIO_Count(pSession);
 
-			printf("Error: WSASend() %d\n", WSAGetLastError());
+			if (WSAGetLastError() != 10054)
+				printf("Error: WSARecv() %d\n", WSAGetLastError());
+
 			return;
 		}
 	}
@@ -513,7 +516,18 @@ void CNetServer::AcceptThread()
 		}
 
 		// 비동기 IO 걸어두기
-		RecvProc(&_sessionArray[idx]);
+		bool recvRet = RecvProc(&_sessionArray[idx]);
+
+		// 로그인패킷을 send했지만, recv를 실패한 경우.
+		if (recvRet == false)
+		{
+			DecreaseIO_Count(&_sessionArray[idx]);
+		}
+		else
+		{
+			DecreaseIO_Count(&_sessionArray[idx]);
+			_sessionArray[idx].loginCheck = TRUE;
+		}
 	}
 }
 

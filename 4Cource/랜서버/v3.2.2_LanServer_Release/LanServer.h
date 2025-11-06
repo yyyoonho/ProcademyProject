@@ -27,7 +27,7 @@ private:
 	// 클래스 내부 함수
 	bool NetInit();
 
-	void RecvProc(Session* pSession);
+	bool RecvProc(Session* pSession);
 	void SendProc(Session* pSession);
 	void SendPost(Session* pSession);
 
