@@ -8,28 +8,30 @@ using namespace std;
 
 Net_SerializePacket::Net_SerializePacket()
 {
-    _original = new char[sizeof(stNetHeader) + eBUFFER_DEFAULT];
-    _buf = _original + sizeof(stNetHeader);
+    _original = new char[sizeof(stExtraBuffer) + eBUFFER_DEFAULT];
+    _buf = _original + sizeof(stExtraBuffer);
     _originalBuf = _buf;
 
     _writePos = 0;
     _readPos = 0;
     _size = 0;
+    _usingExtraBuffer = 0;
 
-    _capacity = sizeof(stNetHeader) + eBUFFER_DEFAULT;
+    _capacity = sizeof(stExtraBuffer) + eBUFFER_DEFAULT;
 }
 
 Net_SerializePacket::Net_SerializePacket(int bufferSize)
 {
-    _original = new char[sizeof(stNetHeader) + bufferSize];
-    _buf = _buf + sizeof(stNetHeader);
+    _original = new char[sizeof(stExtraBuffer) + bufferSize];
+    _buf = _buf + sizeof(stExtraBuffer);
     _originalBuf = _buf;
 
     _writePos = 0;
     _readPos = 0;
     _size = 0;
+    _usingExtraBuffer = 0;
 
-    _capacity = sizeof(stNetHeader) + bufferSize;
+    _capacity = sizeof(stExtraBuffer) + bufferSize;
 }
 
 Net_SerializePacket::~Net_SerializePacket()
@@ -41,6 +43,7 @@ void Net_SerializePacket::Clear()
 {
     _writePos = _readPos = 0;
     _size = 0;
+    _usingExtraBuffer = 0;
     _buf = _originalBuf;
 
     _isHeaderPushed = false;
@@ -59,15 +62,6 @@ int Net_SerializePacket::GetDataSize()
 
 char* Net_SerializePacket::GetBufferPtr()
 {
-    /*if (_isHeaderPushed)
-    {
-        return _buf - _pushedHeaderSize;
-    }
-    else
-    {
-        return _buf;
-    }*/
-
     return _buf;
 }
 
@@ -406,7 +400,7 @@ int Net_SerializePacket::Putdata(char* chpSrc, int iSrcSize)
 
 bool Net_SerializePacket::PushHeader(char* header, int headerSize)
 {
-    if (headerSize > sizeof(stNetHeader))
+    if (headerSize > sizeof(stExtraBuffer) - _usingExtraBuffer)
         return false;
 
     memcpy_s(_buf - headerSize, headerSize, header, headerSize);
@@ -414,6 +408,25 @@ bool Net_SerializePacket::PushHeader(char* header, int headerSize)
 
     _isHeaderPushed = true;
     _pushedHeaderSize = headerSize;
+    _usingExtraBuffer += headerSize;
+
+    _buf = _buf - headerSize;
+    _writePos = _writePos + headerSize;
+
+    return true;
+}
+
+bool Net_SerializePacket::PushExtraBuffer(char* header, int headerSize)
+{
+    if (headerSize > sizeof(stExtraBuffer) - _usingExtraBuffer)
+        return false;
+
+    memcpy_s(_buf - headerSize, headerSize, header, headerSize);
+    _size += headerSize;
+
+    _isHeaderPushed = true;
+    _pushedHeaderSize = headerSize;
+    _usingExtraBuffer += headerSize;
 
     _buf = _buf - headerSize;
     _writePos = _writePos + headerSize;

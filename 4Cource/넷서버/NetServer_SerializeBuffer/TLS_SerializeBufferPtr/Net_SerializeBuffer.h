@@ -1,16 +1,8 @@
 #pragma once
 
-union stNetHeader
+union stExtraBuffer
 {
-	struct
-	{
-		BYTE code;
-		BYTE len[2];
-		BYTE randomKey;
-		BYTE checkSum;
-	};
-
-	BYTE raw[5]; // 전체를 한 번에 접근하기 위한 배열
+	BYTE raw[16]; // 전체를 한 번에 접근하기 위한 배열
 };
 
 class Net_SerializePacket
@@ -77,6 +69,7 @@ public:
 	int Putdata(char* chpSrc, int iSrcSize);
 
 	bool PushHeader(char* header, int headerSize);
+	bool PushExtraBuffer(char* header, int headerSize);
 
 protected:
 	char* _original;
@@ -88,6 +81,7 @@ protected:
 
 	int _capacity;
 	int _size;
+	int _usingExtraBuffer;
 
 	bool _isHeaderPushed = false;
 	int _pushedHeaderSize = 0;
