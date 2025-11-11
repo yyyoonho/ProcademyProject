@@ -77,7 +77,37 @@ int CNetServer::GetSessionCount()
 
 bool CNetServer::Disconnect(DWORD64 sessionID)
 {
-	return false;
+	// 세션 검색
+	unsigned int idx = GetIdxFromSessionID(sessionID);
+	Session* pSession = NULL;
+	pSession = &_sessionArray[idx];
+
+	// 세션 IO_Count ++ (=SessionRefCount의 역할)
+	IncreaseIO_Count(pSession);
+
+	// release flag 체크
+	if (pSession->IOCountNReleaseCheck.releaseCheck == TRUE)
+	{
+		// 중단 - 이미 릴리즈된 세션입니다.
+		DecreaseIO_Count(pSession);
+		return false;
+	}
+
+	// 세션 ID체크 
+	if (sessionID != pSession->sessionID)
+	{
+		// 중단 - 이미 IO_Count 증가 전에 릴리즈되서 재사용된 세션입니다.
+		DecreaseIO_Count(pSession);
+		return false;
+	}
+
+	// 세션 사용 부
+	pSession->cancelIOCheck = TRUE;
+
+	CancelIoEx((HANDLE)(pSession->sock), NULL);
+	DecreaseIO_Count(pSession);
+
+	return true;
 }
 
 void CNetServer::SendPost(Session* pSession)
@@ -86,7 +116,16 @@ void CNetServer::SendPost(Session* pSession)
 	{
 		if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
 		{
-			SendProc(pSession);
+			// cancel IO 했는지 안했는지 검사.
+			if (pSession->cancelIOCheck == TRUE)
+				return;
+
+			bool ret = SendProc(pSession);
+
+			if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+			{
+				Disconnect(pSession->sessionID);
+			}
 		}
 	}
 }
@@ -208,7 +247,7 @@ bool CNetServer::RecvProc(Session* pSession)
 	return true;
 }
 
-void CNetServer::SendProc(Session* pSession)
+bool CNetServer::SendProc(Session* pSession)
 {
 	WSABUF wsaBuf[100];
 	int sPacketCount = 0;
@@ -231,7 +270,7 @@ void CNetServer::SendProc(Session* pSession)
 	if (sPacketCount == 0)
 	{
 		InterlockedExchange(&pSession->checkSend, TRUE);
-		return;
+		return true;
 	}
 		
 	pSession->sendMyOverlapped.sPacketCount = sPacketCount;
@@ -251,9 +290,11 @@ void CNetServer::SendProc(Session* pSession)
 			if (WSAGetLastError() != 10054)
 				printf("Error: WSARecv() %d\n", WSAGetLastError());
 
-			return;
+			return false;
 		}
 	}
+
+	return true;
 }
 
 void CNetServer::IncreaseIO_Count(Session* pSession)
@@ -366,7 +407,18 @@ void CNetServer::WorkerThread()
 				if (pSession->recvQ.GetUseSize() < sizeof(stHeader))
 				{
 					// 비동기IO: Recv 요청 후 break
-					RecvProc(pSession);
+
+					// cancel IO 했는지 안했는지 검사.
+					if (pSession->cancelIOCheck == TRUE)
+						break;
+
+					bool ret = RecvProc(pSession);
+
+					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+					{
+						Disconnect(pSession->sessionID);
+					}
+
 					break;
 				}
 
@@ -376,7 +428,18 @@ void CNetServer::WorkerThread()
 				if (pSession->recvQ.GetUseSize() < sizeof(stHeader) + payLoadLen)
 				{
 					// 비동기IO: Recv 요청 후 break
-					RecvProc(pSession);
+
+					// cancel IO 했는지 안했는지 검사.
+					if (pSession->cancelIOCheck == TRUE)
+						break;
+
+					bool ret = RecvProc(pSession);
+
+					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+					{
+						Disconnect(pSession->sessionID);
+					}
+
 					break;
 				}
 
@@ -419,7 +482,16 @@ void CNetServer::WorkerThread()
 				{
 					if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
 					{
-						SendProc(pSession);
+						// cancel IO 했는지 안했는지 검사.
+						if (pSession->cancelIOCheck == TRUE)
+							break;
+
+						bool ret = SendProc(pSession);
+
+						if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+						{
+							Disconnect(pSession->sessionID);
+						}
 					}
 				}
 			}
