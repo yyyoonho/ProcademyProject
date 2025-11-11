@@ -43,5 +43,7 @@ struct Session
 
     bool loginCheck;
 
+    bool cancelIOCheck;
+
     IOReleasePair IOCountNReleaseCheck;
 };
