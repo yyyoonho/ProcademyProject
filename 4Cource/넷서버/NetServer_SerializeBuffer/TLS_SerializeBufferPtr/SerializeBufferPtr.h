@@ -97,8 +97,13 @@ public:
 	int Putdata(char* chpSrc, int iSrcSize);
 
 	void PushHeader(char* header, int headerSize);
+	void PushExtraBuffer(char* header, int headerSize);
+
+	void MarkEncoded();
+	bool IsEncoded();
 
 private:
 	Net_SerializePacket* _ptr = NULL;
 	RefCountBlock* _RCBPtr = NULL;
+	bool bEncoded = FALSE;
 };
