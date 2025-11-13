@@ -85,7 +85,16 @@ void CNetServer::SendPost(Session* pSession)
 	{
 		if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
 		{
-			SendProc(pSession);
+			// cancel IO 했는지 안했는지 검사.
+			if (pSession->cancelIOCheck == TRUE)
+				return;
+
+			bool ret = SendProc(pSession);
+
+			if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+			{
+				Disconnect(pSession->sessionID);
+			}
 		}
 	}
 }
@@ -210,7 +219,7 @@ bool CNetServer::RecvProc(Session* pSession)
 	return true;
 }
 
-void CNetServer::SendProc(Session* pSession)
+bool CNetServer::SendProc(Session* pSession)
 {
 	WSABUF wsaBuf[100];
 	int sPacketCount = 0;
@@ -233,7 +242,7 @@ void CNetServer::SendProc(Session* pSession)
 	if (sPacketCount == 0)
 	{
 		InterlockedExchange(&pSession->checkSend, TRUE);
-		return;
+		return false;
 	}
 		
 	pSession->sendMyOverlapped.sPacketCount = sPacketCount;
@@ -241,7 +250,6 @@ void CNetServer::SendProc(Session* pSession)
 	IncreaseIO_Count(pSession);
 
 	DWORD wsaSendRet = WSASend(pSession->sock, wsaBuf, sPacketCount, NULL, 0, (LPWSAOVERLAPPED)&pSession->sendMyOverlapped, NULL);
-	DWORD tmp2 = WSAGetLastError();
 	if (wsaSendRet == SOCKET_ERROR)
 	{
 		DWORD tmp = WSAGetLastError();
@@ -253,9 +261,11 @@ void CNetServer::SendProc(Session* pSession)
 			if (WSAGetLastError() != 10054)
 				printf("Error: WSARecv() %d\n", WSAGetLastError());
 
-			return;
+			return false;
 		}
 	}
+
+	return true;
 }
 
 void CNetServer::IncreaseIO_Count(Session* pSession)
@@ -368,7 +378,18 @@ void CNetServer::WorkerThread()
 				if (pSession->recvQ.GetUseSize() < sizeof(stNetHeader))
 				{
 					// 비동기IO: Recv 요청 후 break
-					RecvProc(pSession);
+					// cancel IO 했는지 안했는지 검사.
+					if (pSession->cancelIOCheck == TRUE)
+						break;
+
+					bool ret = RecvProc(pSession);
+
+					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+					{
+						Disconnect(pSession->sessionID);
+					}
+
+
 					break;
 				}
 
@@ -379,7 +400,18 @@ void CNetServer::WorkerThread()
 				if (pSession->recvQ.GetUseSize() < sizeof(stNetHeader) + payloadLen)
 				{
 					// 비동기IO: Recv 요청 후 break
-					RecvProc(pSession);
+					// cancel IO 했는지 안했는지 검사.
+					if (pSession->cancelIOCheck == TRUE)
+						break;
+
+					bool ret = RecvProc(pSession);
+
+					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+					{
+						Disconnect(pSession->sessionID);
+					}
+
+
 					break;
 				}
 
@@ -417,7 +449,16 @@ void CNetServer::WorkerThread()
 			// 비동기IO: Send 요청
 			if (pSession->LockFreeSendQ.Size() > 0)
 			{
-				SendProc(pSession);
+				// cancel IO 했는지 안했는지 검사.
+				if (pSession->cancelIOCheck != TRUE)
+				{
+					bool ret = SendProc(pSession);
+
+					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+					{
+						Disconnect(pSession->sessionID);
+					}
+				}
 			}
 			else
 			{
@@ -427,7 +468,16 @@ void CNetServer::WorkerThread()
 				{
 					if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
 					{
-						SendProc(pSession);
+						// cancel IO 했는지 안했는지 검사.
+						if (pSession->cancelIOCheck != TRUE)
+						{
+							bool ret = SendProc(pSession);
+
+							if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+							{
+								Disconnect(pSession->sessionID);
+							}
+						}
 					}
 				}
 			}

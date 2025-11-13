@@ -28,7 +28,7 @@ private:
 	bool NetInit();
 
 	bool RecvProc(Session* pSession);
-	void SendProc(Session* pSession);
+	bool SendProc(Session* pSession);
 	void SendPost(Session* pSession);
 
 	void IncreaseIO_Count(Session* pSession);

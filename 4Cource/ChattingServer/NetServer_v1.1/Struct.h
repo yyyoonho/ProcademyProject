@@ -42,6 +42,7 @@ struct Session
     LONG checkSend = TRUE;
 
     bool loginCheck;
+    bool cancelIOCheck;
 
     IOReleasePair IOCountNReleaseCheck;
 };
