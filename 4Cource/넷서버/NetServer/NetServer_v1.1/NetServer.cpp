@@ -462,7 +462,6 @@ void CNetServer::WorkerThread()
 
 		else if (pMyOverlapped->type == SEND)
 		{
-
 			for (int i = 0; i < pMyOverlapped->sPacketCount; i++)
 			{
 				pMyOverlapped->sendSerializePacketPtrArr[i].DecreaseRefCount();
@@ -472,7 +471,16 @@ void CNetServer::WorkerThread()
 			// 비동기IO: Send 요청
 			if (pSession->LockFreeSendQ.Size() > 0)
 			{
-				SendProc(pSession);
+				// cancel IO 했는지 안했는지 검사
+				if (pSession->cancelIOCheck != TRUE)
+				{
+					bool ret = SendProc(pSession);
+
+					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+					{
+						Disconnect(pSession->sessionID);
+					}
+				}
 			}
 			else
 			{
@@ -483,14 +491,14 @@ void CNetServer::WorkerThread()
 					if (InterlockedExchange(&pSession->checkSend, FALSE) == TRUE)
 					{
 						// cancel IO 했는지 안했는지 검사.
-						if (pSession->cancelIOCheck == TRUE)
-							break;
-
-						bool ret = SendProc(pSession);
-
-						if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+						if (pSession->cancelIOCheck != TRUE)
 						{
-							Disconnect(pSession->sessionID);
+							bool ret = SendProc(pSession);
+
+							if (ret == TRUE && pSession->cancelIOCheck == TRUE)
+							{
+								Disconnect(pSession->sessionID);
+							}
 						}
 					}
 				}
