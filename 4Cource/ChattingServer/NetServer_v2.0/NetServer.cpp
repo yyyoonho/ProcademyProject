@@ -13,7 +13,7 @@ CNetServer::~CNetServer()
 {
 }
 
-bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount)
+bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff=true)
 {
 	_ipAddress = ipAddress;
 	_port = port;
@@ -22,6 +22,7 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	_coreSkip = coreSkip;
 	_isNagle = isNagle;
 	_maximumSessionCount = maximumSessionCount;
+	_codecOnOff = codecOnOff;
 
 	_hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
@@ -159,12 +160,23 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	// 세션 사용 부
 
 	// 인코딩 + Header넣기
-	if (!pPacket.IsEncoded())
+	if (_codecOnOff == FALSE)
 	{
-		EncodingPacket(pPacket);
-		pPacket.MarkEncoded();
+		if (!pPacket.IsEncoded())
+		{
+			JustPushHeader(pPacket);
+			pPacket.MarkEncoded();	// -> 여기서는 header를 push하는걸 1회만 하기위해 체크하는 용도.
+		}
 	}
-		
+	else if (_codecOnOff == TRUE)
+	{
+		if (!pPacket.IsEncoded())
+		{
+			EncodingPacket(pPacket);
+			pPacket.MarkEncoded();
+		}
+	}
+	
 	RawPtr packetRawPtr;
 	pPacket.GetRawPtr(&packetRawPtr);
 
@@ -457,10 +469,17 @@ void CNetServer::WorkerThread()
 				InterlockedIncrement(&_recvMessageTPS);
 
 				// 디코딩
-				bool decodingRet = DecodingPacket(pPacket, *(stNetHeader*)&header);
-				if (decodingRet == FALSE)
+				if (_codecOnOff == TRUE)
 				{
-					continue;
+					bool decodingRet = DecodingPacket(pPacket, *(stNetHeader*)&header);
+					if (decodingRet == FALSE)
+					{
+						continue;
+					}
+				}
+				else if (_codecOnOff == FALSE)
+				{
+
 				}
 
 				// 컨텐츠에 메시지 전달

@@ -9,8 +9,6 @@
 
 using namespace std;
 
-bool FrameControl();
-
 bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount)
 {
 	bool ret = CNetServer::Start(ipAddress, port, workerThreadCount, coreSkip, isNagle, maximumSessionCount);
@@ -22,6 +20,8 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	// 종료 이벤트 생성
 	_hEventQuit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
+	// 종료 이벤트 생성
+	_hEventMsg = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	// 메시지큐 동기화객체 초기화
 	InitializeSRWLock(&_contentMSGLock);
@@ -54,6 +54,7 @@ void ChatServer::OnAccept(DWORD64 sessionID)
 
 	AcquireSRWLockExclusive(&_contentMSGLock);
 	_contentMSGQueue.Enqueue(acceptMsg);
+	SetEvent(_hEventMsg);
 	ReleaseSRWLockExclusive(&_contentMSGLock);
 
 	return;
@@ -61,6 +62,18 @@ void ChatServer::OnAccept(DWORD64 sessionID)
 
 void ChatServer::OnRelease(DWORD64 sessionID)
 {
+	SerializePacketPtr releaseMsg = SerializePacketPtr::MakeSerializePacket();
+	releaseMsg.Clear();
+
+	MSG_CATEGORY msgCategory = MSG_CATEGORY::DISCONNECT;
+
+	releaseMsg.PushExtraBuffer((char*)&msgCategory, sizeof(MSG_CATEGORY));
+	releaseMsg.Putdata((char*)&sessionID, sizeof(DWORD64));
+
+	AcquireSRWLockExclusive(&_contentMSGLock);
+	_contentMSGQueue.Enqueue(releaseMsg);
+	SetEvent(_hEventMsg);
+	ReleaseSRWLockExclusive(&_contentMSGLock);
 }
 
 void ChatServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -72,6 +85,7 @@ void ChatServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 	AcquireSRWLockExclusive(&_contentMSGLock);
 	_contentMSGQueue.Enqueue(pPacket);
+	SetEvent(_hEventMsg);
 	ReleaseSRWLockExclusive(&_contentMSGLock);
 }
 
@@ -87,37 +101,76 @@ void ChatServer::ContentThreadRun(LPVOID* lParam)
 
 void ChatServer::ContentThread()
 {
-	while (!_bShutdown)
+	HANDLE hEventArr[2] = { _hEventMsg, _hEventQuit };
+
+	int acceptOldTime = timeGetTime();
+	int heartbeatOldTime = timeGetTime();
+
+	while (1)
 	{
-		if(!FrameControl())
-			continue;
-
-		int msgQSize = _contentMSGQueue.GetUseSize();
-		for (int i = 0; i < msgQSize; i++)
+		DWORD ret = WaitForMultipleObjects(2, hEventArr, FALSE, 3000);
+		if (ret == WAIT_TIMEOUT)
 		{
-			SerializePacketPtr msg;
-			_contentMSGQueue.Dequeue(msg);
+			int nowTime = timeGetTime();
 
-			MSG_CATEGORY msgCategory;
-			msg.GetData((char*)&msgCategory, sizeof(MSG_CATEGORY));
+			int acceptDiffTime = nowTime - acceptOldTime;
+			int heartbeatDiffTime = nowTime - heartbeatOldTime;
 
-			switch (msgCategory)
+			if (acceptDiffTime >= 3000)
 			{
-			case MSG_CATEGORY::ACCEPT:
-				AcceptProc(msg);
-				break;
-			case MSG_CATEGORY::MESSAGE:
-				PacketProc(msg);
-				break;
-			case MSG_CATEGORY::DISCONNECT:
-				break;
+				NoReactAfterAcceptProc();
+				acceptOldTime = nowTime;
+			}
+			if (heartbeatDiffTime >= 10000)
+			{
+				NoHeartbeatProc();
+				heartbeatDiffTime = nowTime;
 			}
 
+			continue;
 		}
 
-		// TODO: 하트비트
+		if (_contentMSGQueue.GetUseSize() > 0)
+			SetEvent(_hEventMsg);
 
-		// TODO: accept한것들중 30초이상 안되는것들 처리
+		SerializePacketPtr msg;
+		_contentMSGQueue.Dequeue(msg);
+
+		MSG_CATEGORY msgCategory;
+		msg.GetData((char*)&msgCategory, sizeof(MSG_CATEGORY));
+
+		switch (msgCategory)
+		{
+		case MSG_CATEGORY::ACCEPT:
+			AcceptProc(msg);
+			break;
+		case MSG_CATEGORY::MESSAGE:
+			PacketProc(msg);
+			break;
+		case MSG_CATEGORY::DISCONNECT:
+			ReleaseProc(msg);
+			break;
+		}
+	
+		// 하트비트 처리 & 
+		// Accept후 반응없는 애들 처리
+		{
+			int nowTime = timeGetTime();
+
+			int acceptDiffTime = nowTime - acceptOldTime;
+			int heartbeatDiffTime = nowTime - heartbeatOldTime;
+
+			if (acceptDiffTime >= 3000)
+			{
+				NoReactAfterAcceptProc();
+				acceptOldTime = nowTime;
+			}
+			if (heartbeatDiffTime >= 10000)
+			{
+				NoHeartbeatProc();
+				heartbeatDiffTime = nowTime;
+			}
+		}
 	}
 
 	return;
@@ -150,7 +203,10 @@ void ChatServer::Multicast(std::vector<INT64>& accountNoArr, SerializePacketPtr 
 
 void ChatServer::AcceptProc(SerializePacketPtr pPacket)
 {
+	DWORD64 sessionID;
+	pPacket.GetData((char*)&sessionID, sizeof(DWORD64));
 
+	CreatePlayer(sessionID);
 }
 
 void ChatServer::PacketProc(SerializePacketPtr pPacket)
@@ -190,21 +246,26 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	char sessionKey[64];
 
 	pPacket >> accountNo;
-	pPacket.GetData((char*)&ID, 20);
-	pPacket.GetData((char*)&nickName, 20);
+	pPacket.GetData((char*)&ID, sizeof(WCHAR) * 20);
+	pPacket.GetData((char*)&nickName, sizeof(WCHAR) * 20);
 	pPacket.GetData(sessionKey, 64);
 
 	// 중복로그인 체크
 	bool isLoggedIn = IsLoggedIn(sessionID);
 	if (isLoggedIn == TRUE)
 	{
-		// TODO: 기존에 들어와있던 녀석도 팅기게.
-		// TODO: 새로운놈도 팅기게. (wait pool에 만들어놓은것도 찾아서 free)
+		// 1. (기존) 세션 먼저 disconnect 한 다음, Player지우기.
+		DWORD originSessionID;
+		GetSessionID(accountNo, &originSessionID);
 
-		// 1. remove 존에 옮기고, (기존 + 새로)세션 먼저 disconnect 한다음, player지우기.
+		Disconnect(originSessionID);
+
+		// 2. (New) 세션 먼저 disconnect 한 다음, Player 지우기.
+		Disconnect(sessionID);
 	}
 	else
 	{
+		// 정상 로그인절차 진행
 		LogInPlayer(sessionID, accountNo, ID, 20, nickName, 20, sessionKey, 64);
 	}
 
@@ -245,8 +306,18 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 
 	WORD oldSectorX;
 	WORD oldSectorY;
-	SetSector(accountNo, newSectorY, newSectorX, &oldSectorX, &oldSectorY); // playerManager
-	MoveSector(accountNo, newSectorY, newSectorX, oldSectorX, oldSectorY);
+	SetSector(accountNo, newSectorY, newSectorX, &oldSectorX, &oldSectorY);		// playerManager
+
+	// 여기서 create인지 move 인지 결정
+	PLAYER_STATE state;
+	GetPlayerState(accountNo, &state);
+	if (state == PLAYER_STATE::LOGGED_IN)
+	{
+		CreatePlayerToSector(accountNo, newSectorY, newSectorX);				// sectorManager
+		SetPlayerState(accountNo, PLAYER_STATE::PLAY);
+	}
+	else
+		MoveSector(accountNo, newSectorY, newSectorX, oldSectorX, oldSectorY);	// sectorManager
 	
 	// Res 메시지 생성
 	SerializePacketPtr newMsgPacket = SerializePacketPtr::MakeSerializePacket();
@@ -275,8 +346,8 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	pPacket.GetData((char*)&message, messageLen);
 
 	// 메시지 생성
-	stPlayer player;
-	bool ret = GetPlayer(accountNo, &player);
+	stPlayer* pPlayer;
+	bool ret = GetPlayer(accountNo, &pPlayer);
 	if (ret == false)
 		return;
 
@@ -288,8 +359,8 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 
 	newMsgPacket << accountNo;
 
-	WCHAR* id = player.ID;
-	WCHAR* nickName = player.nickname;
+	WCHAR* id = pPlayer->ID;
+	WCHAR* nickName = pPlayer->nickname;
 
 	newMsgPacket.Putdata((char*)id, 20);
 	newMsgPacket.Putdata((char*)nickName, 20);
@@ -317,19 +388,36 @@ void ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
 	UpdateHeartbeat(sessionID);
 }
 
-bool FrameControl()
+void ChatServer::ReleaseProc(SerializePacketPtr pPacket)
 {
-	static int oldTime = timeGetTime();
+	// Disconnect 후 Release작업진행
+	DWORD64 sessionID;
+	pPacket.GetData((char*)&sessionID, sizeof(DWORD64));
 
-	int diffTime = timeGetTime() - oldTime;
+	RemovePlayerFromWaitMap(sessionID);
+	RemovePlayerFromPlayerMap(sessionID);
 
-	if (diffTime < 40) // 1000/40 = 25fps
+
+}
+
+void ChatServer::NoHeartbeatProc()
+{
+	vector<DWORD64> NoHeartbeatSession;
+	DisconnectNoLoginPlayer(NoHeartbeatSession);
+
+	for (int i = 0; i < NoHeartbeatSession.size(); i++)
 	{
-		return false;
+		Disconnect(NoHeartbeatSession[i]);
 	}
-	else
+}
+
+void ChatServer::NoReactAfterAcceptProc()
+{
+	vector<DWORD64> NoReactSession;
+	DisconnectNoLoginPlayer(NoReactSession);
+
+	for (int i = 0; i < NoReactSession.size(); i++)
 	{
-		oldTime += 40;
-		return true;
+		Disconnect(NoReactSession[i]);
 	}
 }

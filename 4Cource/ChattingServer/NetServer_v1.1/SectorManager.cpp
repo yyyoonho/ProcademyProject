@@ -55,10 +55,33 @@ void GetAdjacentSectorPlayers(WORD sectorY, WORD sectorX, std::vector<INT64>& ar
 			continue;
 
 		list<INT64>::iterator iter = playersInSector[nextY][nextX].begin();
-		for (; iter != playersInSector[nextY][nextX].end(); iter++)
+		for (; iter != playersInSector[nextY][nextX].end(); ++iter)
 		{
 			arr.push_back(*iter);
 		}
 
 	}
+}
+
+void CreatePlayerToSector(INT64 accountNo, WORD sectorY, WORD sectorX)
+{
+	playersInSector[sectorY][sectorX].push_back(accountNo);
+}
+
+bool RemovePlayerFromSector(INT64 accountNo, WORD sectorY, WORD sectorX)
+{
+	bool flag = false;
+
+	list<INT64>::iterator iter = playersInSector[sectorY][sectorX].begin();
+	for (; iter != playersInSector[sectorY][sectorX].end(); ++iter)
+	{
+		if (*iter != accountNo)
+			continue;
+
+		playersInSector[sectorY][sectorX].erase(iter);
+		flag = true;
+	}
+
+
+	return flag;
 }

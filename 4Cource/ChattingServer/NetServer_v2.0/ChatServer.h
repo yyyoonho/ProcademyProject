@@ -1,5 +1,8 @@
 #pragma once
 
+class PlayerManager;
+class SectorManager;
+
 class ChatServer : public CNetServer
 {
 public:
@@ -8,7 +11,8 @@ public:
 		unsigned short workerThreadCount,
 		unsigned short coreSkip,
 		bool isNagle,
-		unsigned int maximumSessionCount) override;
+		unsigned int maximumSessionCount, 
+		bool codecOnOff) override;
 
 	virtual void Stop() override;
 
@@ -33,11 +37,6 @@ private:
 	void ContentThread();
 
 private:
-	void UnicastByAccountNo(INT64 accountNo, SerializePacketPtr sPacket);
-	void UnicastBySessionID(DWORD64 sessionID, SerializePacketPtr sPacket);
-	void Multicast(std::vector<INT64>& accountNoArr, SerializePacketPtr sPacket);
-
-private:
 	void AcceptProc(SerializePacketPtr pPacket);
 
 private:
@@ -51,7 +50,10 @@ private:
 	void ReleaseProc(SerializePacketPtr pPacket);
 
 private:
-	void NoHeartbeatProc();
-	void NoReactAfterAcceptProc();
+	void DisconnectUnresponsivePlayers();
+
+public:
+	PlayerManager* _playerManager;
+	SectorManager* _sectorManager;
 };
 

@@ -6,7 +6,9 @@ using namespace std;
 
 int main()
 {
-	
+	int a = sizeof(WCHAR);
+
+	int b = 32;
 	
 
 

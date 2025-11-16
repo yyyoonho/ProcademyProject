@@ -9,6 +9,8 @@ CEchoServer server1;
 HANDLE hMonitoringThread;
 HANDLE hEvent_Quit;
 
+int a = 1;
+
 void MonitoringThread()
 {
 	while (1)
@@ -61,8 +63,7 @@ int main()
 
 		if (inputKey == 'K' || inputKey == 'k')
 		{
-			int a = 1;
-			server1.Disconnect(a);
+			server1.Disconnect(a++);
 		}
 	}
 
