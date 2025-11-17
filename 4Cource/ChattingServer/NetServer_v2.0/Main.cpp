@@ -9,7 +9,7 @@ ChatServer chattingServer;
 int main()
 {
 
-	bool serverSet = chattingServer.Start(L"127.0.0.1", 6000, 4, 2, TRUE, 10000, FALSE);
+	bool serverSet = chattingServer.Start(L"127.0.0.1", 10004, 4, 2, TRUE, 10000, FALSE);
 	if (serverSet == false)
 	{
 		printf("server start error\n");

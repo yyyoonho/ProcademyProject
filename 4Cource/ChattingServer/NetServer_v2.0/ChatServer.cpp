@@ -187,6 +187,10 @@ void ChatServer::PacketProc(SerializePacketPtr pPacket)
 	case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
 		PacketProc_Heartbeat(sessionID);
 		break;
+
+	default:
+		int a = 3;
+		break;
 	}
 }
 
@@ -292,16 +296,34 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	vector<INT64> aroundPlayer;
 	_sectorManager->GetAroundAccountNo(accountNo, aroundPlayer);
 
+	bool flag = false;
+
+	// debuf
+	if (aroundPlayer.size() >= 2)
+	{
+		int a = 3;
+	}
+
 	for (int i = 0; i < aroundPlayer.size(); i++)
 	{
 		DWORD64 aroundPlayerSessionID = _playerManager->GetSessionID(aroundPlayer[i]);
 		if (aroundPlayerSessionID == -1)
 			continue;
 
+		if (aroundPlayer[i] == accountNo)
+		{
+			flag = true;
+		}
+
 		// LOG
 		cout << "#Send <- en_PACKET_CS_CHAT_RES_MESSAGE - accountNo:" << accountNo << endl;
 
 		SendPacket(aroundPlayerSessionID, msgPacket);
+	}
+
+	if (flag == false && aroundPlayer.size() > 0)
+	{
+		int a = 3;
 	}
 }
 

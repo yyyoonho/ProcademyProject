@@ -162,6 +162,8 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	// 인코딩 + Header넣기
 	if (_codecOnOff == FALSE)
 	{
+		bool ret = pPacket.IsEncoded();
+
 		if (!pPacket.IsEncoded())
 		{
 			JustPushHeader(pPacket);
