@@ -30,7 +30,6 @@ SerializePacketPtr::SerializePacketPtr()
 {
     _ptr = NULL;
     _RCBPtr = NULL;
-    bEncoded = FALSE;
 }
 
 SerializePacketPtr::SerializePacketPtr(Net_SerializePacket* ptr)
@@ -131,8 +130,6 @@ void SerializePacketPtr::Clear()
         return;
 
     _ptr->Clear();
-
-    bEncoded = FALSE;
 }
 
 int SerializePacketPtr::GetBufferSize()
@@ -460,10 +457,10 @@ void SerializePacketPtr::PushExtraBuffer(char* header, int headerSize)
 
 void SerializePacketPtr::MarkEncoded()
 {
-    bEncoded = TRUE;
+    _ptr->MarkEncoded();
 }
 
 bool SerializePacketPtr::IsEncoded()
 {
-    return bEncoded;
+    return _ptr->IsEncoded();
 }

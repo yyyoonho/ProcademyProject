@@ -18,6 +18,8 @@ Net_SerializePacket::Net_SerializePacket()
     _usingExtraBuffer = 0;
 
     _capacity = sizeof(stExtraBuffer) + eBUFFER_DEFAULT;
+
+    _bEncoded = false;
 }
 
 Net_SerializePacket::Net_SerializePacket(int bufferSize)
@@ -32,6 +34,8 @@ Net_SerializePacket::Net_SerializePacket(int bufferSize)
     _usingExtraBuffer = 0;
 
     _capacity = sizeof(stExtraBuffer) + bufferSize;
+
+    _bEncoded = false;
 }
 
 Net_SerializePacket::~Net_SerializePacket()
@@ -48,6 +52,8 @@ void Net_SerializePacket::Clear()
 
     _isHeaderPushed = false;
     _pushedHeaderSize = 0;
+
+    _bEncoded = false;
 }
 
 int Net_SerializePacket::GetBufferSize()
@@ -432,4 +438,14 @@ bool Net_SerializePacket::PushExtraBuffer(char* header, int headerSize)
     _writePos = _writePos + headerSize;
 
     return true;
+}
+
+bool Net_SerializePacket::IsEncoded()
+{
+    return _bEncoded;
+}
+
+void Net_SerializePacket::MarkEncoded()
+{
+    _bEncoded = true;
 }

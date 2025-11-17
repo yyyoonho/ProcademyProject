@@ -105,5 +105,4 @@ public:
 private:
 	Net_SerializePacket* _ptr = NULL;
 	RefCountBlock* _RCBPtr = NULL;
-	bool bEncoded = FALSE;
 };

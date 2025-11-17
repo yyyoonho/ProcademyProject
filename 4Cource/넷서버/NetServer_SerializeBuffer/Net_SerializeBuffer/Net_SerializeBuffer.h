@@ -71,6 +71,9 @@ public:
 	bool PushHeader(char* header, int headerSize);
 	bool PushExtraBuffer(char* header, int headerSize);
 
+	bool IsEncoded();
+	void MarkEncoded();
+
 protected:
 	char* _original;
 	char* _originalBuf;
@@ -86,4 +89,5 @@ protected:
 	bool _isHeaderPushed = false;
 	int _pushedHeaderSize = 0;
 
+	bool _bEncoded = false;
 };
