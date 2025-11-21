@@ -130,7 +130,12 @@ void ChatServer::ContentThread()
 		}
 
 		SerializePacketPtr msg;
-		_contentMSGQueue.Dequeue(msg);
+		int tmpRet = _contentMSGQueue.Dequeue(msg);
+		if (tmpRet == 0)
+		{
+			// 가짜깨움
+			continue;
+		}
 
 		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::UpdateMessageQueue);
 		Monitoring::GetInstance()->Increase(MonitorType::UpdateTPS);
@@ -150,8 +155,8 @@ void ChatServer::ContentThread()
 			AcceptProc(sessionID, msg);
 			break;
 		case MSG_CATEGORY::MESSAGE:
-			if (_playerManager->IsActive(sessionID) == FALSE)
-				break;
+			/*if (_playerManager->IsActive(sessionID) == FALSE)
+				break;*/
 			PacketProc(sessionID, msg);
 			break;
 		case MSG_CATEGORY::DISCONNECT:
@@ -175,10 +180,10 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 	WORD msgType;
 	pPacket >> msgType;
 
-	if (_playerManager->CheckMessageRateLimit(sessionID, msgType) == FALSE)
+	/*if (_playerManager->CheckMessageRateLimit(sessionID, msgType) == FALSE)
 	{
-		//return;
-	}
+		return;
+	}*/
 
 	// switch - case로 메시지별 처리 함수 찾아가기.
 	switch (msgType)
