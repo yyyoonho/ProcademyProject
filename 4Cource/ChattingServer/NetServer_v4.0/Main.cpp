@@ -27,7 +27,7 @@ int main()
 {
 	timeBeginPeriod(1);
 
-	bool serverSet = chattingServer.Start(L"127.0.0.1", 10004, 20, 2, TRUE, 10000, TRUE);
+	bool serverSet = chattingServer.Start(L"127.0.0.1", 10004, 20, 2, TRUE, 50000, TRUE);
 	if (serverSet == false)
 	{
 		printf("server start error\n");
@@ -44,14 +44,16 @@ int main()
 
 	while (1)
 	{
-		char inputKey = _getch();
+		ProfilerInput();
+
+		/*char inputKey = _getch();
 		if (inputKey == 'Q' || inputKey == 'q')
 		{
 			chattingServer.Stop();
 			SetEvent(hEvent_Quit);
 
 			break;
-		}
+		}*/
 	}
 
 	WaitForSingleObject(hThread_Monitoring, INFINITE);

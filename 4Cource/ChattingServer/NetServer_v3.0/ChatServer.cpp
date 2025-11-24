@@ -164,7 +164,7 @@ void ChatServer::ContentThread()
 			break;
 		}
 
-		DisconnectUnresponsivePlayers();
+		//DisconnectUnresponsivePlayers();
 	}
 
 	return;
