@@ -10,7 +10,7 @@ public:
 	{
 		DWORD64 sessionID;
 		DWORD waitLoginTime;
-		SRWLOCK playerLock;
+		//SRWLOCK playerLock;
 
 		PLAYER_STATE state;
 	};
@@ -31,7 +31,7 @@ public:
 
 		PLAYER_STATE state;
 
-		SRWLOCK playerLock;
+		//SRWLOCK playerLock;
 	};
 
 public:

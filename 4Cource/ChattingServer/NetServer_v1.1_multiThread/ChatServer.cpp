@@ -26,7 +26,7 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		tmpIdx_LockFreeStack.Push(i);
 		tmpPlayerArr[i].sessionID = 0xffffffffffffffff;
 		tmpPlayerArr[i].state = PLAYER_STATE::INVALID;
-		InitializeSRWLock(&tmpPlayerArr[i].playerLock);
+		//InitializeSRWLock(&tmpPlayerArr[i].playerLock);
 	}
 
 	for (int i = 19999; i >= 0; i--)
@@ -34,7 +34,7 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		Idx_LockFreeStack.Push(i);
 		playerArr[i].sessionID = 0xffffffffffffffff;
 		playerArr[i].state = PLAYER_STATE::INVALID;
-		InitializeSRWLock(&playerArr[i].playerLock);
+		//InitializeSRWLock(&playerArr[i].playerLock);
 	}
 
 	for (int i = 0; i < MAX_SECTOR_Y; i++)
@@ -71,13 +71,13 @@ void ChatServer::OnAccept(DWORD64 sessionID)
 	int idx;
 	tmpIdx_LockFreeStack.Pop(&idx);
 
-	AcquireSRWLockExclusive(&tmpPlayerArr[idx].playerLock);
+	//AcquireSRWLockExclusive(&tmpPlayerArr[idx].playerLock);
 
 	tmpPlayerArr[idx].sessionID = sessionID;
 	tmpPlayerArr[idx].waitLoginTime = timeGetTime();
 	tmpPlayerArr[idx].state = PLAYER_STATE::ACCEPT;
 
-	ReleaseSRWLockExclusive(&tmpPlayerArr[idx].playerLock);
+	//ReleaseSRWLockExclusive(&tmpPlayerArr[idx].playerLock);
 
 
 	AcquireSRWLockExclusive(&tmpSessionIdToIndex_Lock);
@@ -112,12 +112,12 @@ void ChatServer::OnRelease(DWORD64 sessionID)
 
 		if (tmpIdx != -1)
 		{
-			AcquireSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+			//AcquireSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 
 			tmpPlayerArr[tmpIdx].sessionID = 0xffffffffffffffff;
 			tmpPlayerArr[tmpIdx].state = PLAYER_STATE::INVALID;
 
-			ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+			//ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 
 			tmpIdx_LockFreeStack.Push(tmpIdx);
 		}
@@ -164,7 +164,7 @@ void ChatServer::OnRelease(DWORD64 sessionID)
 
 		if (idx != -1)
 		{
-			AcquireSRWLockExclusive(&playerArr[idx].playerLock);
+			//AcquireSRWLockExclusive(&playerArr[idx].playerLock);
 
 			playerArr[idx].sessionID = 0xffffffffffffffff;
 			state = playerArr[idx].state;
@@ -173,7 +173,7 @@ void ChatServer::OnRelease(DWORD64 sessionID)
 
 			playerArr[idx].state = PLAYER_STATE::INVALID;
 
-			ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
+			//ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
 		}
 
 		if (accountNo != -1)
@@ -282,15 +282,15 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		ReleaseSRWLockExclusive(&tmpSessionIdToIndex_Lock);
 
 
-		AcquireSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+		//AcquireSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 		if (tmpPlayerArr[tmpIdx].sessionID != sessionID)
 		{
-			ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+			//ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 			return;
 		}
 		tmpPlayerArr[tmpIdx].state = PLAYER_STATE::DISCONNECTING;
 
-		ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+		//ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 
 		SendPacket(sessionID, pPacket);
 		Disconnect(sessionID);
@@ -308,15 +308,15 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		int oldIdx = iter2->second;
 		ReleaseSRWLockShared(&accountToIndex_Lock);
 
-		AcquireSRWLockShared(&playerArr[oldIdx].playerLock);
+		//AcquireSRWLockShared(&playerArr[oldIdx].playerLock);
 		if (playerArr[oldIdx].accountNo != accountNo)
 		{
-			ReleaseSRWLockShared(&playerArr[oldIdx].playerLock);
+			//ReleaseSRWLockShared(&playerArr[oldIdx].playerLock);
 			return;
 		}
 
 		DWORD64 oldPlayerSessionID = playerArr[oldIdx].sessionID;
-		ReleaseSRWLockShared(&playerArr[oldIdx].playerLock);
+		//ReleaseSRWLockShared(&playerArr[oldIdx].playerLock);
 
 		Disconnect(oldPlayerSessionID);
 
@@ -344,10 +344,10 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		// ¿©±â!
 
-		AcquireSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+		//AcquireSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 		if (tmpPlayerArr[tmpIdx].sessionID != sessionID)
 		{
-			ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+			//ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 			return;
 		}
 
@@ -356,12 +356,12 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		tmpIdx_LockFreeStack.Push(tmpIdx);
 
-		ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+		//ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 
 		int idx;
 		Idx_LockFreeStack.Pop(&idx);
 
-		AcquireSRWLockExclusive(&playerArr[idx].playerLock);
+		//AcquireSRWLockExclusive(&playerArr[idx].playerLock);
 
 		playerArr[idx].sessionID = sessionID;
 		playerArr[idx].accountNo = accountNo;
@@ -370,7 +370,7 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		pPacket.GetData(playerArr[idx].sessionKey, sizeof(char) * 64);
 		playerArr[idx].state = PLAYER_STATE::LOGIN;
 
-		ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
+		//ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
 
 
 		AcquireSRWLockExclusive(&accountToIndex_Lock);
@@ -428,10 +428,10 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 	ReleaseSRWLockShared(&accountToIndex_Lock);
 
 
-	AcquireSRWLockExclusive(&playerArr[idx].playerLock);
+	//AcquireSRWLockExclusive(&playerArr[idx].playerLock);
 	if (playerArr[idx].sessionID != sessionID)
 	{
-		ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
+		//ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
 		return;
 	}
 
@@ -473,7 +473,7 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 		ReleaseSRWLockExclusive(&sector_Lock[newSectorY][newSectorX]);
 	}
 
-	ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
+	//ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
 
 	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 	newPacket.Clear();
@@ -518,10 +518,10 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 
 	ReleaseSRWLockShared(&accountToIndex_Lock);
 
-	AcquireSRWLockShared(&playerArr[idx].playerLock);
+	//AcquireSRWLockShared(&playerArr[idx].playerLock);
 	if (playerArr[idx].sessionID != sessionID)
 	{
-		ReleaseSRWLockShared(&playerArr[idx].playerLock);
+		//ReleaseSRWLockShared(&playerArr[idx].playerLock);
 		return;
 	}
 
@@ -531,7 +531,7 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	newPacket.Putdata((char*)playerArr[idx].ID, sizeof(WCHAR) * 20);
 	newPacket.Putdata((char*)playerArr[idx].nickName, sizeof(WCHAR) * 20);
 
-	ReleaseSRWLockShared(&playerArr[idx].playerLock);
+	//ReleaseSRWLockShared(&playerArr[idx].playerLock);
 
 	newPacket << msgLen;
 	newPacket.Putdata((char*)msg, msgLen);
@@ -575,22 +575,22 @@ void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
 	ReleaseSRWLockShared(&sessionIdToAccountNo_Lock);
 
 
-	AcquireSRWLockShared(&sessionIdToAccountNo_Lock);
+	AcquireSRWLockShared(&accountToIndex_Lock);
 	unordered_map<INT64, int>::iterator iter2 = accountToIndex.find(accountNo);
 	if (iter2 == accountToIndex.end())
 	{
-		ReleaseSRWLockShared(&sessionIdToAccountNo_Lock);
+		ReleaseSRWLockShared(&accountToIndex_Lock);
 		return;
 	}
 
 	int idx = iter2->second;
-	ReleaseSRWLockShared(&sessionIdToAccountNo_Lock);
+	ReleaseSRWLockShared(&accountToIndex_Lock);
 
 
-	AcquireSRWLockShared(&playerArr[idx].playerLock);
+	//AcquireSRWLockShared(&playerArr[idx].playerLock);
 	playerArr[idx].heartbeat = timeGetTime();
 
-	ReleaseSRWLockShared(&playerArr[idx].playerLock);
+	//ReleaseSRWLockShared(&playerArr[idx].playerLock);
 }
 
 void ChatServer::DisconnectUnresponsivePlayers()
