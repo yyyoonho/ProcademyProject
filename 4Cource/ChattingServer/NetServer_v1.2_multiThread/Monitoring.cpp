@@ -64,8 +64,6 @@ void Monitoring::PrintMonitoring()
 	cout << "SessionNum: " << _monitoringArr[(int)MonitorType::SessionNum] << "\n";
 	cout << "PacketPool: " << _monitoringArr[(int)MonitorType::PacketPool] << "\n";
 	cout << "\n";
-	cout << "UpdateMessageQueue: " << _monitoringArr[(int)MonitorType::UpdateMessageQueue] << "\n";
-	cout << "\n";
 	cout << "PlayerDataPool: " << _monitoringArr[(int)MonitorType::PlayerDataPool] << "\n";
 	cout << "PlayerCount: " << _monitoringArr[(int)MonitorType::PlayerCount] << "\n";
 	cout << "\n";

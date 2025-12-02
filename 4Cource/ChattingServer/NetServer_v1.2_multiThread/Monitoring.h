@@ -5,8 +5,6 @@ enum class MonitorType : int
 	SessionNum,				// NetServer 의 세션수					(O) -> 초기화 x
 	PacketPool,				// Packet 풀 할당량 (아직)				()	-> 초기화 x
 
-	UpdateMessageQueue,		// ContentThread 큐 남은개수				(O) -> 초기화 x
-
 	PlayerDataPool,			// Player 구조체 할당량 (아직)			()	-> 초기화 x
 	PlayerCount,			// Contents 파트 Player 수				(O)	-> 초기화 x
 

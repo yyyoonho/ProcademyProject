@@ -173,13 +173,15 @@ void ChatServer::OnRelease(DWORD64 sessionID)
 		ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
 
 		Idx_LockFreeStack.Push(idx);
-	}
 
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PlayerCount);
+	}
 
 }
 
 void ChatServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::UpdateTPS);
 	PacketProc(sessionID, pPacket);
 }
 
@@ -371,6 +373,8 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		ReleaseSRWLockExclusive(&onlineAccounts_Lock);
 
 		SendPacket(sessionID, newPacket);
+
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::PlayerCount);
 	}
 }
 

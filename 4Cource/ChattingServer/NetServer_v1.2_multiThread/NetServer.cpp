@@ -342,16 +342,26 @@ void CNetServer::DecreaseIO_Count(Session* pSession)
 			return;
 		}
 
-		closesocket(pSession->sock);
-
-		//InterlockedDecrement(&_sessionCount);
-		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SessionNum);
-
-		OnRelease(pSession->sessionID);
-
-		unsigned int idx = GetIdxFromSessionID(pSession->sessionID);
-		_releaseIdxLockFreeStack.Push(idx);
+		PQCS_Release(pSession);
+		//ReleaseProc(pSession);
 	}
+}
+
+void CNetServer::PQCS_Release(Session* pSession)
+{
+	PostQueuedCompletionStatus(_hIOCP, NULL, (ULONG_PTR)pSession, NULL);
+}
+
+void CNetServer::ReleaseProc(Session* pSession)
+{
+	closesocket(pSession->sock);
+
+	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SessionNum);
+
+	OnRelease(pSession->sessionID);
+
+	unsigned int idx = GetIdxFromSessionID(pSession->sessionID);
+	_releaseIdxLockFreeStack.Push(idx);
 }
 
 unsigned int CNetServer::GetIdxFromSessionID(DWORD64 sessionID)
@@ -400,9 +410,18 @@ void CNetServer::WorkerThread()
 			return;
 		}
 
+
+		// TODO: ReleaseProc() 호출
+		if (pMyOverlapped == NULL && pSession != NULL)
+		{
+			ReleaseProc(pSession);
+			continue;
+		}
+
 		if (cbTransferred == 0)
 		{
 			// 클라에서 FIN or RST 를 던졌다.
+			// 뭐.. 할수있느건 없다. 그저 DecreaseIO를 할 뿐
 		}
 
 		else if (pMyOverlapped->type == RECV)

@@ -21,6 +21,7 @@ public:
 	virtual void Stop();
 	int GetSessionCount();
 
+	// 콘텐츠에서 호출하는 함수
 	bool Disconnect(DWORD64 sessionID);
 	bool SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket);
 	
@@ -34,6 +35,9 @@ private:
 
 	void IncreaseIO_Count(Session* pSession);
 	void DecreaseIO_Count(Session* pSession);
+
+	void PQCS_Release(Session* pSession);
+	void ReleaseProc(Session* pSession);
 
 	unsigned int GetIdxFromSessionID(DWORD64 sessionID);
 	void SetIdxToSessionID(DWORD64* pSessionID, unsigned int idx);
