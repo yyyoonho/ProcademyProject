@@ -1,0 +1,86 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="소스 파일\NetLib">
+      <UniqueIdentifier>{ecf840e1-25f1-4847-9608-5685a241e2b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetLib\Header">
+      <UniqueIdentifier>{baf37f0d-f39b-46b0-9203-01bbe785054e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetLib\Struct">
+      <UniqueIdentifier>{dc1bfe70-1743-4006-8138-e112ba34ac2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetLib\BaseServer">
+      <UniqueIdentifier>{b9b484ac-908c-4035-b2ff-2f90155e9f69}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Protocol">
+      <UniqueIdentifier>{12e887e3-9733-46dd-bae7-14f3c8e73817}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetLib\NetCodec">
+      <UniqueIdentifier>{b805ec18-f5d3-4a27-978c-cebc626cc972}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\ChatServer">
+      <UniqueIdentifier>{6d0236cd-64e4-4369-a2e8-2f7f3f8e6c58}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Monitor">
+      <UniqueIdentifier>{a6e9ea79-8ccd-49b3-8572-8bd028295a93}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>소스 파일\NetLib\Header</Filter>
+    </ClCompile>
+    <ClCompile Include="NetServer.cpp">
+      <Filter>소스 파일\NetLib\BaseServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="NetCodec.cpp">
+      <Filter>소스 파일\NetLib\NetCodec</Filter>
+    </ClCompile>
+    <ClCompile Include="ChatServer.cpp">
+      <Filter>소스 파일\ChatServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Monitoring.cpp">
+      <Filter>소스 파일\Monitor</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>소스 파일\NetLib\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>소스 파일\Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="Struct.h">
+      <Filter>소스 파일\NetLib\Struct</Filter>
+    </ClInclude>
+    <ClInclude Include="NetServer.h">
+      <Filter>소스 파일\NetLib\BaseServer</Filter>
+    </ClInclude>
+    <ClInclude Include="NetCodec.h">
+      <Filter>소스 파일\NetLib\NetCodec</Filter>
+    </ClInclude>
+    <ClInclude Include="ChatServer.h">
+      <Filter>소스 파일\ChatServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonProtocol.h">
+      <Filter>소스 파일\Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="Monitoring.h">
+      <Filter>소스 파일\Monitor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
+</Project>

@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define DEFAULT_BUFSIZE 7000
+#define DEFAULT_BUFSIZE 200000
 
 SerializePacketPtr_RingBuffer::SerializePacketPtr_RingBuffer()
 {

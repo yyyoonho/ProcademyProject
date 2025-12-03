@@ -52,6 +52,14 @@ SerializePacketPtr::SerializePacketPtr(const SerializePacketPtr& other)
     _RCBPtr = other._RCBPtr;
 }
 
+SerializePacketPtr::SerializePacketPtr(RawPtr rawPtr)
+{
+    rawPtr.IncreaseRefCount();
+
+    _ptr = rawPtr._ptr;
+    _RCBPtr = rawPtr._RCBPtr;
+}
+
 SerializePacketPtr& SerializePacketPtr::operator=(const SerializePacketPtr& other)
 {
     if (this != &other)

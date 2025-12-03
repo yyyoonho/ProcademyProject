@@ -22,7 +22,7 @@ struct RawPtr
 	// 받았으면 그 즉시, Increse함수를 호출하도록 하자.
 	//**********************************************
 
-	SerializePacket* _ptr;
+	Net_SerializePacket* _ptr;
 	RefCountBlock* _RCBPtr;
 
 	void IncreaseRefCount();
@@ -36,9 +36,8 @@ public:
 
 public:
 	SerializePacketPtr();
-	SerializePacketPtr(SerializePacket* ptr);
+	SerializePacketPtr(Net_SerializePacket* ptr);
 	SerializePacketPtr(const SerializePacketPtr& other);
-	SerializePacketPtr(RawPtr rawPtr);
 
 	SerializePacketPtr& operator=(const SerializePacketPtr& other);
 	SerializePacketPtr& operator=(std::nullptr_t);
@@ -51,7 +50,7 @@ public:
 	int GetRefCount();
 
 public:
-	static SerializePacket* MakeSerializePacket();
+	static Net_SerializePacket* MakeSerializePacket();
 
 private:
 	void DecreaseRefCount();
@@ -98,8 +97,12 @@ public:
 	int Putdata(char* chpSrc, int iSrcSize);
 
 	void PushHeader(char* header, int headerSize);
+	void PushExtraBuffer(char* header, int headerSize);
+
+	void MarkEncoded();
+	bool IsEncoded();
 
 private:
-	SerializePacket* _ptr = NULL;
+	Net_SerializePacket* _ptr = NULL;
 	RefCountBlock* _RCBPtr = NULL;
 };
