@@ -1,5 +1,7 @@
 #pragma once
 #include <new.h>
+#include <mutex>
+#include <unordered_set>
 
 #define CHUNKSIZE 500
 
@@ -15,12 +17,26 @@ namespace procademy
 	class MemoryPool_TLS
 	{
 	private:
+		
+		struct TraceInfo
+		{
+			const char* lastTag = nullptr;
+			const char* lastFile = nullptr;
+			int         lastLine = 0;
+			DWORD64     lastTick = 0;
+		};
+
 		struct Node
 		{
 			Node*	_underflowGuard = NULL; // 겸 poolId 체크용
 			DATA	_data;
 			Node*	_pNextNode = NULL; // 겸 _overflowGuard
+
+			TraceInfo trace;
 		};
+
+		mutex gAliveNodesMutex;
+		unordered_set<Node*> gAliveNodes;
 
 		struct Chunk
 		{
@@ -63,6 +79,21 @@ namespace procademy
 
 		DATA* Alloc();
 		bool			Free(DATA* pData);
+
+		static Node* ToNode(DATA* pData)
+		{
+			return (Node*)((char*)pData - offsetof(Node, _data));
+		}
+
+		static void TraceStamp(DATA* pData, const char* tag, const char* file, int line)
+		{
+			Node* pNode = ToNode(pData);
+
+			pNode->trace.lastTag = tag;
+			pNode->trace.lastFile = file;
+			pNode->trace.lastLine = line;
+			pNode->trace.lastTick = GetTickCount64();
+		}
 
 	private:
 		Chunk*			_pFullChunk = NULL;
@@ -252,8 +283,22 @@ namespace procademy
 		}
 
 		if (pData != NULL)
-			return pData;
+		{
+			// TRACE
+			{
+				Node* pNode = ToNode(pData);
 
+				pNode->trace.lastTag = "Alloc";
+				pNode->trace.lastTick = GetTickCount64();
+
+				{
+					std::lock_guard<std::mutex> lock(gAliveNodesMutex);
+					gAliveNodes.insert(pNode);
+				}
+			}
+
+			return pData;
+		}
 
 		// 3. TLS에서 해결불가. [메인 메모리풀 -> 청크 -> TLS 메인풀]
 		// FullStack 에서 청크하나 꺼내오기.
@@ -348,6 +393,18 @@ namespace procademy
 		// 4. 장전 끝났으면 다시 TLS에서 Alloc
 		pData = pTlsAllocator->MyTLSAlloc();
 
+		// TRACE
+		{
+			Node* pNode = ToNode(pData);
+			pNode->trace.lastTag = "Alloc";
+			pNode->trace.lastTick = GetTickCount64();
+
+			{
+				std::lock_guard<std::mutex> lock(gAliveNodesMutex);
+				gAliveNodes.insert(pNode);
+			}
+		}
+
 		return pData;
 	}
 
@@ -368,6 +425,19 @@ namespace procademy
 
 		// 1. TLS 메인 스택으로 반납
 		// 2. TLS 메인 스택이 다 찼으면 TLS 서브 스택으로 반납
+
+		// TRACE
+		{
+			Node* pNode = ToNode(pData);
+
+			{
+				std::lock_guard<std::mutex> lock(gAliveNodesMutex);
+				gAliveNodes.erase(pNode);
+			}
+
+			pNode->trace = {};
+		}
+
 		pTlsAllocator->MyTLSFree(pData);
 
 

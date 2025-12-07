@@ -1,13 +1,13 @@
 #pragma once
 #include <new.h>
 
-//#define LOG_MEMORYPOOL
-
 #define CHUNKSIZE 500
 
 using namespace std;
 
-int testCount = 0;
+
+struct RefCountBlock;
+class Net_SerializePacket;
 
 namespace procademy
 {
@@ -80,11 +80,8 @@ namespace procademy
 		
 	private:
 		// 디버깅용 변수
-		LONG			_fullChunkStackCount = 0;
-		LONG			_emptyChunkStackCount = 0;
-	public:
-		LONG			GetFullChunkStackCount();
-		LONG			GetEmptyChunkStackCount();
+		inline static LONG			Net_SerializePacket_fullChunkStackCount = 0;
+		inline static LONG			RefCountBlock_fullChunkStackCount = 0;
 	};
 
 
@@ -108,10 +105,6 @@ namespace procademy
 			{
 				Chunk* pNewChunk = new Chunk;
 
-				// 로깅
-				//InterlockedIncrement(&_fullChunkUseCount);
-				cout << "2번" << endl;
-
 				// chunk에 삽입
 				for (int j = 0; j < CHUNKSIZE; j++)
 				{
@@ -129,10 +122,17 @@ namespace procademy
 				pNewChunk->_pNextChunk = _pFullChunk;
 				_pFullChunk = pNewChunk;
 
-#ifdef LOG_MEMORYPOOL
-				InterlockedIncrement(&_fullChunkStackCount);
-#endif // LOG_MEMORYPOOL
-
+				// 청크증가!
+				if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
+				{
+					auto cnt = InterlockedIncrement(&Net_SerializePacket_fullChunkStackCount);
+					//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
+				}
+				else if constexpr (std::is_same_v<DATA, RefCountBlock>)
+				{
+					auto cnt = InterlockedIncrement(&RefCountBlock_fullChunkStackCount);
+					//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
+				}
 			}
 		}
 		// 어차피 Alloc할때마다 생성자 호출할거니, 지금은 생성자 호출 하지않겠다.
@@ -142,10 +142,6 @@ namespace procademy
 			for (int i = 0; i < iChunkNum; i++)
 			{
 				Chunk* pNewChunk = new Chunk;
-
-				// 로깅
-				//InterlockedIncrement(&_fullChunkUseCount);
-				cout << "3번" << endl;
 
 				// chunk에 삽입
 				for (int j = 0; j < CHUNKSIZE; j++)
@@ -169,9 +165,17 @@ namespace procademy
 				pNewChunk->_pNextChunk = _pFullChunk;
 				_pFullChunk = pNewChunk;
 
-#ifdef LOG_MEMORYPOOL
-				InterlockedIncrement(&_fullChunkStackCount);
-#endif // LOG_MEMORYPOOL
+				// 청크증가!
+				if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
+				{
+					auto cnt = InterlockedIncrement(&Net_SerializePacket_fullChunkStackCount);
+					//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
+				}
+				else if constexpr (std::is_same_v<DATA, RefCountBlock>)
+				{
+					auto cnt = InterlockedIncrement(&RefCountBlock_fullChunkStackCount);
+					//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
+				}
 			}
 		}
 	}
@@ -278,6 +282,18 @@ namespace procademy
 					newNode->_underflowGuard = (Node*)_poolId;
 				}
 
+				// 청크증가!
+				if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
+				{
+					auto cnt = InterlockedIncrement(&Net_SerializePacket_fullChunkStackCount);
+					//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
+				}
+				else if constexpr (std::is_same_v<DATA, RefCountBlock>)
+				{
+					auto cnt = InterlockedIncrement(&RefCountBlock_fullChunkStackCount);
+					//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
+				}
+
 				oldTop = pNewChunk;
 				break;
 			}
@@ -289,10 +305,6 @@ namespace procademy
 			if ((Chunk*)ret == oldTop)
 			{
 				oldTop = ((Chunk*)((DWORD64)oldTop & 0x0000ffffffffffff));
-
-#ifdef LOG_MEMORYPOOL
-				InterlockedDecrement(&_fullChunkStackCount);
-#endif // LOG_MEMORYPOOL
 
 				break;
 			}
@@ -313,9 +325,6 @@ namespace procademy
 			LONG64 ret = InterlockedCompareExchange64((LONG64*)&_pEmptyChunk, (LONG64)pTlsAllocator->tlsMain_Chunk, (LONG64)oldTop);
 			if ((Chunk*)ret == oldTop)
 			{
-#ifdef LOG_MEMORYPOOL
-				InterlockedIncrement(&_emptyChunkStackCount);
-#endif // LOG_MEMORYPOOL
 
 				break;
 			}
@@ -369,9 +378,6 @@ namespace procademy
 				LONG64 ret = InterlockedCompareExchange64((LONG64*)&_pFullChunk, (LONG64)newChunk, (LONG64)oldTop);
 				if ((Chunk*)ret == oldTop)
 				{
-#ifdef LOG_MEMORYPOOL
-					InterlockedIncrement(&_fullChunkStackCount);
-#endif // LOG_MEMORYPOOL
 					break;
 				}
 			}
@@ -401,10 +407,6 @@ namespace procademy
 				{
 					oldTop = ((Chunk*)((DWORD64)oldTop & 0x0000ffffffffffff));
 
-#ifdef LOG_MEMORYPOOL
-					InterlockedDecrement(&_emptyChunkStackCount);
-#endif // LOG_MEMORYPOOL
-
 					break;
 				}
 			}
@@ -417,17 +419,6 @@ namespace procademy
 		return true;
 	}
 
-	template<typename DATA>
-	inline LONG MemoryPool_TLS<DATA>::GetFullChunkStackCount()
-	{
-		return _fullChunkStackCount;
-	}
-
-	template<typename DATA>
-	inline LONG MemoryPool_TLS<DATA>::GetEmptyChunkStackCount()
-	{
-		return _emptyChunkStackCount;
-	}
 
 
 	template<typename DATA>
