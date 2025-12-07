@@ -24,6 +24,9 @@ enum class MonitorType : int
 	WaitDuration,			// 초당 블락되어있는 ms					(O)
 	WorkDuration,			// 초당 작동되고있는 ms					(O)
 
+	DuplicatedDisconnect_new,		// 중복로그인으로 인한 disconnect			
+	DuplicatedDisconnect_old,		// 중복로그인으로 인한 disconnect			
+
 	COUNT,
 };
 

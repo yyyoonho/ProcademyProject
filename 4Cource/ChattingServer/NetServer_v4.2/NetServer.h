@@ -36,7 +36,7 @@ private:
 	bool SendPacketProc(DWORD64 sessionID);
 
 	void IncreaseIO_Count(Session* pSession);
-	void DecreaseIO_Count(Session* pSession);
+	bool DecreaseIO_Count(Session* pSession);
 
 	void PQCS_Release(Session* pSession);
 	void ReleaseProc(Session* pSession);

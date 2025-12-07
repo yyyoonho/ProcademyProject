@@ -24,6 +24,8 @@
 #include <conio.h>
 #include <queue>
 
+#include "CrashDump.h"
+
 #include "RingBuffer.h"
 #include "CustomProfiler.h"
 

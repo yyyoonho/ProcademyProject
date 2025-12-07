@@ -362,7 +362,7 @@ void CNetServer::IncreaseIO_Count(Session* pSession)
 	InterlockedIncrement(&(pSession->IOCountNReleaseCheck.IO_Count));
 }
 
-void CNetServer::DecreaseIO_Count(Session* pSession)
+bool CNetServer::DecreaseIO_Count(Session* pSession)
 {
 	LONG ret = InterlockedDecrement(&(pSession->IOCountNReleaseCheck.IO_Count));
 
@@ -380,11 +380,14 @@ void CNetServer::DecreaseIO_Count(Session* pSession)
 		IOReleasePair oldValue = *((IOReleasePair*)&result);
 		if (oldValue.IO_Count != expected.IO_Count || oldValue.releaseCheck != expected.releaseCheck)
 		{
-			return;
+			return false;
 		}
 
 		PQCS_Release(pSession);
+		return true;
 	}
+
+	return false;
 }
 
 void CNetServer::PQCS_Release(Session* pSession)
@@ -623,6 +626,9 @@ void CNetServer::AcceptThread()
 		unsigned int idx;
 		_releaseIdxLockFreeStack.Pop(&idx);
 
+		// 디버깅
+		IncreaseIO_Count(&_sessionArray[idx]);
+
 		_sessionArray[idx].sock = clientSocket;
 		_sessionArray[idx].sessionID = ++_g_sessionID;
 
@@ -652,6 +658,17 @@ void CNetServer::AcceptThread()
 		_sessionArray[idx].recvQ.ClearBuffer();
 		if(_sessionArray[idx].LockFreeSendQ.Size() > 0)
 		{
+			while (1)
+			{
+				if (_sessionArray[idx].LockFreeSendQ.Size() <= 0)
+					break;
+
+				RawPtr r;
+				_sessionArray[idx].LockFreeSendQ.Dequeue(&r);
+
+				r.DecreaseRefCount();
+			}
+
 			_sessionArray[idx].LockFreeSendQ.Clear();
 		}
 
@@ -679,6 +696,16 @@ void CNetServer::AcceptThread()
 		// 비동기 IO 걸어두기
 		bool recvRet = RecvProc(&_sessionArray[idx]);
 
+		// 로그인패킷을 send했지만, recv를 실패한 경우.
+		if (recvRet == false)
+		{
+			bool ret = DecreaseIO_Count(&_sessionArray[idx]);
+		}
+		else
+		{
+			DecreaseIO_Count(&_sessionArray[idx]);
+			_sessionArray[idx].loginCheck = TRUE;
+		}
 	}
 }
 

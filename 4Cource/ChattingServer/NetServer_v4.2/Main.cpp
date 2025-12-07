@@ -5,6 +5,8 @@
 
 using namespace std;
 
+procademy::CCrashDump dump;
+
 ChatServer chattingServer;
 HANDLE hEvent_Quit;
 

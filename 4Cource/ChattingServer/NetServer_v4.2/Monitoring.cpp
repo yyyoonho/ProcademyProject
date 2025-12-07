@@ -94,7 +94,11 @@ void Monitoring::PrintMonitoring()
 	cout << "RecvMessageChat: " << _monitoringArr[(int)MonitorType::RecvMessageChatTPS] << "\n";
 	cout << "\n";
 	cout << "WaitDuration: " << _monitoringArr[(int)MonitorType::WaitDuration] << "\n";
-	cout << "WorkDuration: " << _monitoringArr[(int)MonitorType::WorkDuration] << "\n";
+	cout << "WorkDuration: " << _monitoringArr[(int)MonitorType::WorkDuration] << "\n"; 
+	cout << "\n";
+	cout << "\n";
+	cout << "Disconnect-중복로그인(new): " << _monitoringArr[(int)MonitorType::DuplicatedDisconnect_new] << "\n";
+	cout << "Disconnect-중복로그인(old): " << _monitoringArr[(int)MonitorType::DuplicatedDisconnect_old] << "\n";
 	cout << "===============================================================================\n";
 	cout << "\n";
 

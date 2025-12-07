@@ -140,7 +140,7 @@ void ChatServer::ContentThread()
 
 		if (ret == WAIT_TIMEOUT)
 		{
-			DisconnectUnresponsivePlayers();
+			//DisconnectUnresponsivePlayers();
 			continue;
 		}
 		if (ret == WAIT_OBJECT_0 + 1)
@@ -258,6 +258,8 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		loginPlayer = tmpPlayerArr[i];
 		tmpPlayerArr[i] = tmpPlayerArr.back();
 		tmpPlayerArr.pop_back();
+
+		break;
 	}
 
 	if (loginPlayer == NULL)
@@ -267,10 +269,12 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	pPacket >> accountNo;
 
 	// 중복로그인 체크
-	if (CheckDuplicateLogin(accountNo) == false)
+	bool flag = CheckDuplicateLogin(accountNo);
+	if (flag == false)
 	{
 		// 로그인 플레이어부터 끊기
 		Disconnect(loginPlayer->sessionID);
+		Monitoring::GetInstance()->Increase(MonitorType::DuplicatedDisconnect_new);
 
 		// 기존 플레이어 끊기
 		unordered_map<INT64, int>::iterator iter = accountToIndex.find(accountNo);
@@ -278,7 +282,9 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 			return;
 
 		int idx = iter->second;
+		playerArr[idx]->state = PLAYER_STATE::DUPLICATED;
 		Disconnect(playerArr[idx]->sessionID);
+		Monitoring::GetInstance()->Increase(MonitorType::DuplicatedDisconnect_old);
 
 		return;
 	}
@@ -294,6 +300,7 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		loginPlayer->state = PLAYER_STATE::LOGIN;
 
 		playerArr.push_back(loginPlayer);
+
 		sessionIDAccountNoMap.insert({ sessionID, accountNo });
 		accountToIndex.insert({ accountNo, playerArr.size() - 1 });
 		onlineAccounts.insert(accountNo);
@@ -433,63 +440,79 @@ void ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
 
 void ChatServer::ReleaseProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
+	bool flag = true;
+	INT64 accountNo = -1;
+	int idx = -1;
+	PLAYER_STATE state = PLAYER_STATE::NONE;
+
 	unordered_map<DWORD64, INT64>::iterator iter = sessionIDAccountNoMap.find(sessionID);
-	if (iter != sessionIDAccountNoMap.end())
+	if (iter == sessionIDAccountNoMap.end())
 	{
-		INT64 accountNo = iter->second;
+		flag = false;
+	}
+	else
+	{
+		flag = true;
+		accountNo = iter->second;
 		sessionIDAccountNoMap.erase(iter);
+	}
 
+	if (flag == true)
+	{
 		unordered_map<INT64, int>::iterator iter2 = accountToIndex.find(accountNo);
-		if (iter2 != accountToIndex.end())
+		idx = iter2->second;
+
+		state = playerArr[idx]->state;
+
+		WORD sectorY = playerArr[idx]->sectorY;
+		WORD sectorX = playerArr[idx]->sectorX;
+
+		if (sectorY != 12345)
 		{
-			int idx = iter2->second;
+			for (int i = 0; i < sector[sectorY][sectorX].size(); i++)
+			{
+				if (sector[sectorY][sectorX][i] != sessionID)
+					continue;
+
+				sector[sectorY][sectorX][i] = sector[sectorY][sectorX].back();
+				sector[sectorY][sectorX].pop_back();
+
+				break;
+			}
+		}
+		
+		Player* pPlayer = playerArr[idx];
+		playerArr[idx] = playerArr.back();
+		playerArr.pop_back();
+
+		INT64 backAccountNo = playerArr[idx]->accountNo;
+		accountToIndex[backAccountNo] = idx;
+
+		playerPool.Free(pPlayer);
+
+		if (state != PLAYER_STATE::DUPLICATED)
+		{
 			accountToIndex.erase(iter2);
-
-			WORD sectorY = playerArr[idx]->sectorY;
-			WORD sectorX = playerArr[idx]->sectorX;
-
-			if (sectorY != 12345)
-			{
-				for (int i = 0; i < sector[sectorY][sectorX].size(); i++)
-				{
-					if (sector[sectorY][sectorX][i] != sessionID)
-						continue;
-
-					sector[sectorY][sectorX][i] = sector[sectorY][sectorX].back();
-					sector[sectorY][sectorX].pop_back();
-					break;
-				}
-			}
-
-			Player* pPlayer = playerArr[idx];
-			playerArr[idx] = playerArr.back();
-
-			unordered_map<INT64, int>::iterator iter3 = accountToIndex.find(playerArr[idx]->accountNo);
-			if (iter3 != accountToIndex.end())
-			{
-				accountToIndex[playerArr[idx]->accountNo] = idx;
-			}
-
-			playerArr.pop_back();
 			onlineAccounts.erase(accountNo);
-			playerPool.Free(pPlayer);
-
-			Monitoring::GetInstance()->Decrease(MonitorType::PlayerCount);
 		}
 
 	}
 	else
 	{
+		Player* pPlayer;
+
 		for (int i = 0; i < tmpPlayerArr.size(); i++)
 		{
 			if (tmpPlayerArr[i]->sessionID != sessionID)
 				continue;
 
-			Player* pPlayer = tmpPlayerArr[i];
+			pPlayer = tmpPlayerArr[i];
 			tmpPlayerArr[i] = tmpPlayerArr.back();
 			tmpPlayerArr.pop_back();
 
 			playerPool.Free(pPlayer);
+
+			break;
 		}
 	}
 
