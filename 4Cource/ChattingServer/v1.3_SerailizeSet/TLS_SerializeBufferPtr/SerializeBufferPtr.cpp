@@ -1,4 +1,5 @@
-﻿#pragma comment(lib, "Net_SerializeBuffer.lib")
+﻿
+#pragma comment(lib, "Net_SerializeBuffer.lib")
 
 #include <iostream>
 

@@ -5,8 +5,6 @@
 
 using namespace std;
 
-#define TRACE
-
 CNetServer::CNetServer()
 {
 }
@@ -135,15 +133,6 @@ void CNetServer::SendPost(Session* pSession)
 
 bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
-#ifdef TRACE
-	{
-		RawPtr r;
-		pPacket.GetRawPtr(&r);
-
-		r._ptr->SPacketMP.TraceStamp(r._ptr, "SendPacket", __FILE__, __LINE__);
-	}
-#endif // TRACE
-
 	// 세션 검색
 	unsigned int idx = GetIdxFromSessionID(sessionID);
 	Session* pSession = NULL;
@@ -250,7 +239,7 @@ bool CNetServer::NetInit()
 		return false;
 	}
 
-	listenRet = listen(_listenSocket, SOMAXCONN);
+	listenRet = listen(_listenSocket, SOMAXCONN_HINT(65535));
 	if (listenRet == SOCKET_ERROR)
 	{
 		printf("Error: listen()\n");
@@ -300,12 +289,6 @@ bool CNetServer::SendProc(Session* pSession)
 		RawPtr packet;
 		pSession->LockFreeSendQ.Dequeue(&packet);
 
-#ifdef TRACE
-		{
-			packet._ptr->SPacketMP.TraceStamp(packet._ptr, "SendProc", __FILE__, __LINE__);
-		}
-#endif // TRACE
-
 		wsaBuf[i].buf = packet._ptr->GetBufferPtr();
 		wsaBuf[i].len = packet._ptr->GetDataSize();
 
@@ -331,11 +314,16 @@ bool CNetServer::SendProc(Session* pSession)
 
 		if (WSAGetLastError() != ERROR_IO_PENDING && WSAGetLastError() != 0)
 		{
+			for (int i = 0; i < sPacketCount; i++)
+			{
+				pSession->sendMyOverlapped.sendSerializePacketPtrArr[i].DecreaseRefCount();
+				pSession->sendMyOverlapped.sendSerializePacketPtrArr[i]._ptr = NULL;
+			}
+
 			DecreaseIO_Count(pSession);
 
 			if (WSAGetLastError() != 10054 && WSAGetLastError() != 10038)
 				printf("Error: WSASend() %d\n", WSAGetLastError());
-
 
 			return false;
 		}
@@ -347,7 +335,6 @@ bool CNetServer::SendProc(Session* pSession)
 void CNetServer::IncreaseIO_Count(Session* pSession)
 {
 	InterlockedIncrement(&(pSession->IOCountNReleaseCheck.IO_Count));
-	
 }
 
 void CNetServer::DecreaseIO_Count(Session* pSession)
@@ -528,15 +515,6 @@ void CNetServer::WorkerThread()
 				SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
 				pPacket.Clear();
 
-#ifdef TRACE
-				{
-					RawPtr r;
-					pPacket.GetRawPtr(&r);
-					r._ptr->SPacketMP.TraceStamp(r._ptr, "Recv_Complete", __FILE__, __LINE__);
-					int a = 3;
-				}
-#endif // TRACE
-
 				int ret = pSession->recvQ.Dequeue(pPacket.GetBufferPtr(), payloadLen);
 				pPacket.MoveWritePos(ret);
 
@@ -561,14 +539,6 @@ void CNetServer::WorkerThread()
 
 			for (int i = 0; i < pMyOverlapped->sPacketCount; i++)
 			{
-#ifdef TRACE
-				// TRACE
-				{
-					RawPtr r = pMyOverlapped->sendSerializePacketPtrArr[i];
-					r._ptr->SPacketMP.TraceStamp(r._ptr, "SEND_COMPLETE", __FILE__, __LINE__);
-				}
-#endif // TRACE
-
 				pMyOverlapped->sendSerializePacketPtrArr[i].DecreaseRefCount();
 				pMyOverlapped->sendSerializePacketPtrArr[i]._ptr = NULL;
 			}
@@ -668,16 +638,7 @@ void CNetServer::AcceptThread()
 		for (int i = 0; i < 100; i++)
 		{
 			if (_sessionArray[idx].sendMyOverlapped.sendSerializePacketPtrArr[i]._ptr != NULL)
-			{
-#ifdef TRACE
-				{
-					RawPtr r = _sessionArray[idx].sendMyOverlapped.sendSerializePacketPtrArr[i];
-					r._ptr->SPacketMP.TraceStamp(r._ptr, "AcceptInit", __FILE__, __LINE__);
-				}
-#endif // TRACE
 				_sessionArray[idx].sendMyOverlapped.sendSerializePacketPtrArr[i].DecreaseRefCount();
-			}
-				
 
 			_sessionArray[idx].sendMyOverlapped.sendSerializePacketPtrArr[i]._ptr = NULL;
 			_sessionArray[idx].sendMyOverlapped.sendSerializePacketPtrArr[i]._RCBPtr = NULL;
@@ -686,7 +647,6 @@ void CNetServer::AcceptThread()
 		_sessionArray[idx].sendMyOverlapped.sPacketCount = 0;
 
 		_sessionArray[idx].recvQ.ClearBuffer();
-
 		if(_sessionArray[idx].LockFreeSendQ.Size() > 0)
 		{
 			while (1)
@@ -698,8 +658,9 @@ void CNetServer::AcceptThread()
 				_sessionArray[idx].LockFreeSendQ.Dequeue(&r);
 				r.DecreaseRefCount();
 			}
+
+			_sessionArray[idx].LockFreeSendQ.Clear();
 		}
-		_sessionArray[idx].LockFreeSendQ.Clear();
 
 		_sessionArray[idx].loginCheck = FALSE;
 
