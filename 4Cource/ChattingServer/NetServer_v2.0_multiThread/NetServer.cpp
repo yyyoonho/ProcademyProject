@@ -43,10 +43,6 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	if (_hThread_Accept == NULL)
 		return false;
 
-	//_hThread_Monitor = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&CNetServer::MonitorThreadRun, this, NULL, NULL);
-	//if (_hThread_Monitor == NULL)
-	//	return false;
-
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 
@@ -70,11 +66,6 @@ void CNetServer::Stop()
 {
 	SetEvent(_hEvent_Quit);
 	PostQueuedCompletionStatus(_hIOCP, NULL, NULL, NULL);
-}
-
-int CNetServer::GetSessionCount()
-{
-	return _sessionCount;
 }
 
 bool CNetServer::Disconnect(DWORD64 sessionID)
@@ -188,7 +179,6 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	packetRawPtr.IncreaseRefCount();
 	pSession->LockFreeSendQ.Enqueue(packetRawPtr);
 
-	//InterlockedIncrement(&_sendMessageTPS);
 	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendMessageTPS);
 
 	SendPost(pSession);
@@ -381,7 +371,7 @@ void CNetServer::ReleaseProc(Session* pSession)
 
 	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SessionNum);
 
-	// TODO: send링버퍼 돌기, 오버랩구조체 돌기
+	// send링버퍼 돌기, 오버랩구조체 돌기
 	{
 		while (1)
 		{
@@ -488,7 +478,6 @@ void CNetServer::WorkerThread()
 
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
-						//Disconnect(pSession->sessionID);
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
 
@@ -511,7 +500,6 @@ void CNetServer::WorkerThread()
 
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
-						//Disconnect(pSession->sessionID);
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
 
@@ -562,7 +550,6 @@ void CNetServer::WorkerThread()
 
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
-						//Disconnect(pSession->sessionID);
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
 				}
@@ -582,7 +569,6 @@ void CNetServer::WorkerThread()
 
 							if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 							{
-								//Disconnect(pSession->sessionID);
 								CancelIoEx((HANDLE)(pSession->sock), NULL);
 							}
 						}
@@ -679,7 +665,6 @@ void CNetServer::AcceptThread()
 
 		_sessionArray[idx].cancelIOCheck = FALSE;
 
-		//_sessionArray[idx].releaseCheck = FALSE;
 		_sessionArray[idx].IOCountNReleaseCheck.releaseCheck = FALSE;
 
 		getpeername(clientSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);
@@ -693,7 +678,6 @@ void CNetServer::AcceptThread()
 
 		// OnAccept
 		{
-			//IncreaseIO_Count(&_sessionArray[idx]);
 			OnAccept(_sessionArray[idx].sessionID);
 		}
 
@@ -711,45 +695,4 @@ void CNetServer::AcceptThread()
 			_sessionArray[idx].loginCheck = TRUE;
 		}
 	}
-}
-
-void CNetServer::MonitorThreadRun(LPVOID* lParam)
-{
-	CNetServer* self = (CNetServer*)lParam;
-	self->MonitorThread();
-}
-
-void CNetServer::MonitorThread()
-{
-	while (1)
-	{
-		DWORD ret = WaitForSingleObject(_hEvent_Quit, 1000);
-		if (ret == WAIT_OBJECT_0)
-		{
-			return;
-		}
-
-		_acceptTPS_BackUp = _acceptTPS;
-		_recvMessageTPS_BackUp = _recvMessageTPS;
-		_sendMessageTPS_BackUp = _sendMessageTPS;
-
-		InterlockedExchange(&_acceptTPS, 0);
-		InterlockedExchange(&_recvMessageTPS, 0);
-		InterlockedExchange(&_sendMessageTPS, 0);
-	}
-}
-
-int CNetServer::GetAcceptTPS()
-{
-	return _acceptTPS_BackUp;
-}
-
-int CNetServer::GetRecvMessageTPS()
-{
-	return _recvMessageTPS_BackUp;
-}
-
-int CNetServer::GetSendMessageTPS()
-{
-	return _sendMessageTPS_BackUp;
 }

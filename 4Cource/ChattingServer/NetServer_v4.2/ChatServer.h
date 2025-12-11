@@ -79,7 +79,6 @@ public:
 	vector<Player*>					playerArr;
 
 	unordered_map<DWORD64, INT64>	sessionIDAccountNoMap;
-	unordered_set<INT64>			onlineAccounts;			// 온라인 여부만 확인
 	unordered_map<INT64, int>		accountToIndex;
 
 	vector<DWORD64>					sector[MAX_SECTOR_Y][MAX_SECTOR_X];

@@ -99,16 +99,4 @@ private:
 private:
 	// 멤버변수: 이벤트
 	HANDLE _hEvent_Quit;
-
-private:
-	// 멤버변수: 모니터링
-	LONG _acceptTPS = 0;
-	LONG _recvMessageTPS = 0;
-	LONG _sendMessageTPS = 0;
-
-	LONG _acceptTPS_BackUp = 0;
-	LONG _recvMessageTPS_BackUp = 0;
-	LONG _sendMessageTPS_BackUp = 0;
-
-	LONG _sessionCount = 0;
 };

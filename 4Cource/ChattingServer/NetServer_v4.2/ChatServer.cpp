@@ -282,7 +282,6 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 			return;
 
 		int idx = iter->second;
-		playerArr[idx]->state = PLAYER_STATE::DUPLICATED;
 		Disconnect(playerArr[idx]->sessionID);
 		Monitoring::GetInstance()->Increase(MonitorType::DuplicatedDisconnect_old);
 
@@ -303,7 +302,6 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		sessionIDAccountNoMap.insert({ sessionID, accountNo });
 		accountToIndex.insert({ accountNo, playerArr.size() - 1 });
-		onlineAccounts.insert(accountNo);
 
 		SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 		newPacket.Clear();
@@ -324,8 +322,8 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 bool ChatServer::CheckDuplicateLogin(INT64 accountNo)
 {
-	unordered_set<INT64>::iterator iter = onlineAccounts.find(accountNo);
-	if (iter == onlineAccounts.end())
+	unordered_map<INT64, int>::iterator iter = accountToIndex.find(accountNo);
+	if (iter == accountToIndex.end())
 	{
 		return true;
 	}
@@ -440,35 +438,58 @@ void ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
 
 void ChatServer::ReleaseProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
-	bool flag = true;
+	bool flag =false;
 	INT64 accountNo = -1;
-	int idx = -1;
-	PLAYER_STATE state = PLAYER_STATE::NONE;
 
-	unordered_map<DWORD64, INT64>::iterator iter = sessionIDAccountNoMap.find(sessionID);
+	auto iter = sessionIDAccountNoMap.find(sessionID);
 	if (iter == sessionIDAccountNoMap.end())
 	{
-		flag = false;
+		flag = true;
 	}
 	else
 	{
-		flag = true;
+		flag = false;
 		accountNo = iter->second;
+
 		sessionIDAccountNoMap.erase(iter);
 	}
 
 	if (flag == true)
 	{
-		unordered_map<INT64, int>::iterator iter2 = accountToIndex.find(accountNo);
-		idx = iter2->second;
-
-		state = playerArr[idx]->state;
-
-		WORD sectorY = playerArr[idx]->sectorY;
-		WORD sectorX = playerArr[idx]->sectorX;
-
-		if (sectorY != 12345)
+		for (int i = 0; i < tmpPlayerArr.size(); i++)
 		{
+			if (tmpPlayerArr[i]->sessionID != sessionID)
+				continue;
+
+			tmpPlayerArr[i] = tmpPlayerArr.back();
+			tmpPlayerArr.pop_back();
+			break;
+		}
+	}
+	else
+	{
+		auto iter2 = accountToIndex.find(accountNo);
+		if (iter2 == accountToIndex.end())
+		{
+			DebugBreak();
+		}
+
+		int targetIdx = iter2->second;
+		accountToIndex.erase(iter2);
+
+		Player* target = playerArr[targetIdx];
+		playerArr[targetIdx] = playerArr.back();
+		playerArr.pop_back();
+
+		INT64 backAccountNo = playerArr[targetIdx]->accountNo;
+		accountToIndex[backAccountNo] = targetIdx;
+
+		if (target->state == PLAYER_STATE::PLAY)
+		{
+			// TODO: 섹터정리
+			WORD sectorY = target->sectorY;
+			WORD sectorX = target->sectorX;
+		
 			for (int i = 0; i < sector[sectorY][sectorX].size(); i++)
 			{
 				if (sector[sectorY][sectorX][i] != sessionID)
@@ -476,46 +497,10 @@ void ChatServer::ReleaseProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 				sector[sectorY][sectorX][i] = sector[sectorY][sectorX].back();
 				sector[sectorY][sectorX].pop_back();
-
 				break;
 			}
 		}
-		
-		Player* pPlayer = playerArr[idx];
-		playerArr[idx] = playerArr.back();
-		playerArr.pop_back();
-
-		INT64 backAccountNo = playerArr[idx]->accountNo;
-		accountToIndex[backAccountNo] = idx;
-
-		playerPool.Free(pPlayer);
-
-		if (state != PLAYER_STATE::DUPLICATED)
-		{
-			accountToIndex.erase(iter2);
-			onlineAccounts.erase(accountNo);
-		}
-
 	}
-	else
-	{
-		Player* pPlayer;
-
-		for (int i = 0; i < tmpPlayerArr.size(); i++)
-		{
-			if (tmpPlayerArr[i]->sessionID != sessionID)
-				continue;
-
-			pPlayer = tmpPlayerArr[i];
-			tmpPlayerArr[i] = tmpPlayerArr.back();
-			tmpPlayerArr.pop_back();
-
-			playerPool.Free(pPlayer);
-
-			break;
-		}
-	}
-
 }
 
 void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
@@ -540,42 +525,5 @@ void ChatServer::DisconnectUnresponsivePlayers()
 	static DWORD oldTime_waitLogin = timeGetTime();
 	static DWORD oldTime_waitHB = timeGetTime();
 
-	DWORD nowTime = timeGetTime();
-	if (nowTime - oldTime_waitLogin >= 2000)
-	{
-		for (int i = 0; i < tmpPlayerArr.size(); i++)
-		{
-			if (nowTime - tmpPlayerArr[i]->heartbeat >= 4000 && tmpPlayerArr[i]->state != PLAYER_STATE::DISCONNECTING)
-			{
-				DWORD64 sessionID = tmpPlayerArr[i]->sessionID;
-				tmpPlayerArr[i]->state = PLAYER_STATE::DISCONNECTING;
-
-				Disconnect(sessionID);
-
-				cout << "로그인시간 초과" << endl;
-			}
-		}
-
-		oldTime_waitLogin = nowTime;
-	}
-
-
-	if (nowTime - oldTime_waitHB >= 20000)
-	{
-		for (int i = 0; i < playerArr.size(); i++)
-		{
-			if (nowTime - playerArr[i]->heartbeat >= 40000 && playerArr[i]->state != PLAYER_STATE::DISCONNECTING)
-			{
-				DWORD64 sessionID = playerArr[i]->sessionID;
-				playerArr[i]->state = PLAYER_STATE::DISCONNECTING;
-
-				Disconnect(sessionID);
-
-				cout << "하트비트시간 초과" << endl;
-			}
-		}
-
-		oldTime_waitHB = nowTime;
-	}
-
+	// TODO: 중복되서 처리되지않게 조심.
 }

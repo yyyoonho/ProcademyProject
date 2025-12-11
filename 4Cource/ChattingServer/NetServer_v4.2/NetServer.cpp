@@ -66,11 +66,6 @@ void CNetServer::Stop()
 	PostQueuedCompletionStatus(_hIOCP, NULL, NULL, NULL);
 }
 
-int CNetServer::GetSessionCount()
-{
-	return _sessionCount;
-}
-
 bool CNetServer::Disconnect(DWORD64 sessionID)
 {
 	// 세션 검색
@@ -121,7 +116,7 @@ void CNetServer::SendPost(Session* pSession)
 
 			if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 			{
-				Disconnect(pSession->sessionID);
+				CancelIoEx((HANDLE)(pSession->sock), NULL);
 			}
 		}
 	}
@@ -278,6 +273,8 @@ bool CNetServer::NetInit()
 		printf("Error: listen()\n");
 		return false;
 	}
+
+	return true;
 }
 
 bool CNetServer::RecvProc(Session* pSession)
@@ -294,12 +291,14 @@ bool CNetServer::RecvProc(Session* pSession)
 	DWORD wsaRecvRet = WSARecv(pSession->sock, &wsaBuf, 1, &sendBytes, &flags, (LPWSAOVERLAPPED)&pSession->recvMyOverlapped, NULL);
 	if (wsaRecvRet == SOCKET_ERROR)
 	{
-		if (WSAGetLastError() != ERROR_IO_PENDING && WSAGetLastError() != 0)
+		DWORD tmp = WSAGetLastError();
+
+		if (tmp != ERROR_IO_PENDING && tmp != 0)
 		{
 			DecreaseIO_Count(pSession);
 
-			if (WSAGetLastError() != 10054)
-				printf("Error: WSARecv() %d\n", WSAGetLastError());
+			if (tmp != 10054 && tmp != 10038)
+				printf("Error: WSARecv() %d\n", tmp);
 
 			return false;
 		}
@@ -343,12 +342,18 @@ bool CNetServer::SendProc(Session* pSession)
 	{
 		DWORD tmp = WSAGetLastError();
 
-		if (WSAGetLastError() != ERROR_IO_PENDING && WSAGetLastError() != 0)
+		if (tmp != ERROR_IO_PENDING && tmp != 0)
 		{
+			for (int i = 0; i < sPacketCount; i++)
+			{
+				pSession->sendMyOverlapped.sendSerializePacketPtrArr[i].DecreaseRefCount();
+				pSession->sendMyOverlapped.sendSerializePacketPtrArr[i]._ptr = NULL;
+			}
+
 			DecreaseIO_Count(pSession);
 
-			if (WSAGetLastError() != 10054)
-				printf("Error: WSASend() %d\n", WSAGetLastError());
+			if (tmp != 10054 && tmp != 10038)
+				printf("Error: WSASend() %d\n", tmp);
 
 			return false;
 		}
@@ -400,6 +405,28 @@ void CNetServer::ReleaseProc(Session* pSession)
 	closesocket(pSession->sock);
 
 	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SessionNum);
+
+	// send링버퍼 돌기, 오버랩구조체 돌기
+	{
+		while (1)
+		{
+			if (pSession->LockFreeSendQ.Size() <= 0)
+				break;
+
+			RawPtr r;
+			pSession->LockFreeSendQ.Dequeue(&r);
+			r.DecreaseRefCount();
+		}
+
+		for (int i = 0; i < pSession->sendMyOverlapped.sPacketCount; i++)
+		{
+			if (pSession->sendMyOverlapped.sendSerializePacketPtrArr[i]._ptr == NULL)
+				continue;
+
+			pSession->sendMyOverlapped.sendSerializePacketPtrArr[i].DecreaseRefCount();
+			pSession->sendMyOverlapped.sendSerializePacketPtrArr[i]._ptr = NULL;
+		}
+	}
 
 	OnRelease(pSession->sessionID);
 
@@ -491,7 +518,7 @@ void CNetServer::WorkerThread()
 
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
-						Disconnect(pSession->sessionID);
+						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
 
 
@@ -513,7 +540,7 @@ void CNetServer::WorkerThread()
 
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
-						Disconnect(pSession->sessionID);
+						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
 
 
@@ -563,7 +590,7 @@ void CNetServer::WorkerThread()
 
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
-						Disconnect(pSession->sessionID);
+						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
 				}
 			}
@@ -582,7 +609,7 @@ void CNetServer::WorkerThread()
 
 							if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 							{
-								Disconnect(pSession->sessionID);
+								CancelIoEx((HANDLE)(pSession->sock), NULL);
 							}
 						}
 					}
@@ -676,7 +703,8 @@ void CNetServer::AcceptThread()
 
 		_sessionArray[idx].checkSend = TRUE;
 
-		//_sessionArray[idx].releaseCheck = FALSE;
+		_sessionArray[idx].cancelIOCheck = FALSE;
+
 		_sessionArray[idx].IOCountNReleaseCheck.releaseCheck = FALSE;
 
 		getpeername(clientSocket, (SOCKADDR*)&clientAddr, &clientAddrSize);

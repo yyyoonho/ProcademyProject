@@ -328,8 +328,7 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		AcquireSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
 		if (tmpPlayerArr[tmpIdx].sessionID != sessionID)
 		{
-			ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
-			return;
+			DebugBreak();
 		}
 
 		tmpPlayerArr[tmpIdx].sessionID = 0xffffffffffffffff;
@@ -594,9 +593,9 @@ void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
 		ReleaseSRWLockShared(&sessionIdToAccountNo_Lock);
 		return;
 	}
-	ReleaseSRWLockShared(&sessionIdToAccountNo_Lock);
-	
+
 	INT64 accountNo = iter->second;
+	ReleaseSRWLockShared(&sessionIdToAccountNo_Lock);
 
 	AcquireSRWLockShared(&accountToIndex_Lock);
 	auto iter2 = accountToIndex.find(accountNo);
@@ -612,7 +611,7 @@ void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
 	AcquireSRWLockExclusive(&playerArr[idx].playerLock);
 	if (playerArr[idx].sessionID != sessionID)
 	{
-		ReleaseSRWLockShared(&playerArr[idx].playerLock);
+		ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
 		return;
 	}
 
