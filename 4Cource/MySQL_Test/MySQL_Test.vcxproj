@@ -135,10 +135,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MyConfig.cpp" />
     <ClCompile Include="MySQL_Test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DB_JOB.h" />
+    <ClInclude Include="MyConfig.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

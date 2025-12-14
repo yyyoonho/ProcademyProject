@@ -13,11 +13,14 @@
 #include <conio.h>
 #include <string>
 
+#include "MyConfig.h"
 #include "RingBuffer.h"
 
 #include "DB_JOB.h"
 
 using namespace std;
+
+MyConfig g_MyConfig;
 
 HANDLE hEVENT_QUIT;
 HANDLE hEVENT_MSGQ;
@@ -181,7 +184,15 @@ void DBWriterThread()
 
 	// DB 연결
 
-	connection = mysql_real_connect(&conn, "127.0.0.1", "root", "dbsgh123!@", "mytest", 3306, (char*)NULL, 0);
+	//connection = mysql_real_connect(&conn, "127.0.0.1", "root", "dbsgh123!@", "mytest", 3306, (char*)NULL, 0);
+	connection = mysql_real_connect(&conn,
+		g_MyConfig.mySQLConfig.ip.c_str(),
+		g_MyConfig.mySQLConfig.user.c_str(),
+		g_MyConfig.mySQLConfig.password.c_str(),
+		"mytest",
+		g_MyConfig.mySQLConfig.port,
+		(char*)NULL,
+		0);
 	if (connection == NULL)
 	{
 		// mysql_errno(&_MySQL);
@@ -336,6 +347,8 @@ int main()
 {
 	timeBeginPeriod(1);
 
+	g_MyConfig.Load("MySQLconfig.ini");
+
 	msgQ.Resize(5000);
 
 	hEVENT_QUIT = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -355,6 +368,7 @@ int main()
 		if (input =='Q' || input =='q')
 		{
 			SetEvent(hEVENT_QUIT);
+			break;
 		}
 	}
 
