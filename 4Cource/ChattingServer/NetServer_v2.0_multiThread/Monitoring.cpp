@@ -57,20 +57,27 @@ void Monitoring::Clear()
 	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvMessageMoveTPS], 0);
 	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvMessageChatTPS], 0);
 
-	_monitoringArr[(int)MonitorType::PacketPool_FULL] = procademy::MemoryPool_TLS<Net_SerializePacket>::Get_Net_SerializePacket_fullChunkStackCount();
-	_monitoringArr[(int)MonitorType::RCBPool_FULL] = procademy::MemoryPool_TLS<RefCountBlock>::Get_RefCountBlock_fullChunkStackCount();
+	_monitoringArr[(int)MonitorType::PacketPool_FULL] = procademy::MemoryPool_TLS<Net_SerializePacket>::fullChunkStackCount;
+	_monitoringArr[(int)MonitorType::PacketPool_EMPTY] = procademy::MemoryPool_TLS<Net_SerializePacket>::emptyChunkStackCount;
 
-	_monitoringArr[(int)MonitorType::PacketPool_EMPTY] = procademy::MemoryPool_TLS<Net_SerializePacket>::Get_Net_SerializePacket_emptyChunkStackCount();
-	_monitoringArr[(int)MonitorType::RCBPool_EMPTY] = procademy::MemoryPool_TLS<RefCountBlock>::Get_RefCountBlock_emptyChunkStackCount();
+	_monitoringArr[(int)MonitorType::RCBPool_FULL] = procademy::MemoryPool_TLS<RefCountBlock>::fullChunkStackCount;	
+	_monitoringArr[(int)MonitorType::RCBPool_EMPTY] = procademy::MemoryPool_TLS<RefCountBlock>::emptyChunkStackCount;
+
+	_monitoringArr[(int)MonitorType::lockfreeQ_FULL] = LockFreeQueue<RawPtr>::mp.fullChunkStackCount;
+	_monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] = LockFreeQueue<RawPtr>::mp.emptyChunkStackCount;	
 }
 
 void Monitoring::PrintMonitoring()
 {
 	cout << "===============================================================================\n";
 	cout << "PacketPool_fullChunk: " << _monitoringArr[(int)MonitorType::PacketPool_FULL] << "\n";
-	cout << "RCBPool_fullChunk: " << _monitoringArr[(int)MonitorType::RCBPool_FULL] << "\n";
 	cout << "PacketPool_emptyChunk: " << _monitoringArr[(int)MonitorType::PacketPool_EMPTY] << "\n";
+	cout << "\n";
+	cout << "RCBPool_fullChunk: " << _monitoringArr[(int)MonitorType::RCBPool_FULL] << "\n";
 	cout << "RCBPool_emptyChunk: " << _monitoringArr[(int)MonitorType::RCBPool_EMPTY] << "\n";
+	cout << "\n";
+	cout << "LockFreeQ_fullChunk: " << _monitoringArr[(int)MonitorType::lockfreeQ_FULL] << "\n";
+	cout << "LockFreeQ_emptyChunk: " << _monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] << "\n";
 	cout << "\n";
 	cout << "PacketUseSize: " << _monitoringArr[(int)MonitorType::PacketUseCount] << "\n";
 	cout << "-------------------------------------------------------------------------------\n";

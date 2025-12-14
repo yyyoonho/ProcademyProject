@@ -32,7 +32,7 @@ struct RawPtr
 class SerializePacketPtr
 {
 public:
-	inline static procademy::MemoryPool_TLS<RefCountBlock> RcbMP{ 60,false };
+	inline static procademy::MemoryPool_TLS<RefCountBlock> RcbMP{ 0,false };
 
 public:
 	SerializePacketPtr();

@@ -393,6 +393,8 @@ void CNetServer::ReleaseProc(Session* pSession)
 		}
 	}
 
+	pSession->recvQ.ClearBuffer();
+
 	OnRelease(pSession->sessionID);
 
 	unsigned int idx = GetIdxFromSessionID(pSession->sessionID);
@@ -643,21 +645,20 @@ void CNetServer::AcceptThread()
 
 		_sessionArray[idx].sendMyOverlapped.sPacketCount = 0;
 
-		_sessionArray[idx].recvQ.ClearBuffer();
-		if(_sessionArray[idx].LockFreeSendQ.Size() > 0)
+		
+		while (1)
 		{
-			while (1)
-			{
-				if (_sessionArray[idx].LockFreeSendQ.Size() <= 0)
-					break;
+			if (_sessionArray[idx].LockFreeSendQ.Size() <= 0)
+				break;
 
-				RawPtr r;
-				_sessionArray[idx].LockFreeSendQ.Dequeue(&r);
-				r.DecreaseRefCount();
-			}
-
-			_sessionArray[idx].LockFreeSendQ.Clear();
+			RawPtr r;
+			_sessionArray[idx].LockFreeSendQ.Dequeue(&r);
+			r.DecreaseRefCount();
 		}
+
+		_sessionArray[idx].LockFreeSendQ.Clear();
+
+		_sessionArray[idx].recvQ.ClearBuffer();
 
 		_sessionArray[idx].loginCheck = FALSE;
 

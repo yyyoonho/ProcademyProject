@@ -2,10 +2,14 @@
 // 모니터링 항목
 enum class MonitorType : int
 {
-	PacketPool_FULL,		// Packet 풀 할당량 (아직)				()	-> 초기화 x
-	RCBPool_FULL,			// RCB 구조체 할당량 (아직)				()	-> 초기화 x
-	PacketPool_EMPTY,		// Packet 풀 할당량 (아직)				()	-> 초기화 x
-	RCBPool_EMPTY,			// RCB 구조체 할당량 (아직)				()	-> 초기화 x
+	PacketPool_FULL,		// packet 메모리풀_full					()	-> 초기화 x
+	PacketPool_EMPTY,		// packet 메모리풀_empty					()	-> 초기화 x
+
+	RCBPool_FULL,			// RCB 메모리풀_full						()	-> 초기화 x	
+	RCBPool_EMPTY,			// RCB 메모리풀_empty					()	-> 초기화 x
+
+	lockfreeQ_FULL,			// 락프리큐 노드 메모리풀_full			()	-> 초기화 x
+	lockfreeQ_EMPTY,		// 락프리큐 노드 메모리풀_empty			()	-> 초기화 x
 
 	PacketUseCount,
 

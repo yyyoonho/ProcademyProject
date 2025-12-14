@@ -1,7 +1,7 @@
 #pragma once
 #include <new.h>
 
-#define CHUNKSIZE 500
+#define CHUNKSIZE 5000
 
 using namespace std;
 
@@ -77,36 +77,10 @@ namespace procademy
 	private:
 		inline static int	_tlsIdx = TLS_OUT_OF_INDEXES;
 
-		
-	private:
-		// 디버깅용 변수
-		inline static LONG			Net_SerializePacket_emptyChunkStackCount = 0;
-		inline static LONG			Net_SerializePacket_fullChunkStackCount = 0;
-
-		inline static LONG			RefCountBlock_emptyChunkStackCount = 0;
-		inline static LONG			RefCountBlock_fullChunkStackCount = 0;
-	
-
 	public:
-		static LONG Get_Net_SerializePacket_fullChunkStackCount()
-		{
-			return Net_SerializePacket_fullChunkStackCount;
-		}
-
-		static LONG Get_RefCountBlock_fullChunkStackCount()
-		{
-			return RefCountBlock_fullChunkStackCount;
-		}
-
-		static LONG Get_Net_SerializePacket_emptyChunkStackCount()
-		{
-			return Net_SerializePacket_emptyChunkStackCount;
-		}
-
-		static LONG Get_RefCountBlock_emptyChunkStackCount()
-		{
-			return RefCountBlock_emptyChunkStackCount;
-		}
+		// 디버깅용 변수
+		inline static LONG			emptyChunkStackCount = 0;
+		inline static LONG			fullChunkStackCount = 0;
 	};
 
 
@@ -148,16 +122,7 @@ namespace procademy
 				_pFullChunk = pNewChunk;
 
 				// 청크증가!
-				if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
-				{
-					auto cnt = InterlockedIncrement(&Net_SerializePacket_fullChunkStackCount);
-					//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
-				}
-				else if constexpr (std::is_same_v<DATA, RefCountBlock>)
-				{
-					auto cnt = InterlockedIncrement(&RefCountBlock_fullChunkStackCount);
-					//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
-				}
+				InterlockedIncrement(&fullChunkStackCount);
 			}
 		}
 		// 어차피 Alloc할때마다 생성자 호출할거니, 지금은 생성자 호출 하지않겠다.
@@ -191,16 +156,7 @@ namespace procademy
 				_pFullChunk = pNewChunk;
 
 				// 청크증가!
-				if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
-				{
-					auto cnt = InterlockedIncrement(&Net_SerializePacket_fullChunkStackCount);
-					//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
-				}
-				else if constexpr (std::is_same_v<DATA, RefCountBlock>)
-				{
-					auto cnt = InterlockedIncrement(&RefCountBlock_fullChunkStackCount);
-					//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
-				}
+				InterlockedIncrement(&fullChunkStackCount);
 			}
 		}
 	}
@@ -236,29 +192,10 @@ namespace procademy
 			pTlsAllocator->tlsMain_Chunk = new Chunk;
 			pTlsAllocator->tlsSub_Chunk = new Chunk;
 
-			// 청크증가!
-			if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
-			{
-				auto cnt = InterlockedIncrement(&Net_SerializePacket_emptyChunkStackCount);
-				//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
-			}
-			else if constexpr (std::is_same_v<DATA, RefCountBlock>)
-			{
-				auto cnt = InterlockedIncrement(&RefCountBlock_emptyChunkStackCount);
-				//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
-			}
 
 			// 청크증가!
-			if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
-			{
-				auto cnt = InterlockedIncrement(&Net_SerializePacket_emptyChunkStackCount);
-				//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
-			}
-			else if constexpr (std::is_same_v<DATA, RefCountBlock>)
-			{
-				auto cnt = InterlockedIncrement(&RefCountBlock_emptyChunkStackCount);
-				//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
-			}
+			InterlockedIncrement(&emptyChunkStackCount);
+			InterlockedIncrement(&emptyChunkStackCount);
 		}
 
 		TlsAllocator* pTlsAllocator = (TlsAllocator*)TlsGetValue(_tlsIdx);
@@ -332,16 +269,7 @@ namespace procademy
 				}
 
 				// 청크증가!
-				if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
-				{
-					auto cnt = InterlockedIncrement(&Net_SerializePacket_fullChunkStackCount);
-					//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
-				}
-				else if constexpr (std::is_same_v<DATA, RefCountBlock>)
-				{
-					auto cnt = InterlockedIncrement(&RefCountBlock_fullChunkStackCount);
-					//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
-				}
+				InterlockedIncrement(&fullChunkStackCount);
 
 				oldTop = pNewChunk;
 				break;
@@ -401,29 +329,9 @@ namespace procademy
 			pTlsAllocator->tlsMain_Chunk = new Chunk;
 			pTlsAllocator->tlsSub_Chunk = new Chunk;
 
-			// 청크증가!
-			if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
-			{
-				auto cnt = InterlockedIncrement(&Net_SerializePacket_emptyChunkStackCount);
-				//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
-			}
-			else if constexpr (std::is_same_v<DATA, RefCountBlock>)
-			{
-				auto cnt = InterlockedIncrement(&RefCountBlock_emptyChunkStackCount);
-				//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
-			}
-
-			// 청크증가!
-			if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
-			{
-				auto cnt = InterlockedIncrement(&Net_SerializePacket_emptyChunkStackCount);
-				//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
-			}
-			else if constexpr (std::is_same_v<DATA, RefCountBlock>)
-			{
-				auto cnt = InterlockedIncrement(&RefCountBlock_emptyChunkStackCount);
-				//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
-			}
+			// 청크증가
+			InterlockedIncrement(&emptyChunkStackCount);
+			InterlockedIncrement(&emptyChunkStackCount);
 		}
 
 		TlsAllocator* pTlsAllocator = (TlsAllocator*)TlsGetValue(_tlsIdx);
@@ -471,16 +379,7 @@ namespace procademy
 					oldTop = pNewChunk;
 
 					// 청크증가!
-					if constexpr (std::is_same_v<DATA, Net_SerializePacket>)
-					{
-						auto cnt = InterlockedIncrement(&Net_SerializePacket_emptyChunkStackCount);
-						//std::cout << "[Packet] Chunk Increased: " << cnt << std::endl;
-					}
-					else if constexpr (std::is_same_v<DATA, RefCountBlock>)
-					{
-						auto cnt = InterlockedIncrement(&RefCountBlock_emptyChunkStackCount);
-						//std::cout << "[RefCount] Chunk Increased: " << cnt << std::endl;
-					}
+					InterlockedIncrement(&emptyChunkStackCount);
 
 					break;
 				}

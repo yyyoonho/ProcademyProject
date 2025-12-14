@@ -53,14 +53,6 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		}
 	}
 
-	for (int y = 0; y < MAX_SECTOR_Y; y++)
-	{
-		for (int x = 0; x < MAX_SECTOR_X; x++)
-		{
-			sector[y][x].reserve(200);
-		}
-	}
-
 	InitializeSRWLock(&tmpSessionIdToIndex_Lock);
 	InitializeSRWLock(&accountToIndex_Lock);
 	InitializeSRWLock(&sessionIdToAccountNo_Lock);
@@ -130,7 +122,6 @@ void ChatServer::OnRelease(DWORD64 sessionID)
 
 		sessionIdToAccountNo.erase(iter);
 		ReleaseSRWLockExclusive(&sessionIdToAccountNo_Lock);
-		
 	}
 
 	// tmp 영역 정리
@@ -291,12 +282,14 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		int oldIdx = iter2->second;
 		ReleaseSRWLockShared(&accountToIndex_Lock);
 
+
 		AcquireSRWLockExclusive(&playerArr[oldIdx].playerLock);
 		if (playerArr[oldIdx].accountNo != accountNo)
 		{
 			ReleaseSRWLockExclusive(&playerArr[oldIdx].playerLock);
 			return;
 		}
+
 		DWORD64 oldPlayerSessionID = playerArr[oldIdx].sessionID;
 		ReleaseSRWLockExclusive(&playerArr[oldIdx].playerLock);
 

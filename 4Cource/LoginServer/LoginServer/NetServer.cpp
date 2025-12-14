@@ -677,7 +677,7 @@ void CNetServer::AcceptThread()
 
 		// OnAccept
 		{
-			OnAccept(_sessionArray[idx].sessionID);
+			OnAccept(_sessionArray[idx].sessionID, clientAddr);
 		}
 
 		// 비동기 IO 걸어두기

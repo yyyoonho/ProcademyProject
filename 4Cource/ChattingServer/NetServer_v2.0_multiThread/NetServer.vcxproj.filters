@@ -103,6 +103,9 @@
     <ClInclude Include="LogManager.h">
       <Filter>소스 파일\Monitor</Filter>
     </ClInclude>
+    <ClInclude Include="LockFree_Queue.h">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

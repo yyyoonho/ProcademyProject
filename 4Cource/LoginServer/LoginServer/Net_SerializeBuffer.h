@@ -10,7 +10,7 @@ class Net_SerializePacket
 	friend procademy::MemoryPool_TLS<Net_SerializePacket>;
 
 public:
-	inline static procademy::MemoryPool_TLS<Net_SerializePacket> SPacketMP{ 60,false };
+	inline static procademy::MemoryPool_TLS<Net_SerializePacket> SPacketMP{ 0,false };
 
 public:
 	enum en_PACKET

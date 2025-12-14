@@ -104,6 +104,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,6 +146,7 @@
   <ItemGroup>
     <ClInclude Include="ChatServer.h" />
     <ClInclude Include="CommonProtocol.h" />
+    <ClInclude Include="LockFree_Queue.h" />
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="Monitoring.h" />
     <ClInclude Include="NetCodec.h" />

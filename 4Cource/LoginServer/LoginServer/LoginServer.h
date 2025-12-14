@@ -1,5 +1,7 @@
 #pragma once
 
+class Player;
+
 class LoginServer : public CNetServer
 {
 public:
@@ -19,7 +21,7 @@ public:
 
 	// 핸들링 함수
 	virtual bool OnConnectionRequest(SOCKADDR_IN clientAddr);
-	virtual void OnAccept(DWORD64 sessionID);
+	virtual void OnAccept(DWORD64 sessionID, SOCKADDR_IN addr);
 	virtual void OnRelease(DWORD64 sessionID);
 	virtual void OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket);
 	virtual void OnError(int errorCode, WCHAR* errorComment);
@@ -40,7 +42,21 @@ private:
 
 private:
 	HANDLE hEvent_Quit;
-	cpp_redis::client* client;
 
+private:
+	procademy::MemoryPool_TLS<Player> mp{ 0,false };
+
+	mutex _playeLock;
+	unordered_map<DWORD64, int> sessionIDToIdx;
+	vector<Player*> _playerVec;
+
+private:
+	const WCHAR* _chattingServerIpStr1;
+	const WCHAR* _chattingServerIpStr2;
+	const WCHAR* _dummyIpStr1;
+	const WCHAR* _dummyIpStr2;
+
+	in_addr _dummyIpAddr1;
+	in_addr _dummyIpAddr2;
 };
 

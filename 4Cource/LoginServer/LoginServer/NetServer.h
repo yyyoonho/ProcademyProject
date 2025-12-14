@@ -47,21 +47,14 @@ private:
 	void WorkerThread();
 	static void AcceptThreadRun(LPVOID* lParam);
 	void AcceptThread();
-	static void MonitorThreadRun(LPVOID* lParam);
-	void MonitorThread();
 	
 public:
 	// 핸들링 함수
 	virtual bool OnConnectionRequest(SOCKADDR_IN clientAddr) = 0;
-	virtual void OnAccept(DWORD64 sessionID) = 0;
+	virtual void OnAccept(DWORD64 sessionID, SOCKADDR_IN addr) = 0;
 	virtual void OnRelease(DWORD64 sessionID) = 0;
 	virtual void OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket) = 0;
 	virtual void OnError(int errorCode, WCHAR* errorComment) = 0;
-
-	// 모니터링 함수
-	int GetAcceptTPS();
-	int GetRecvMessageTPS();
-	int GetSendMessageTPS();
 
 private:
 	// 멤버변수: 쓰레드

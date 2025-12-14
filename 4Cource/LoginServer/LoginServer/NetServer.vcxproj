@@ -141,6 +141,7 @@
     <ClCompile Include="NetServer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Net_SerializeBuffer.cpp" />
+    <ClCompile Include="Player.cpp" />
     <ClCompile Include="SerializeBufferPtr.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -148,12 +149,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonProtocol.h" />
+    <ClInclude Include="LockFree_Queue.h" />
     <ClInclude Include="LoginServer.h" />
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="Monitoring.h" />
     <ClInclude Include="NetCodec.h" />
     <ClInclude Include="NetServer.h" />
     <ClInclude Include="Net_SerializeBuffer.h" />
+    <ClInclude Include="Player.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="SerializeBufferPtr.h" />
     <ClInclude Include="stdafx.h" />

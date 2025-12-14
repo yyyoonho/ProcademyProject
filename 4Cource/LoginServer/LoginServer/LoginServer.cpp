@@ -6,8 +6,11 @@
 
 #include "CommonProtocol.h"
 #include "Monitoring.h"
+#include "Player.h"
 #include "NetServer.h"
 #include "LoginServer.h"
+
+thread_local cpp_redis::client* client;
 
 LoginServer::LoginServer()
 {
@@ -26,8 +29,15 @@ bool LoginServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 		return false;
 	}
 
-	client = new cpp_redis::client;
-	client->connect();
+	// TODO: config 파일 파싱으로 바꾸기.
+	_chattingServerIpStr1 = L"10.0.1.1";
+	_chattingServerIpStr2 = L"10.0.2.1";
+	_dummyIpStr1 = L"10.0.1.2";
+	_dummyIpStr2 = L"10.0.2.2";
+
+	InetPtonW(AF_INET, _dummyIpStr1, &_dummyIpAddr1);
+	InetPtonW(AF_INET, _dummyIpStr2, &_dummyIpAddr2);
+
 
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	if (hEvent_Quit == 0)
@@ -51,12 +61,45 @@ bool LoginServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
 	return false;
 }
 
-void LoginServer::OnAccept(DWORD64 sessionID)
+void LoginServer::OnAccept(DWORD64 sessionID, SOCKADDR_IN addr)
 {
+	Player* newPlayer = mp.Alloc();
+
+	newPlayer->sessionID = sessionID;
+	newPlayer->_addr = addr;
+
+	{
+		lock_guard<mutex> lock(_playeLock);
+		_playerVec.push_back(newPlayer);
+		sessionIDToIdx.insert({ sessionID, _playerVec.size() - 1 });
+	}
 }
 
 void LoginServer::OnRelease(DWORD64 sessionID)
 {
+	lock_guard<mutex> lock(_playeLock);
+
+	auto iter = sessionIDToIdx.find(sessionID);
+	if (iter == sessionIDToIdx.end())
+	{
+		DebugBreak();
+	}
+
+	int idx = iter->second;
+	int lastIdx = _playerVec.size() - 1;
+	Player* removed = _playerVec[idx];
+	
+	if (idx != lastIdx)
+	{
+		Player* moved = _playerVec[lastIdx];
+		_playerVec[idx] = moved;
+		sessionIDToIdx[moved->sessionID] = idx;
+	}
+
+	_playerVec.pop_back();
+
+	sessionIDToIdx.erase(sessionID);
+	mp.Free(removed);
 }
 
 void LoginServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -80,7 +123,7 @@ void LoginServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		break;
 	}
 
-
+	// TODO: Accept후 3초간 아무 반응이 없다면, 내보내자.
 }
 
 void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -112,6 +155,12 @@ bool LoginServer::AuthorizeToken(const char* token)
 
 bool LoginServer::SaveTokenToRedis(INT64 accountNo, const char* sessionKey)
 {
+	if (client == NULL)
+	{
+		client = new cpp_redis::client;
+		client->connect();
+	}
+
 	string key = to_string(accountNo);
 	string token = string(sessionKey);
 
@@ -127,6 +176,26 @@ bool LoginServer::SaveTokenToRedis(INT64 accountNo, const char* sessionKey)
 
 void LoginServer::SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID)
 {
+	sockaddr_in playerAddr;
+	{
+		lock_guard<mutex> lock(_playeLock);
+
+		if (sessionIDToIdx.find(sessionID) == sessionIDToIdx.end())
+		{
+			DebugBreak();
+		}
+
+		int idx = sessionIDToIdx[sessionID];
+
+		if (_playerVec[idx]->sessionID != sessionID)
+		{
+			DebugBreak();
+		}
+
+		playerAddr = _playerVec[idx]->_addr;
+	}
+
+
 	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 	newPacket.Clear();
 
@@ -145,9 +214,20 @@ void LoginServer::SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID)
 	swprintf_s(Nickname, 20, L"Nickname_%lld", accountNo);
 
 	wcscpy_s(GameServerIP, L"7.7.7.7");
-	GameServerPort = 7777;
+	GameServerPort = 7777;	
 
-	wcscpy_s(ChatServerIP, L"127.0.0.1");
+	if (playerAddr.sin_addr.S_un.S_addr == _dummyIpAddr1.S_un.S_addr)
+	{
+		wcscpy_s(ChatServerIP, _chattingServerIpStr1);
+	}
+	else if (playerAddr.sin_addr.S_un.S_addr == _dummyIpAddr2.S_un.S_addr)
+	{
+		wcscpy_s(ChatServerIP, _chattingServerIpStr2);
+	}
+	else
+	{
+		wcscpy_s(ChatServerIP, L"127.0.0.1");
+	}
 	ChatServerPort = 20601;
 
 	newPacket << type;

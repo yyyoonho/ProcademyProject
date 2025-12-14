@@ -65,6 +65,9 @@
     <ClCompile Include="LoginServer.cpp">
       <Filter>소스 파일\LoginServer</Filter>
     </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>소스 파일\LoginServer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -101,6 +104,12 @@
       <Filter>소스 파일\Protocol</Filter>
     </ClInclude>
     <ClInclude Include="LoginServer.h">
+      <Filter>소스 파일\LoginServer</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFree_Queue.h">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
       <Filter>소스 파일\LoginServer</Filter>
     </ClInclude>
   </ItemGroup>
