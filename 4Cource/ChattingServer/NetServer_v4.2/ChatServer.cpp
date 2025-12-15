@@ -444,9 +444,55 @@ void ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
 
 void ChatServer::ReleaseProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
-	// tmp에 있는지, origin에 있는지 구분.
+	// release대상이 tmp인 상황. (playerstate == accept)
 	auto iter = tmpSIDToIdx.find(sessionID);
-	if(iter )
+	if (iter != tmpSIDToIdx.end())
+	{
+		int tmpIdx = iter->second;
+		Player* removed = tmpPlayerArr[tmpIdx];
+
+		int tmpLastIdx = tmpPlayerArr.size() - 1;
+
+		if (tmpIdx != tmpLastIdx)
+		{
+			Player* moved = tmpPlayerArr[tmpLastIdx];
+			tmpPlayerArr[tmpIdx] = moved;
+			
+			tmpSIDToIdx[moved->sessionID] = tmpIdx;
+		}
+
+		tmpPlayerArr.pop_back();
+		tmpSIDToIdx.erase(sessionID);
+
+		return;
+	}
+
+	// release대상이 origin인 상황. (playerstate == login or play)
+	{
+		auto iter2 = SIDToIdx.find(sessionID);
+		if (iter2 == SIDToIdx.end())
+		{
+			DebugBreak();
+		}
+
+		int idx = iter2->second;
+		Player* removed = playerArr[idx];
+		INT64 accountNo = removed->accountNo;
+
+		int lastIdx = playerArr.size() - 1;
+		if (idx != lastIdx)
+		{
+			Player* moved = playerArr[lastIdx];
+			playerArr[idx] = moved;
+
+
+		}
+
+
+
+		accountNoToIdx.erase(accountNo);
+		SIDToIdx.erase(sessionID);
+	}
 
 }
 
