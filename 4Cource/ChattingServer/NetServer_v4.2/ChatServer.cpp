@@ -214,6 +214,7 @@ void ChatServer::AcceptProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 	newPlayer->state = PLAYER_STATE::ACCEPT;
 
 	tmpPlayerArr.push_back(newPlayer);
+	tmpSIDToIdx.insert({ sessionID, tmpPlayerArr.size() - 1 });
 }
 
 void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -249,21 +250,14 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
-	Player* loginPlayer = NULL;
-	for (int i = 0; i < tmpPlayerArr.size(); i++)
+	auto iter = tmpSIDToIdx.find(sessionID);
+	if (iter == tmpSIDToIdx.end())
 	{
-		if (tmpPlayerArr[i]->sessionID != sessionID)
-			continue;
-
-		loginPlayer = tmpPlayerArr[i];
-		tmpPlayerArr[i] = tmpPlayerArr.back();
-		tmpPlayerArr.pop_back();
-
-		break;
+		DebugBreak();
 	}
 
-	if (loginPlayer == NULL)
-		return;
+	int idx = iter->second;
+	Player* loginPlayer = tmpPlayerArr[idx];
 
 	INT64 accountNo;
 	pPacket >> accountNo;
@@ -273,16 +267,18 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	if (flag == false)
 	{
 		// 로그인 플레이어부터 끊기
-		Disconnect(loginPlayer->sessionID);
+		Disconnect(sessionID);
 		Monitoring::GetInstance()->Increase(MonitorType::DuplicatedDisconnect_new);
 
 		// 기존 플레이어 끊기
-		unordered_map<INT64, int>::iterator iter = accountToIndex.find(accountNo);
-		if (iter == accountToIndex.end())
-			return;
+		auto iter2 = accountNoToIdx.find(accountNo);
+		if (iter2 == accountNoToIdx.end())
+		{
+			DebugBreak();
+		}
 
-		int idx = iter->second;
-		Disconnect(playerArr[idx]->sessionID);
+		DWORD64 oldSID = playerArr[iter2->second]->sessionID;
+		Disconnect(oldSID);
 		Monitoring::GetInstance()->Increase(MonitorType::DuplicatedDisconnect_old);
 
 		return;
@@ -294,14 +290,25 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		pPacket.GetData(loginPlayer->sessionKey, 64);
 
 		loginPlayer->accountNo = accountNo;
-		loginPlayer->sectorY = 12345;
-		loginPlayer->sectorX = 12345;
 		loginPlayer->state = PLAYER_STATE::LOGIN;
 
-		playerArr.push_back(loginPlayer);
+		
+		// tmp 자료구조 정리
+		int lastIdx = tmpPlayerArr.size() - 1;
+		if (idx != lastIdx)
+		{
+			Player* moved = tmpPlayerArr[lastIdx];
+			tmpPlayerArr[idx] = moved;
+			tmpSIDToIdx[moved->sessionID] = idx;
+		}
+		tmpPlayerArr.pop_back();
+		tmpSIDToIdx.erase(sessionID);
 
-		sessionIDAccountNoMap.insert({ sessionID, accountNo });
-		accountToIndex.insert({ accountNo, playerArr.size() - 1 });
+		// new 자료구조 정리
+		playerArr.push_back(loginPlayer);
+		int newIdx = playerArr.size() - 1;
+		SIDToIdx.insert({ sessionID, newIdx });
+		accountNoToIdx.insert({ accountNo, newIdx });
 
 		SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 		newPacket.Clear();
@@ -314,7 +321,6 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		newPacket << accountNo;
 
 		SendPacket(sessionID, newPacket);
-
 		Monitoring::GetInstance()->Increase(MonitorType::PlayerCount);
 	}
 
@@ -322,8 +328,8 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 bool ChatServer::CheckDuplicateLogin(INT64 accountNo)
 {
-	unordered_map<INT64, int>::iterator iter = accountToIndex.find(accountNo);
-	if (iter == accountToIndex.end())
+	unordered_map<INT64, int>::iterator iter = accountNoToIdx.find(accountNo);
+	if (iter == accountNoToIdx.end())
 	{
 		return true;
 	}
@@ -341,7 +347,7 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 	pPacket >> sectorX;
 	pPacket >> sectorY;
 
-	Player* pPlayer = playerArr[accountToIndex.find(accountNo)->second];
+	Player* pPlayer = playerArr[accountNoToIdx.find(accountNo)->second];
 
 	WORD oldSectorY = pPlayer->sectorY;
 	WORD oldSectorX = pPlayer->sectorX;
@@ -349,7 +355,7 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 	pPlayer->sectorY = sectorY;
 	pPlayer->sectorX = sectorX;
 
-	if (oldSectorY != 12345)
+	if (pPlayer->state == PLAYER_STATE::PLAY)
 	{
 		for (int i = 0; i < sector[oldSectorY][oldSectorX].size(); i++)
 		{
@@ -393,7 +399,7 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	pPacket >> msgLen;
 	pPacket.GetData((char*)msg, msgLen);
 
-	Player* pPlayer = playerArr[accountToIndex.find(accountNo)->second];
+	Player* pPlayer = playerArr[accountNoToIdx.find(accountNo)->second];
 
 	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 	newPacket.Clear();
@@ -438,86 +444,15 @@ void ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
 
 void ChatServer::ReleaseProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
-	bool flag =false;
-	INT64 accountNo = -1;
+	// tmp에 있는지, origin에 있는지 구분.
+	auto iter = tmpSIDToIdx.find(sessionID);
+	if(iter )
 
-	auto iter = sessionIDAccountNoMap.find(sessionID);
-	if (iter == sessionIDAccountNoMap.end())
-	{
-		flag = true;
-	}
-	else
-	{
-		flag = false;
-		accountNo = iter->second;
-
-		sessionIDAccountNoMap.erase(iter);
-	}
-
-	if (flag == true)
-	{
-		for (int i = 0; i < tmpPlayerArr.size(); i++)
-		{
-			if (tmpPlayerArr[i]->sessionID != sessionID)
-				continue;
-
-			tmpPlayerArr[i] = tmpPlayerArr.back();
-			tmpPlayerArr.pop_back();
-			break;
-		}
-	}
-	else
-	{
-		auto iter2 = accountToIndex.find(accountNo);
-		if (iter2 == accountToIndex.end())
-		{
-			DebugBreak();
-		}
-
-		int targetIdx = iter2->second;
-		accountToIndex.erase(iter2);
-
-		Player* target = playerArr[targetIdx];
-		playerArr[targetIdx] = playerArr.back();
-		playerArr.pop_back();
-
-		INT64 backAccountNo = playerArr[targetIdx]->accountNo;
-		accountToIndex[backAccountNo] = targetIdx;
-
-		if (target->state == PLAYER_STATE::PLAY)
-		{
-			// TODO: 섹터정리
-			WORD sectorY = target->sectorY;
-			WORD sectorX = target->sectorX;
-		
-			for (int i = 0; i < sector[sectorY][sectorX].size(); i++)
-			{
-				if (sector[sectorY][sectorX][i] != sessionID)
-					continue;
-
-				sector[sectorY][sectorX][i] = sector[sectorY][sectorX].back();
-				sector[sectorY][sectorX].pop_back();
-				break;
-			}
-		}
-	}
 }
 
 void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
 {
-	unordered_map<DWORD64, INT64>::iterator iter = sessionIDAccountNoMap.find(sessionID);
-	if (iter == sessionIDAccountNoMap.end())
-		return;
-
-	INT64 accountNo = iter->second;
-
-	unordered_map<INT64, int>::iterator iter2 = accountToIndex.find(accountNo);
-	if (iter2 == accountToIndex.end())
-		return;
-
-	int idx = iter2->second;
-
-	playerArr[idx]->heartbeat = timeGetTime();
+	
 }
 
 void ChatServer::DisconnectUnresponsivePlayers()
@@ -525,5 +460,5 @@ void ChatServer::DisconnectUnresponsivePlayers()
 	static DWORD oldTime_waitLogin = timeGetTime();
 	static DWORD oldTime_waitHB = timeGetTime();
 
-	// TODO: 중복되서 처리되지않게 조심.
+	// TODO: 중복되서 처리되지않게 조심.(근데 어차피 disconnect에서 알아서 걸러주지않나)
 }

@@ -75,11 +75,11 @@ public:
 	procademy::MemoryPool_TLS<Player> playerPool{ 0,false };
 
 	vector<Player*>					tmpPlayerArr;
+	unordered_map<DWORD64, int>		tmpSIDToIdx;
 
 	vector<Player*>					playerArr;
-
-	unordered_map<DWORD64, INT64>	sessionIDAccountNoMap;
-	unordered_map<INT64, int>		accountToIndex;
+	unordered_map<DWORD64, int>		SIDToIdx;
+	unordered_map<INT64, int>		accountNoToIdx;
 
 	vector<DWORD64>					sector[MAX_SECTOR_Y][MAX_SECTOR_X];
 };
