@@ -20,6 +20,8 @@
 
 using namespace std;
 
+//#define TRANSACTION
+
 MyConfig g_MyConfig;
 
 HANDLE hEVENT_QUIT;
@@ -34,13 +36,18 @@ mutex msgQ_Lock;
 
 DWORD64 g_number = 0;
 
-#define DEFAULTFRAME 50
+#define DEFAULTFRAME 300
 
 DWORD64 msgTPS;
 
 int g_Frame = DEFAULTFRAME;
 LONG g_FrameCount = 0;
 float g_UsePercent;
+
+
+MYSQL conn;
+MYSQL* connection = NULL;
+
 
 bool Frame()
 {
@@ -173,15 +180,63 @@ void UpdateThread()
 	}
 }
 
+void ReqQuery()
+{
+#ifdef TRANSACTION
+	{
+		string query =
+			"BEGIN";
+
+		int query_stat;
+
+		// Insert 쿼리문
+		query_stat = mysql_query(connection, query.c_str());
+		if (query_stat != 0)
+		{
+			printf("Mysql query error : %s", mysql_error(&conn));
+			return;
+		}
+	}
+#endif // TRANSACTION
+
+	for (int i = 0; i < 3; i++)
+	{
+		g_number++;
+
+		string query =
+			"INSERT INTO `new_table` (`accountNo`) VALUES ('" + to_string(g_number) + "');";
+
+		int query_stat;
+
+		// Insert 쿼리문
+		query_stat = mysql_query(connection, query.c_str());
+		if (query_stat != 0)
+		{
+			printf("Mysql query error : %s", mysql_error(&conn));
+			return;
+		}
+	}
+
+#ifdef TRANSACTION
+	{
+		string query =
+			"COMMIT";
+
+		int query_stat;
+
+		// Insert 쿼리문
+		query_stat = mysql_query(connection, query.c_str());
+		if (query_stat != 0)
+		{
+			printf("Mysql query error : %s", mysql_error(&conn));
+			return;
+		}
+	}
+#endif // TRANSACTION
+}
+
 void DBWriterThread()
 {
-	// TODO: 큐에서 메시지를 뽑아서 DB에 저장합니다.
-	MYSQL conn;
-	MYSQL* connection = NULL;
-
-	// 초기화
-	mysql_init(&conn);
-
 	// DB 연결
 
 	//connection = mysql_real_connect(&conn, "127.0.0.1", "root", "dbsgh123!@", "mytest", 3306, (char*)NULL, 0);
@@ -198,6 +253,21 @@ void DBWriterThread()
 		// mysql_errno(&_MySQL);
 		fprintf(stderr, "Mysql connection error : %s", mysql_error(&conn));
 		return;
+	}
+
+	{
+		string query =
+			"TRUNCATE `new_table`;";
+
+		int query_stat;
+
+		// Insert 쿼리문
+		query_stat = mysql_query(connection, query.c_str());
+		if (query_stat != 0)
+		{
+			printf("Mysql query error : %s", mysql_error(&conn));
+			return;
+		}
 	}
 
 	//*************************************************************************************************************//
@@ -235,29 +305,9 @@ void DBWriterThread()
 			msgQ.MoveFront(sizeof(st_DBQUERY_HEADER));
 			msgQ.Dequeue((char*)&msg, sizeof(st_DBQUERY_MSG_LEVELUP));
 
-			if (msgQ.GetUseSize() > 0)
-			{
-				SetEvent(hEVENT_MSGQ);
-			}
-
 			// TODO: 쿼리 날리기
-			for (int i = 0; i < 3; i++)
-			{
-				g_number++;
-
-				string query =
-					"INSERT INTO `mytest`.`new_table` (`accountNo`) VALUES ('" + to_string(g_number) +"');";
-
-				int query_stat;
-
-				// Insert 쿼리문
-				query_stat = mysql_query(connection, query.c_str());
-				if (query_stat != 0)
-				{
-					printf("Mysql query error : %s", mysql_error(&conn));
-					return;
-				}
-			}
+			ReqQuery();
+			msgTPS++;
 		}
 			break;
 		case df_DBQUERY_MSG_MONEY_ADD:
@@ -271,29 +321,9 @@ void DBWriterThread()
 			msgQ.MoveFront(sizeof(st_DBQUERY_HEADER));
 			msgQ.Dequeue((char*)&msg, sizeof(st_DBQUERY_MSG_MONEY_ADD));
 
-			if (msgQ.GetUseSize() > 0)
-			{
-				SetEvent(hEVENT_MSGQ);
-			}
-
 			// TODO: 쿼리 날리기
-			for (int i = 0; i < 3; i++)
-			{
-				g_number++;
-
-				string query =
-					"INSERT INTO `mytest`.`new_table` (`accountNo`) VALUES ('" + to_string(g_number) + "');";
-
-				int query_stat;
-
-				// Insert 쿼리문
-				query_stat = mysql_query(connection, query.c_str());
-				if (query_stat != 0)
-				{
-					printf("Mysql query error : %s", mysql_error(&conn));
-					return;
-				}
-			}
+			ReqQuery();
+			msgTPS++;
 		}
 			break;
 		case df_DBQUERY_MSG_QUEST_COMPLETE:
@@ -307,35 +337,20 @@ void DBWriterThread()
 			msgQ.MoveFront(sizeof(st_DBQUERY_HEADER));
 			msgQ.Dequeue((char*)&msg, sizeof(st_DBQUERY_MSG_QUEST_COMPLETE));
 
-			if (msgQ.GetUseSize() > 0)
-			{
-				SetEvent(hEVENT_MSGQ);
-			}
-
 			// TODO: 쿼리 날리기
-			for (int i = 0; i < 3; i++)
-			{
-				g_number++;
-
-				string query =
-					"INSERT INTO `mytest`.`new_table` (`accountNo`) VALUES ('" + to_string(g_number) + "');";
-
-				int query_stat;
-
-				// Insert 쿼리문
-				query_stat = mysql_query(connection, query.c_str());
-				if (query_stat != 0)
-				{
-					printf("Mysql query error : %s", mysql_error(&conn));
-					return;
-				}
-			}
+			ReqQuery();
+			msgTPS++;
 		}
-
 			break;
 		}
 
-		msgTPS++;
+
+		if (msgQ.GetUseSize() > 0)
+		{
+			SetEvent(hEVENT_MSGQ);
+		}
+
+		
 	}
 
 	// DB 연결닫기
@@ -349,7 +364,10 @@ int main()
 
 	g_MyConfig.Load("MySQLconfig.ini");
 
-	msgQ.Resize(5000);
+	// 초기화
+	mysql_init(&conn);
+
+	msgQ.Resize(10000);
 
 	hEVENT_QUIT = CreateEvent(NULL, TRUE, FALSE, NULL);
 	hEVENT_MSGQ = CreateEvent(NULL, FALSE, FALSE, NULL);
