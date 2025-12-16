@@ -463,6 +463,7 @@ void ChatServer::ReleaseProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		tmpPlayerArr.pop_back();
 		tmpSIDToIdx.erase(sessionID);
+		playerPool.Free(removed);
 
 		return;
 	}
@@ -485,13 +486,30 @@ void ChatServer::ReleaseProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 			Player* moved = playerArr[lastIdx];
 			playerArr[idx] = moved;
 
-
+			SIDToIdx[moved->sessionID] = idx;
+			accountNoToIdx[moved->accountNo] = idx;
 		}
+		playerArr.pop_back();
 
+		if (removed->state == PLAYER_STATE::PLAY)
+		{
+			WORD sectorY = removed->sectorY;
+			WORD sectorX = removed->sectorX;
 
+			for (int i = 0; i < sector[sectorY][sectorX].size(); i++)
+			{
+				if (sector[sectorY][sectorX][i] != removed->sessionID)
+					continue;
+
+				sector[sectorY][sectorX][i] = sector[sectorY][sectorX].back();
+				sector[sectorY][sectorX].pop_back();
+				break;
+			}
+		}
 
 		accountNoToIdx.erase(accountNo);
 		SIDToIdx.erase(sessionID);
+		playerPool.Free(removed);
 	}
 
 }
