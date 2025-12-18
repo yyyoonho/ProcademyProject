@@ -38,6 +38,7 @@ public:
 	SerializePacketPtr();
 	SerializePacketPtr(Net_SerializePacket* ptr);
 	SerializePacketPtr(const SerializePacketPtr& other);
+	SerializePacketPtr(RawPtr rawPtr);
 
 	SerializePacketPtr& operator=(const SerializePacketPtr& other);
 	SerializePacketPtr& operator=(std::nullptr_t);

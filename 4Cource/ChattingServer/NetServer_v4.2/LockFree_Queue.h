@@ -20,9 +20,11 @@ private:
     int maximumQSize = 1000000;
 
     LONG _uniqueCode;
+
     DWORD64 _uniqueQueueCode;
 
-private:
+
+public:
     inline static procademy::MemoryPool_TLS<Node> mp{ 0,false };
 
 public:
@@ -37,15 +39,7 @@ public:
 template<typename T>
 LockFreeQueue<T>::LockFreeQueue()
 {
-    thread_local bool randInitialized = false;
-
-    if (!randInitialized)
-    {
-        srand(time(nullptr) * GetCurrentThreadId());
-        randInitialized = true;
-    }
-
-    _uniqueQueueCode = rand();
+    _uniqueQueueCode = (DWORD64)&_uniqueQueueCode;
     _uniqueCode = 0;
     _useSize = 0;
 

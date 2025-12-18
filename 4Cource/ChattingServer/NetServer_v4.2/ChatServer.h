@@ -48,7 +48,8 @@ private:
 	HANDLE _hMonitoringhread;
 	HANDLE _hEventQuit;
 
-	SerializePacketPtr_RingBuffer _contentMSGQueue;
+	//SerializePacketPtr_RingBuffer _contentMSGQueue;
+	LockFreeQueue<RawPtr> _contentMSGQueue;
 	HANDLE _hEventMsg;
 	SRWLOCK _contentMSGLock;
 

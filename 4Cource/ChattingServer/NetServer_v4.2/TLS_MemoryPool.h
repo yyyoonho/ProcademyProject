@@ -1,11 +1,13 @@
 #pragma once
 #include <new.h>
 
-//#define LOG_MEMORYPOOL
-
 #define CHUNKSIZE 500
 
 using namespace std;
+
+
+struct RefCountBlock;
+class Net_SerializePacket;
 
 namespace procademy
 {
@@ -75,14 +77,10 @@ namespace procademy
 	private:
 		inline static int	_tlsIdx = TLS_OUT_OF_INDEXES;
 
-		
-	private:
-		// 디버깅용 변수
-		LONG			_fullChunkStackCount = 0;
-		LONG			_emptyChunkStackCount = 0;
 	public:
-		LONG			GetFullChunkStackCount();
-		LONG			GetEmptyChunkStackCount();
+		// 디버깅용 변수
+		inline static LONG			emptyChunkStackCount = 0;
+		inline static LONG			fullChunkStackCount = 0;
 	};
 
 
@@ -106,10 +104,6 @@ namespace procademy
 			{
 				Chunk* pNewChunk = new Chunk;
 
-				// 로깅
-				//InterlockedIncrement(&_fullChunkUseCount);
-				cout << "2번" << endl;
-
 				// chunk에 삽입
 				for (int j = 0; j < CHUNKSIZE; j++)
 				{
@@ -127,10 +121,8 @@ namespace procademy
 				pNewChunk->_pNextChunk = _pFullChunk;
 				_pFullChunk = pNewChunk;
 
-#ifdef LOG_MEMORYPOOL
-				InterlockedIncrement(&_fullChunkStackCount);
-#endif // LOG_MEMORYPOOL
-
+				// 청크증가!
+				InterlockedIncrement(&fullChunkStackCount);
 			}
 		}
 		// 어차피 Alloc할때마다 생성자 호출할거니, 지금은 생성자 호출 하지않겠다.
@@ -140,10 +132,6 @@ namespace procademy
 			for (int i = 0; i < iChunkNum; i++)
 			{
 				Chunk* pNewChunk = new Chunk;
-
-				// 로깅
-				//InterlockedIncrement(&_fullChunkUseCount);
-				cout << "3번" << endl;
 
 				// chunk에 삽입
 				for (int j = 0; j < CHUNKSIZE; j++)
@@ -167,9 +155,8 @@ namespace procademy
 				pNewChunk->_pNextChunk = _pFullChunk;
 				_pFullChunk = pNewChunk;
 
-#ifdef LOG_MEMORYPOOL
-				InterlockedIncrement(&_fullChunkStackCount);
-#endif // LOG_MEMORYPOOL
+				// 청크증가!
+				InterlockedIncrement(&fullChunkStackCount);
 			}
 		}
 	}
@@ -204,6 +191,11 @@ namespace procademy
 
 			pTlsAllocator->tlsMain_Chunk = new Chunk;
 			pTlsAllocator->tlsSub_Chunk = new Chunk;
+
+
+			// 청크증가!
+			InterlockedIncrement(&emptyChunkStackCount);
+			InterlockedIncrement(&emptyChunkStackCount);
 		}
 
 		TlsAllocator* pTlsAllocator = (TlsAllocator*)TlsGetValue(_tlsIdx);
@@ -276,6 +268,9 @@ namespace procademy
 					newNode->_underflowGuard = (Node*)_poolId;
 				}
 
+				// 청크증가!
+				InterlockedIncrement(&fullChunkStackCount);
+
 				oldTop = pNewChunk;
 				break;
 			}
@@ -287,10 +282,6 @@ namespace procademy
 			if ((Chunk*)ret == oldTop)
 			{
 				oldTop = ((Chunk*)((DWORD64)oldTop & 0x0000ffffffffffff));
-
-#ifdef LOG_MEMORYPOOL
-				InterlockedDecrement(&_fullChunkStackCount);
-#endif // LOG_MEMORYPOOL
 
 				break;
 			}
@@ -311,9 +302,6 @@ namespace procademy
 			LONG64 ret = InterlockedCompareExchange64((LONG64*)&_pEmptyChunk, (LONG64)pTlsAllocator->tlsMain_Chunk, (LONG64)oldTop);
 			if ((Chunk*)ret == oldTop)
 			{
-#ifdef LOG_MEMORYPOOL
-				InterlockedIncrement(&_emptyChunkStackCount);
-#endif // LOG_MEMORYPOOL
 
 				break;
 			}
@@ -340,6 +328,10 @@ namespace procademy
 
 			pTlsAllocator->tlsMain_Chunk = new Chunk;
 			pTlsAllocator->tlsSub_Chunk = new Chunk;
+
+			// 청크증가
+			InterlockedIncrement(&emptyChunkStackCount);
+			InterlockedIncrement(&emptyChunkStackCount);
 		}
 
 		TlsAllocator* pTlsAllocator = (TlsAllocator*)TlsGetValue(_tlsIdx);
@@ -367,9 +359,6 @@ namespace procademy
 				LONG64 ret = InterlockedCompareExchange64((LONG64*)&_pFullChunk, (LONG64)newChunk, (LONG64)oldTop);
 				if ((Chunk*)ret == oldTop)
 				{
-#ifdef LOG_MEMORYPOOL
-					InterlockedIncrement(&_fullChunkStackCount);
-#endif // LOG_MEMORYPOOL
 					break;
 				}
 			}
@@ -388,6 +377,10 @@ namespace procademy
 					pNewChunk->_pNextChunk = NULL;
 
 					oldTop = pNewChunk;
+
+					// 청크증가!
+					InterlockedIncrement(&emptyChunkStackCount);
+
 					break;
 				}
 
@@ -398,10 +391,6 @@ namespace procademy
 				if ((Chunk*)ret == oldTop)
 				{
 					oldTop = ((Chunk*)((DWORD64)oldTop & 0x0000ffffffffffff));
-
-#ifdef LOG_MEMORYPOOL
-					InterlockedDecrement(&_emptyChunkStackCount);
-#endif // LOG_MEMORYPOOL
 
 					break;
 				}
@@ -415,17 +404,6 @@ namespace procademy
 		return true;
 	}
 
-	template<typename DATA>
-	inline LONG MemoryPool_TLS<DATA>::GetFullChunkStackCount()
-	{
-		return _fullChunkStackCount;
-	}
-
-	template<typename DATA>
-	inline LONG MemoryPool_TLS<DATA>::GetEmptyChunkStackCount()
-	{
-		return _emptyChunkStackCount;
-	}
 
 
 	template<typename DATA>

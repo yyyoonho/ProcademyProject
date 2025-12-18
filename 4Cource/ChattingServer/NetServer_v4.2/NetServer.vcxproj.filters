@@ -33,6 +33,9 @@
     <Filter Include="소스 파일\Monitor">
       <UniqueIdentifier>{a6e9ea79-8ccd-49b3-8572-8bd028295a93}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\NetLib\Utils">
+      <UniqueIdentifier>{6a0f8651-d709-49cd-8619-1b50359243e8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -52,6 +55,12 @@
     </ClCompile>
     <ClCompile Include="Monitoring.cpp">
       <Filter>소스 파일\Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="Net_SerializeBuffer.cpp">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializeBufferPtr.cpp">
+      <Filter>소스 파일\NetLib\Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -78,6 +87,18 @@
     </ClInclude>
     <ClInclude Include="Monitoring.h">
       <Filter>소스 파일\Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFree_Queue.h">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Net_SerializeBuffer.h">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializeBufferPtr.h">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="TLS_MemoryPool.h">
+      <Filter>소스 파일\NetLib\Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

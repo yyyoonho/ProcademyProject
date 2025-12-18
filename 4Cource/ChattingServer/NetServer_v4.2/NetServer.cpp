@@ -699,6 +699,10 @@ void CNetServer::AcceptThread()
 			_sessionArray[idx].LockFreeSendQ.Clear();
 		}
 
+		_sessionArray[idx].LockFreeSendQ.Clear();
+
+		_sessionArray[idx].recvQ.ClearBuffer();
+
 		_sessionArray[idx].loginCheck = FALSE;
 
 		_sessionArray[idx].checkSend = TRUE;

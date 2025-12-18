@@ -29,7 +29,7 @@ int main()
 {
 	timeBeginPeriod(1);
 
-	bool serverSet = chattingServer.Start(L"127.0.0.1", 20601, 20, 2, TRUE, 50000, TRUE);
+	bool serverSet = chattingServer.Start(L"127.0.0.1", 20601, 40, 2, TRUE, 50000, TRUE);
 	if (serverSet == false)
 	{
 		printf("server start error\n");

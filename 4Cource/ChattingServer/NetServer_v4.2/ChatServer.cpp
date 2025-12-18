@@ -53,15 +53,19 @@ void ChatServer::OnAccept(DWORD64 sessionID)
 
 	AcquireSRWLockExclusive(&_contentMSGLock);
 
-	int size = _contentMSGQueue.GetUseSize();
-	_contentMSGQueue.Enqueue(acceptMsg);
+	//_contentMSGQueue.Enqueue(acceptMsg);
+	RawPtr rawPtr;
+	acceptMsg.GetRawPtr(&rawPtr);
+	rawPtr.IncreaseRefCount();
+
+	_contentMSGQueue.Enqueue(rawPtr);
 
 	SetEvent(_hEventMsg);
 	
 	ReleaseSRWLockExclusive(&_contentMSGLock);
 
 
-	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::UpdateMessageQueue);
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::MSGQueueSize);
 
 	return;
 }
@@ -78,14 +82,17 @@ void ChatServer::OnRelease(DWORD64 sessionID)
 
 	AcquireSRWLockExclusive(&_contentMSGLock);
 
-	int size = _contentMSGQueue.GetUseSize();
-	_contentMSGQueue.Enqueue(releaseMsg);
+	RawPtr rawPtr;
+	releaseMsg.GetRawPtr(&rawPtr);
+	rawPtr.IncreaseRefCount();
+
+	_contentMSGQueue.Enqueue(rawPtr);
 
 	SetEvent(_hEventMsg);
 
 	ReleaseSRWLockExclusive(&_contentMSGLock);
 
-	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::UpdateMessageQueue);
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::MSGQueueSize);
 }
 
 void ChatServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -97,14 +104,17 @@ void ChatServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 	AcquireSRWLockExclusive(&_contentMSGLock);
 	
-	int size = _contentMSGQueue.GetUseSize();
-	_contentMSGQueue.Enqueue(pPacket);
+	RawPtr rawPtr;
+	pPacket.GetRawPtr(&rawPtr);
+	rawPtr.IncreaseRefCount();
+
+	_contentMSGQueue.Enqueue(rawPtr);
 
 	SetEvent(_hEventMsg);
 
 	ReleaseSRWLockExclusive(&_contentMSGLock);
 
-	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::UpdateMessageQueue);
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::MSGQueueSize);
 }
 
 void ChatServer::OnError(int errorCode, WCHAR* errorComment)
@@ -153,17 +163,21 @@ void ChatServer::ContentThread()
 		// ------------------------
 		DWORD workStart = timeGetTime();
 
-		int size = _contentMSGQueue.GetUseSize();
+		int size = _contentMSGQueue.Size();
 		for (int i = 0; i < size; i++)
 		{
-			SerializePacketPtr msg;
-			int tmpRet = _contentMSGQueue.Dequeue(msg);
-			if (tmpRet == 0)
+			//SerializePacketPtr msg;
+			RawPtr rawPtr;
+			bool tmpRet = _contentMSGQueue.Dequeue(&rawPtr);
+			if (tmpRet == false)
 			{
 				break;
 			}
 
-			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::UpdateMessageQueue);
+			SerializePacketPtr msg(rawPtr);
+			rawPtr.DecreaseRefCount();
+
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::MSGQueueSize);
 			Monitoring::GetInstance()->Increase(MonitorType::UpdateTPS);
 
 			MSG_CATEGORY msgCategory;
@@ -188,7 +202,7 @@ void ChatServer::ContentThread()
 
 		//DisconnectUnresponsivePlayers();
 
-		if (_contentMSGQueue.GetUseSize() > 0)
+		if (_contentMSGQueue.Size() > 0)
 		{
 			SetEvent(_hEventMsg);
 		}
