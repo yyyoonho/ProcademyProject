@@ -1,7 +1,7 @@
 #pragma once
 #include <new.h>
 
-#define CHUNKSIZE 5000
+#define CHUNKSIZE 500
 
 using namespace std;
 

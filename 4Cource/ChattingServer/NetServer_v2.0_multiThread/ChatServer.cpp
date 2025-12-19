@@ -27,24 +27,6 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		return false;
 	}
 
-	for (int i = 29999; i >= 0; i--)
-	{
-		tmpIdx_LockFreeStack.Push(i);
-		tmpPlayerArr[i].sessionID = 0xffffffffffffffff;
-		tmpPlayerArr[i].state = PLAYER_STATE::INVALID;
-
-		InitializeSRWLock(&tmpPlayerArr[i].playerLock);
-	}
-
-	for (int i = 19999; i >= 0; i--)
-	{
-		Idx_LockFreeStack.Push(i);
-		playerArr[i].sessionID = 0xffffffffffffffff;
-		playerArr[i].state = PLAYER_STATE::INVALID;
-		
-		InitializeSRWLock(&playerArr[i].playerLock);
-	}
-
 	for (int i = 0; i < MAX_SECTOR_Y; i++)
 	{
 		for (int j = 0; j < MAX_SECTOR_X; j++)
@@ -53,17 +35,17 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		}
 	}
 
-	InitializeSRWLock(&tmpSessionIdToIndex_Lock);
-	InitializeSRWLock(&accountToIndex_Lock);
-	InitializeSRWLock(&sessionIdToAccountNo_Lock);
+	InitializeSRWLock(&tmpPlayerArrLock);
+	InitializeSRWLock(&tmpSIDToPlayerLock);
+	InitializeSRWLock(&playerArrLock);
+	InitializeSRWLock(&SIDToPlayerLock);
+	InitializeSRWLock(&accountNoToPlayerLock);
 
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	if (hEvent_Quit == 0)
 		return 0;
 
 	hThread_Monitoring = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThreadRun, this, NULL, NULL);
-
-	//hHeartbeatThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&HeartbeatThreadRun, this, NULL, NULL);
 
 	return true;
 }
@@ -80,124 +62,44 @@ bool ChatServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
 
 void ChatServer::OnAccept(DWORD64 sessionID)
 {
-	int idx;
-	tmpIdx_LockFreeStack.Pop(&idx);
+	Player* newPlayer = playerPool.Alloc();
 
-	AcquireSRWLockExclusive(&tmpPlayerArr[idx].playerLock);
+	if (newPlayer->IsInitLock == false)
+	{
+		InitializeSRWLock(&newPlayer->playerLock);
+		newPlayer->IsInitLock = true;
+	}
 
-	tmpPlayerArr[idx].sessionID = sessionID;
-	tmpPlayerArr[idx].waitLoginTime = timeGetTime();
-	tmpPlayerArr[idx].state = PLAYER_STATE::ACCEPT;
+	{
+		AcquireSRWLockExclusive(&newPlayer->playerLock);
+		newPlayer->sessionID = sessionID;
+		newPlayer->state = PLAYER_STATE::ACCEPT;
+		ReleaseSRWLockExclusive(&newPlayer->playerLock);
+	}
+	
+	{
+		AcquireSRWLockExclusive(&tmpPlayerArrLock);
+		tmpPlayerArr.push_back(newPlayer);
+		ReleaseSRWLockExclusive(&tmpPlayerArrLock);
+	}
 
-	ReleaseSRWLockExclusive(&tmpPlayerArr[idx].playerLock);
-
-
-	AcquireSRWLockExclusive(&tmpSessionIdToIndex_Lock);
-
-	auto iter = tmpSessionIdToIndex.insert({ sessionID, idx });
-
-	ReleaseSRWLockExclusive(&tmpSessionIdToIndex_Lock);
+	{
+		AcquireSRWLockExclusive(&tmpSIDToPlayerLock);
+		tmpSIDToPlayer.insert({ sessionID, newPlayer });
+		ReleaseSRWLockExclusive(&tmpSIDToPlayerLock);
+	}
 }
 
 void ChatServer::OnRelease(DWORD64 sessionID)
 {
 	InterlockedIncrement(&releaseCount);
 
-	// *인덱스 반환전까지는 재사용되지 않는다.
-	// 여기까지 왔다는건, 더이상 아무도 onAccept, OnMessage 안에 있지 않다는거다.
+	bool ret = ReleaseTmpPlayer(sessionID);
 
-	INT64 accountNo = -1;
-	bool flag = false;
+	if (ret == true)
+		return;
 
-	AcquireSRWLockExclusive(&sessionIdToAccountNo_Lock);
-	auto iter = sessionIdToAccountNo.find(sessionID);
-	if (iter == sessionIdToAccountNo.end())
-	{
-		ReleaseSRWLockExclusive(&sessionIdToAccountNo_Lock);
-	}
-	else
-	{
-		accountNo = iter->second;
-		flag = true;
-
-		sessionIdToAccountNo.erase(iter);
-		ReleaseSRWLockExclusive(&sessionIdToAccountNo_Lock);
-	}
-
-	// tmp 영역 정리
-	if (flag == false)
-	{
-		int idx = -1;
-
-		AcquireSRWLockExclusive(&tmpSessionIdToIndex_Lock);
-		auto iter2 = tmpSessionIdToIndex.find(sessionID);
-		
-		if (iter2 == tmpSessionIdToIndex.end())
-		{
-			DebugBreak();
-		}
-
-		idx = iter2->second;
-		
-		tmpSessionIdToIndex.erase(iter2);
-		ReleaseSRWLockExclusive(&tmpSessionIdToIndex_Lock);
-
-		AcquireSRWLockExclusive(&tmpPlayerArr[idx].playerLock);
-		tmpPlayerArr[idx].sessionID = 0xffffffffffffffff;
-		tmpPlayerArr[idx].state = PLAYER_STATE::INVALID;
-
-		ReleaseSRWLockExclusive(&tmpPlayerArr[idx].playerLock);
-
-		tmpIdx_LockFreeStack.Push(idx);
-	}
-
-	// play 영역 정리
-	else
-	{
-		int idx = -1;
-
-		AcquireSRWLockExclusive(&accountToIndex_Lock);
-		auto iter2 = accountToIndex.find(accountNo);
-		idx = iter2->second;
-
-		accountToIndex.erase(iter2);
-		ReleaseSRWLockExclusive(&accountToIndex_Lock);
-
-		PLAYER_STATE state;
-		WORD sectorY;
-		WORD sectorX;
-
-		AcquireSRWLockExclusive(&playerArr[idx].playerLock);
-		playerArr[idx].sessionID = 0xffffffffffffffff;
-
-		state = playerArr[idx].state;
-		sectorY = playerArr[idx].sectorY;
-		sectorX = playerArr[idx].sectorX;
-
-		playerArr[idx].state = PLAYER_STATE::INVALID;
-		ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
-
-		if (state == PLAYER_STATE::PLAY)
-		{
-			AcquireSRWLockExclusive(&sector_Lock[sectorY][sectorX]);
-
-			for (int i = 0; i < sector[sectorY][sectorX].size(); i++)
-			{
-				if (sector[sectorY][sectorX][i] != sessionID)
-					continue;
-
-				sector[sectorY][sectorX][i] = sector[sectorY][sectorX].back();
-				sector[sectorY][sectorX].pop_back();
-				break;
-			}
-
-			ReleaseSRWLockExclusive(&sector_Lock[sectorY][sectorX]);
-		}
-
-		Idx_LockFreeStack.Push(idx);
-
-		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PlayerCount);
-	}
+	ReleaseOriginPlayer(sessionID);
 
 }
 
@@ -271,29 +173,30 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		Disconnect(sessionID);
 		
 		// old disconnect
-		AcquireSRWLockShared(&accountToIndex_Lock);
-		unordered_map<INT64, int>::iterator iter2 = accountToIndex.find(accountNo);
-		if (iter2 == accountToIndex.end())
+		AcquireSRWLockShared(&accountNoToPlayerLock);
+		auto iter = accountNoToPlayer.find(accountNo);
+		if (iter == accountNoToPlayer.end())
 		{
-			ReleaseSRWLockShared(&accountToIndex_Lock);
+			ReleaseSRWLockShared(&accountNoToPlayerLock);
 			return;
 		}
 
-		int oldIdx = iter2->second;
-		ReleaseSRWLockShared(&accountToIndex_Lock);
-
-
-		AcquireSRWLockExclusive(&playerArr[oldIdx].playerLock);
-		if (playerArr[oldIdx].accountNo != accountNo)
+		Player* originPlayer = iter->second;
+		ReleaseSRWLockShared(&accountNoToPlayerLock);
+		
+		AcquireSRWLockShared(&originPlayer->playerLock);
+		if (originPlayer->accountNo != accountNo)
 		{
-			ReleaseSRWLockExclusive(&playerArr[oldIdx].playerLock);
+			ReleaseSRWLockShared(&originPlayer->playerLock);
 			return;
 		}
 
-		DWORD64 oldPlayerSessionID = playerArr[oldIdx].sessionID;
-		ReleaseSRWLockExclusive(&playerArr[oldIdx].playerLock);
+		DWORD64 originSID = originPlayer->sessionID;
 
-		Disconnect(oldPlayerSessionID);
+		ReleaseSRWLockShared(&originPlayer->playerLock);
+
+
+		Disconnect(originSID);
 	}
 
 	// 정상로그인 O
@@ -304,61 +207,63 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		newPacket << status;
 		newPacket << accountNo;
 
-		AcquireSRWLockExclusive(&tmpSessionIdToIndex_Lock);
-		unordered_map<DWORD64, int>::iterator iter = tmpSessionIdToIndex.find(sessionID);
-		if (iter == tmpSessionIdToIndex.end())
+
+		AcquireSRWLockExclusive(&tmpSIDToPlayerLock);
+
+		auto iter = tmpSIDToPlayer.find(sessionID);
+		if (iter == tmpSIDToPlayer.end())
 		{
-			ReleaseSRWLockExclusive(&tmpSessionIdToIndex_Lock);
+			DebugBreak();
+			ReleaseSRWLockExclusive(&tmpSIDToPlayerLock);
 			return;
 		}
 
-		int tmpIdx = iter->second;
-		
-		tmpSessionIdToIndex.erase(iter);
-		ReleaseSRWLockExclusive(&tmpSessionIdToIndex_Lock);
+		Player* loginPlayer = iter->second;
+
+		tmpSIDToPlayer.erase(iter);
+		ReleaseSRWLockExclusive(&tmpSIDToPlayerLock);
 
 
-		AcquireSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
-		if (tmpPlayerArr[tmpIdx].sessionID != sessionID)
+		AcquireSRWLockExclusive(&tmpPlayerArrLock);
+		for (int i = 0; i < tmpPlayerArr.size(); i++)
 		{
-			DebugBreak();
+			if (tmpPlayerArr[i] != loginPlayer)
+				continue;
+
+			tmpPlayerArr[i] = tmpPlayerArr.back();
+			tmpPlayerArr.pop_back();
+			break;
 		}
+		ReleaseSRWLockExclusive(&tmpPlayerArrLock);
 
-		tmpPlayerArr[tmpIdx].sessionID = 0xffffffffffffffff;
-		tmpPlayerArr[tmpIdx].state = PLAYER_STATE::INVALID;
+		/**************************************************************/
 
-		ReleaseSRWLockExclusive(&tmpPlayerArr[tmpIdx].playerLock);
+		AcquireSRWLockExclusive(&loginPlayer->playerLock);
 
-		tmpIdx_LockFreeStack.Push(tmpIdx);
+		loginPlayer->sessionID = sessionID;
+		loginPlayer->accountNo = accountNo;
+		pPacket.GetData((char*)loginPlayer->ID, sizeof(WCHAR) * 20);
+		pPacket.GetData((char*)loginPlayer->nickName, sizeof(WCHAR) * 20);
+		pPacket.GetData(loginPlayer->sessionKey, sizeof(char) * 64);
+		loginPlayer->heartbeat = timeGetTime();
+		loginPlayer->state = PLAYER_STATE::LOGIN;
 
-
-		int idx;
-		Idx_LockFreeStack.Pop(&idx);
-
-		AcquireSRWLockExclusive(&playerArr[idx].playerLock);
-
-		playerArr[idx].sessionID = sessionID;
-		playerArr[idx].accountNo = accountNo;
-		pPacket.GetData((char*)playerArr[idx].ID, sizeof(WCHAR) * 20);
-		pPacket.GetData((char*)playerArr[idx].nickName, sizeof(WCHAR) * 20);
-		pPacket.GetData(playerArr[idx].sessionKey, sizeof(char) * 64);
-		playerArr[idx].heartbeat = timeGetTime();
-		playerArr[idx].state = PLAYER_STATE::LOGIN;
-
-		ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
+		ReleaseSRWLockExclusive(&loginPlayer->playerLock);
 
 
-		AcquireSRWLockExclusive(&accountToIndex_Lock);
-		accountToIndex.insert({ accountNo, idx });
-		ReleaseSRWLockExclusive(&accountToIndex_Lock);
+		AcquireSRWLockExclusive(&playerArrLock);
+		playerArr.push_back(loginPlayer);
+		ReleaseSRWLockExclusive(&playerArrLock);
 
+		AcquireSRWLockExclusive(&SIDToPlayerLock);
+		SIDToPlayer.insert({ sessionID,loginPlayer });
+		ReleaseSRWLockExclusive(&SIDToPlayerLock);
 
-		AcquireSRWLockExclusive(&sessionIdToAccountNo_Lock);
-		sessionIdToAccountNo.insert({ sessionID, accountNo });
-		ReleaseSRWLockExclusive(&sessionIdToAccountNo_Lock);
+		AcquireSRWLockExclusive(&accountNoToPlayerLock);
+		accountNoToPlayer.insert({ accountNo, loginPlayer });
+		ReleaseSRWLockExclusive(&accountNoToPlayerLock);
 
 		SendPacket(sessionID, newPacket);
-
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::PlayerCount);
 	}
 }
@@ -367,12 +272,12 @@ bool ChatServer::CheckDuplicateLogin(INT64 accountNo)
 {
 	bool ret = false;
 
-	AcquireSRWLockShared(&accountToIndex_Lock);
+	AcquireSRWLockShared(&accountNoToPlayerLock);
 
-	if (accountToIndex.find(accountNo) != accountToIndex.end())
+	if (accountNoToPlayer.find(accountNo) != accountNoToPlayer.end())
 		ret = true;
 
-	ReleaseSRWLockShared(&accountToIndex_Lock);
+	ReleaseSRWLockShared(&accountNoToPlayerLock);
 
 	return ret;
 }
@@ -387,43 +292,42 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 	pPacket >> newSectorY;
 	pPacket >> newSectorX;
 
-	AcquireSRWLockShared(&accountToIndex_Lock);
-	unordered_map<INT64, int>::iterator iter = accountToIndex.find(accountNo);
-	if (iter == accountToIndex.end())
+	AcquireSRWLockShared(&SIDToPlayerLock);
+	auto iter = SIDToPlayer.find(sessionID);
+	if (iter == SIDToPlayer.end())
 	{
-		ReleaseSRWLockShared(&accountToIndex_Lock);
+		ReleaseSRWLockShared(&SIDToPlayerLock);
 		return;
 	}
 
-	int idx = iter->second;
-	ReleaseSRWLockShared(&accountToIndex_Lock);
+	Player* movePlayer = iter->second;
+	ReleaseSRWLockShared(&SIDToPlayerLock);
 
 
-	AcquireSRWLockExclusive(&playerArr[idx].playerLock);
-	if (playerArr[idx].sessionID != sessionID)
+	AcquireSRWLockExclusive(&movePlayer->playerLock);
+	if (movePlayer->sessionID != sessionID)
 	{
-		ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
+		ReleaseSRWLockExclusive(&movePlayer->playerLock);
 		return;
 	}
 
-	if (playerArr[idx].state == PLAYER_STATE::LOGIN)
+	if (movePlayer->state == PLAYER_STATE::LOGIN)
 	{
-		playerArr[idx].sectorY = newSectorY;
-		playerArr[idx].sectorX = newSectorX;
-		playerArr[idx].state = PLAYER_STATE::PLAY;
+		movePlayer->sectorY = newSectorY;
+		movePlayer->sectorX = newSectorX;
+		movePlayer->state = PLAYER_STATE::PLAY;
 
 		AcquireSRWLockExclusive(&sector_Lock[newSectorY][newSectorX]);
 		sector[newSectorY][newSectorX].push_back(sessionID);
-
 		ReleaseSRWLockExclusive(&sector_Lock[newSectorY][newSectorX]);
 	}
-	else if (playerArr[idx].state == PLAYER_STATE::PLAY)
+	else if (movePlayer->state == PLAYER_STATE::PLAY)
 	{
-		WORD oldSectorY = playerArr[idx].sectorY;
-		WORD oldSectorX = playerArr[idx].sectorX;
+		WORD oldSectorY = movePlayer->sectorY;
+		WORD oldSectorX = movePlayer->sectorX;
 
-		playerArr[idx].sectorY = newSectorY;
-		playerArr[idx].sectorX = newSectorX;
+		movePlayer->sectorY = newSectorY;
+		movePlayer->sectorX = newSectorX;
 
 		if (newSectorY == oldSectorY && newSectorX == oldSectorX)
 		{
@@ -488,8 +392,8 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 			ReleaseSRWLockExclusive(&sector_Lock[secondY][secondX]);
 		}
 	}
+	ReleaseSRWLockExclusive(&movePlayer->playerLock);
 
-	ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
 
 	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 	newPacket.Clear();
@@ -522,32 +426,33 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	newPacket << type;
 	newPacket << accountNo;
 
-	AcquireSRWLockShared(&accountToIndex_Lock);
-	unordered_map<INT64, int>::iterator iter = accountToIndex.find(accountNo);
-	if (iter == accountToIndex.end())
+	AcquireSRWLockShared(&SIDToPlayerLock);
+	auto iter = SIDToPlayer.find(sessionID);
+	if (iter == SIDToPlayer.end())
 	{
-		ReleaseSRWLockShared(&accountToIndex_Lock);
+		ReleaseSRWLockShared(&SIDToPlayerLock);
 		return;
 	}
 
-	int idx = iter->second;
+	Player* msgPlayer = iter->second;
+	ReleaseSRWLockShared(&SIDToPlayerLock);
 
-	ReleaseSRWLockShared(&accountToIndex_Lock);
 
-	AcquireSRWLockShared(&playerArr[idx].playerLock);
-	if (playerArr[idx].sessionID != sessionID)
+
+	AcquireSRWLockShared(&msgPlayer->playerLock);
+	if (msgPlayer->sessionID != sessionID)
 	{
-		ReleaseSRWLockShared(&playerArr[idx].playerLock);
+		ReleaseSRWLockShared(&msgPlayer->playerLock);
 		return;
 	}
 
-	WORD sectorY = playerArr[idx].sectorY;
-	WORD sectorX = playerArr[idx].sectorX;
+	WORD sectorY = msgPlayer->sectorY;
+	WORD sectorX = msgPlayer->sectorX;
 
-	newPacket.Putdata((char*)playerArr[idx].ID, sizeof(WCHAR) * 20);
-	newPacket.Putdata((char*)playerArr[idx].nickName, sizeof(WCHAR) * 20);
+	newPacket.Putdata((char*)msgPlayer->ID, sizeof(WCHAR) * 20);
+	newPacket.Putdata((char*)msgPlayer->nickName, sizeof(WCHAR) * 20);
 
-	ReleaseSRWLockShared(&playerArr[idx].playerLock);
+	ReleaseSRWLockShared(&msgPlayer->playerLock);
 
 	newPacket << msgLen;
 	newPacket.Putdata((char*)msg, msgLen);
@@ -579,43 +484,127 @@ void ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
 
 void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
 {
-	AcquireSRWLockShared(&sessionIdToAccountNo_Lock);
-	auto iter = sessionIdToAccountNo.find(sessionID);
-	if (iter == sessionIdToAccountNo.end())
+	AcquireSRWLockShared(&SIDToPlayerLock);
+	auto iter = SIDToPlayer.find(sessionID);
+	if (iter == SIDToPlayer.end())
 	{
-		ReleaseSRWLockShared(&sessionIdToAccountNo_Lock);
+		ReleaseSRWLockShared(&SIDToPlayerLock);
 		return;
 	}
 
-	INT64 accountNo = iter->second;
-	ReleaseSRWLockShared(&sessionIdToAccountNo_Lock);
+	Player* targetPlayer = iter->second;
+	ReleaseSRWLockShared(&SIDToPlayerLock);
 
-	AcquireSRWLockShared(&accountToIndex_Lock);
-	auto iter2 = accountToIndex.find(accountNo);
-	if (iter2 == accountToIndex.end())
+
+	AcquireSRWLockExclusive(&targetPlayer->playerLock);
+	if (targetPlayer->sessionID != sessionID)
 	{
-		ReleaseSRWLockShared(&accountToIndex_Lock);
-		return;
-	}
-	ReleaseSRWLockShared(&accountToIndex_Lock);
-
-	int idx = iter2->second;
-
-	AcquireSRWLockExclusive(&playerArr[idx].playerLock);
-	if (playerArr[idx].sessionID != sessionID)
-	{
-		ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
+		ReleaseSRWLockExclusive(&targetPlayer->playerLock);
 		return;
 	}
 
-	playerArr[idx].heartbeat = timeGetTime();
-	ReleaseSRWLockExclusive(&playerArr[idx].playerLock);
+	targetPlayer->heartbeat = timeGetTime();
+	ReleaseSRWLockExclusive(&targetPlayer->playerLock);
 }
 
 void ChatServer::DisconnectUnresponsivePlayers()
 {
 	
 
+}
+
+bool ChatServer::ReleaseTmpPlayer(DWORD64 sessionID)
+{
+	// release대상이 tmp인 상황 (playerState == accept)
+	AcquireSRWLockExclusive(&tmpSIDToPlayerLock);
+
+	auto iter = tmpSIDToPlayer.find(sessionID);
+	if (iter == tmpSIDToPlayer.end())
+	{
+		//DebugBreak();
+		ReleaseSRWLockExclusive(&tmpSIDToPlayerLock);
+		return false;
+	}
+
+	Player* removed = iter->second;
+
+	tmpSIDToPlayer.erase(iter);
+	ReleaseSRWLockExclusive(&tmpSIDToPlayerLock);
+
+	AcquireSRWLockExclusive(&tmpPlayerArrLock);
+	for (int i = 0; i < tmpPlayerArr.size(); i++)
+	{
+		if (tmpPlayerArr[i] != removed)
+			continue;
+
+		tmpPlayerArr[i] = tmpPlayerArr.back();
+		tmpPlayerArr.pop_back();
+		break;
+	}
+	ReleaseSRWLockExclusive(&tmpPlayerArrLock);
+
+	playerPool.Free(removed);
+
+	return true;
+}
+
+bool ChatServer::ReleaseOriginPlayer(DWORD64 sessionID)
+{
+	// release대상이 origin인 상황 (playerstate == login or play)
+	
+	AcquireSRWLockExclusive(&SIDToPlayerLock);
+	auto iter = SIDToPlayer.find(sessionID);
+	if (iter == SIDToPlayer.end())
+	{
+		DebugBreak();
+		ReleaseSRWLockExclusive(&SIDToPlayerLock);
+		return true;
+	}
+
+	Player* removed = iter->second;
+
+	SIDToPlayer.erase(iter);
+	ReleaseSRWLockExclusive(&SIDToPlayerLock);
+
+	AcquireSRWLockShared(&removed->playerLock);
+	int accountNo = removed->accountNo;
+	PLAYER_STATE state = removed->state;
+	WORD sectorY = removed->sectorY;
+	WORD sectorX = removed->sectorX;
+	ReleaseSRWLockShared(&removed->playerLock);
+
+
+	AcquireSRWLockExclusive(&accountNoToPlayerLock);
+	auto iter2 = accountNoToPlayer.find(accountNo);
+	if (iter2 == accountNoToPlayer.end())
+	{
+		DebugBreak();
+		ReleaseSRWLockExclusive(&accountNoToPlayerLock);
+		return false;
+	}
+
+	accountNoToPlayer.erase(iter2);
+	ReleaseSRWLockExclusive(&accountNoToPlayerLock);
+
+	if (state == PLAYER_STATE::PLAY)
+	{
+		AcquireSRWLockExclusive(&sector_Lock[sectorY][sectorX]);
+		for (int i = 0; i < sector[sectorY][sectorX].size(); i++)
+		{
+			if (sector[sectorY][sectorX][i] != sessionID)
+				continue;
+
+			sector[sectorY][sectorX][i] = sector[sectorY][sectorX].back();
+			sector[sectorY][sectorX].pop_back();
+			break;
+		}
+
+		ReleaseSRWLockExclusive(&sector_Lock[sectorY][sectorX]);
+	}
+
+	playerPool.Free(removed);
+
+	return true;
 }
 
 void ChatServer::LockAroundSector_Shared(WORD sectorY, WORD sectorX)
@@ -662,24 +651,7 @@ void ChatServer::HeartbeatThread()
 
 		DWORD nowTime = timeGetTime();
 
-		for (int i = 0; i < 20000; i++)
-		{
-			AcquireSRWLockExclusive(&playerArr[i].playerLock);
-
-			if (playerArr[i].state != PLAYER_STATE::LOGIN && playerArr[i].state != PLAYER_STATE::PLAY)
-			{
-				ReleaseSRWLockExclusive(&playerArr[i].playerLock);
-				continue;
-			}
-
-			if (nowTime - playerArr[i].heartbeat >= 35000)
-			{
-				playerArr[i].state = PLAYER_STATE::DISCONNECTING;
-				Disconnect(playerArr[i].sessionID);
-			}
-
-			ReleaseSRWLockExclusive(&playerArr[i].playerLock);
-		}
+		
 	}
 }
 

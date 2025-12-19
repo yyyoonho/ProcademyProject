@@ -645,15 +645,21 @@ void CNetServer::AcceptThread()
 
 		_sessionArray[idx].sendMyOverlapped.sPacketCount = 0;
 
-		
-		while (1)
+		_sessionArray[idx].recvQ.ClearBuffer();
+		if (_sessionArray[idx].LockFreeSendQ.Size() > 0)
 		{
-			if (_sessionArray[idx].LockFreeSendQ.Size() <= 0)
-				break;
+			while (1)
+			{
+				if (_sessionArray[idx].LockFreeSendQ.Size() <= 0)
+					break;
 
-			RawPtr r;
-			_sessionArray[idx].LockFreeSendQ.Dequeue(&r);
-			r.DecreaseRefCount();
+				RawPtr r;
+				_sessionArray[idx].LockFreeSendQ.Dequeue(&r);
+
+				r.DecreaseRefCount();
+			}
+
+			_sessionArray[idx].LockFreeSendQ.Clear();
 		}
 
 		_sessionArray[idx].LockFreeSendQ.Clear();

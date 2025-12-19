@@ -32,6 +32,7 @@ public:
 		PLAYER_STATE state;
 
 		SRWLOCK playerLock;
+		bool IsInitLock = false;
 	};
 
 	struct Heartbeat
@@ -86,6 +87,9 @@ private:
 
 	void DisconnectUnresponsivePlayers();
 
+	bool ReleaseTmpPlayer(DWORD64 sessionID);
+	bool ReleaseOriginPlayer(DWORD64 sessionID);
+
 	void LockAroundSector_Shared(WORD sectorY, WORD sectorX);
 	void UnLockAroundSector_Shared(WORD sectorY, WORD sectorX);
 
@@ -96,25 +100,24 @@ private:
 	void MonitorThread();
 
 public:
+	procademy::MemoryPool_TLS<Player> playerPool{ 0,false };
+
 	// accept 전용
-	LockFreeStack<int>				tmpIdx_LockFreeStack;
+	vector<Player*>					tmpPlayerArr;
+	SRWLOCK							tmpPlayerArrLock;
 
-	unordered_map<DWORD64, int>		tmpSessionIdToIndex;
-	SRWLOCK							tmpSessionIdToIndex_Lock;
-
-	WaitPlayer						tmpPlayerArr[30000];
-	
+	unordered_map<DWORD64, Player*>	tmpSIDToPlayer;
+	SRWLOCK							tmpSIDToPlayerLock;
 
 	// play 전용
-	LockFreeStack<int>				Idx_LockFreeStack;
+	vector<Player*>					playerArr;
+	SRWLOCK							playerArrLock;
 
-	unordered_map<DWORD64, INT64>	sessionIdToAccountNo;
-	SRWLOCK							sessionIdToAccountNo_Lock;
+	unordered_map<DWORD64, Player*>	SIDToPlayer;
+	SRWLOCK							SIDToPlayerLock;
 
-	unordered_map<INT64, int>		accountToIndex;
-	SRWLOCK							accountToIndex_Lock;
-
-	Player							playerArr[20000];
+	unordered_map<INT64, Player*>	accountNoToPlayer;
+	SRWLOCK							accountNoToPlayerLock;
 
 	// 섹터
 	vector<DWORD64>					sector[MAX_SECTOR_Y][MAX_SECTOR_X];

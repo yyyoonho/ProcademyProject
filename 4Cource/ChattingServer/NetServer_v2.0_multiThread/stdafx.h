@@ -20,6 +20,7 @@
 #include <stack>
 #include <conio.h>
 #include <queue>
+#include <mutex>
 
 #include "CrashDump.h"
 
