@@ -7,11 +7,14 @@
 #include <Windows.h>
 #include <queue>
 #include <string>
+#include <unordered_map>
 
 #include "DBJob.h"
 
 
 using namespace std;
+using DBRow = unordered_map<string, string>;
+using DBResult = vector<DBRow>;
 
 void DBLevelUP::Exec(MYSQL* connection)
 {
@@ -57,9 +60,24 @@ void DBCheckAccountInfo::Exec(MYSQL* connection)
 
 	sql_result = mysql_store_result(connection);		// 결과 전체를 미리 가져옴
 
+	unsigned int colCount = mysql_num_fields(sql_result);
+	MYSQL_FIELD* fields = mysql_fetch_fields(sql_result);
+
+	DBResult result;
 	while ((sql_row = mysql_fetch_row(sql_result)) != NULL)
 	{
-		printf("%2s %2s %s\n", sql_row[0], sql_row[1], sql_row[2]);
+		DBRow oneRow;
+
+		for (int i = 0; i < colCount; i++)
+		{
+			string colName = fields[i].name;
+			string value = sql_row[i];
+			
+			oneRow.emplace(colName, value);
+		}
+		
+		result.push_back(oneRow);
 	}
+
 	mysql_free_result(sql_result);
 }
