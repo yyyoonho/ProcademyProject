@@ -1,9 +1,13 @@
 #pragma once
 
 #pragma comment(lib, "winmm.lib")
+
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "RingBuffer.lib")
 #pragma comment(lib, "CustomProfiler.lib")
+
+//#pragma comment (lib, "cpp_redis.lib")
+//#pragma comment (lib, "tacopie.lib")
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -21,6 +25,7 @@
 #include <conio.h>
 #include <queue>
 #include <mutex>
+//#include <cpp_redis/cpp_redis>
 
 #include "CrashDump.h"
 

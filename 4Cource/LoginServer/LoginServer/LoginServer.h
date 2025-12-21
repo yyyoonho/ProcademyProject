@@ -51,10 +51,11 @@ private:
 	vector<Player*> _playerVec;
 
 private:
-	const WCHAR* _chattingServerIpStr1;
-	const WCHAR* _chattingServerIpStr2;
-	const WCHAR* _dummyIpStr1;
-	const WCHAR* _dummyIpStr2;
+	void ConvertToUTF16();
+	WCHAR _chattingServerIpStr1[16];
+	WCHAR _chattingServerIpStr2[16];
+	WCHAR _dummyIpStr1[16];
+	WCHAR _dummyIpStr2[16];
 
 	in_addr _dummyIpAddr1;
 	in_addr _dummyIpAddr2;

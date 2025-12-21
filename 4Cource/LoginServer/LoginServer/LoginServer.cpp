@@ -4,12 +4,14 @@
 #pragma comment (lib, "cpp_redis.lib")
 #pragma comment (lib, "tacopie.lib")
 
+#include "MyConfig.h"
 #include "CommonProtocol.h"
 #include "Monitoring.h"
 #include "Player.h"
 #include "NetServer.h"
 #include "LoginServer.h"
 
+MyConfig myConfig;
 thread_local cpp_redis::client* client;
 
 LoginServer::LoginServer()
@@ -21,6 +23,107 @@ LoginServer::~LoginServer()
 {
 }
 
+void LoginServer::ConvertToUTF16()
+{
+	{
+		std::wstring wideStr;
+
+		int len = MultiByteToWideChar(
+			CP_UTF8,
+			0,
+			myConfig.loginServerConfig.chatServer_ip1.data(),
+			myConfig.loginServerConfig.chatServer_ip1.size(),
+			nullptr,
+			0);
+
+		wideStr.resize(len);
+
+		MultiByteToWideChar(
+			CP_UTF8,
+			0,
+			myConfig.loginServerConfig.chatServer_ip1.data(),
+			myConfig.loginServerConfig.chatServer_ip1.size(),
+			&wideStr[0],
+			len);
+
+		wcscpy_s(_chattingServerIpStr1, wideStr.c_str());
+	}
+
+	{
+		std::wstring wideStr;
+
+		int len = MultiByteToWideChar(
+			CP_UTF8,
+			0,
+			myConfig.loginServerConfig.chatServer_ip2.c_str(),
+			myConfig.loginServerConfig.chatServer_ip2.size(),
+			nullptr,
+			0);
+
+		wideStr.resize(len);
+
+		MultiByteToWideChar(
+			CP_UTF8,
+			0,
+			myConfig.loginServerConfig.chatServer_ip2.c_str(),
+			myConfig.loginServerConfig.chatServer_ip2.size(),
+			&wideStr[0],
+			len);
+
+		wcscpy_s(_chattingServerIpStr2, wideStr.c_str());
+	}
+
+	{
+		std::wstring wideStr;
+
+		int len = MultiByteToWideChar(
+			CP_UTF8,
+			0,
+			myConfig.loginServerConfig.dummy_ip1.c_str(),
+			myConfig.loginServerConfig.dummy_ip1.size(),
+			nullptr,
+			0);
+
+		wideStr.resize(len);
+
+		MultiByteToWideChar(
+			CP_UTF8,
+			0,
+			myConfig.loginServerConfig.dummy_ip1.c_str(),
+			myConfig.loginServerConfig.dummy_ip1.size(),
+			&wideStr[0],
+			len);
+
+		//_dummyIpStr1 = wideStr.c_str();
+		wcscpy_s(_dummyIpStr1, wideStr.c_str());
+	}
+
+	{
+		std::wstring wideStr;
+
+		int len = MultiByteToWideChar(
+			CP_UTF8,
+			0,
+			myConfig.loginServerConfig.dummy_ip2.c_str(),
+			myConfig.loginServerConfig.dummy_ip2.size(),
+			nullptr,
+			0);
+
+		wideStr.resize(len);
+
+		MultiByteToWideChar(
+			CP_UTF8,
+			0,
+			myConfig.loginServerConfig.dummy_ip2.c_str(),
+			myConfig.loginServerConfig.dummy_ip2.size(),
+			&wideStr[0],
+			len);
+
+		//_dummyIpStr2 = wideStr.c_str();
+		wcscpy_s(_dummyIpStr2, wideStr.c_str());
+	}
+}
+
 bool LoginServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff)
 {
 	bool ret = CNetServer::Start(ipAddress, port, workerThreadCount, coreSkip, isNagle, maximumSessionCount, codecOnOff);
@@ -29,15 +132,11 @@ bool LoginServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 		return false;
 	}
 
-	// TODO: config 파일 파싱으로 바꾸기.
-	_chattingServerIpStr1 = L"10.0.1.1";
-	_chattingServerIpStr2 = L"10.0.2.1";
-	_dummyIpStr1 = L"10.0.1.2";
-	_dummyIpStr2 = L"10.0.2.2";
+	myConfig.Load("LoginConfig.ini");
+	ConvertToUTF16();
 
 	InetPtonW(AF_INET, _dummyIpStr1, &_dummyIpAddr1);
 	InetPtonW(AF_INET, _dummyIpStr2, &_dummyIpAddr2);
-
 
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	if (hEvent_Quit == 0)
@@ -162,9 +261,10 @@ bool LoginServer::SaveTokenToRedis(INT64 accountNo, const char* sessionKey)
 	}
 
 	string key = to_string(accountNo);
-	string token = string(sessionKey);
+	string token = string(sessionKey, 64);
 
-	client->set(key, token);
+	client->setex(key, 10, token);
+	
 	/*client->get(key, [](cpp_redis::reply& reply) {
 		std::cout << reply << std::endl;
 		});*/

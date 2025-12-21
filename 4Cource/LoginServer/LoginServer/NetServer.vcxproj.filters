@@ -36,6 +36,9 @@
     <Filter Include="소스 파일\LoginServer">
       <UniqueIdentifier>{b607fd00-95c6-4832-9198-07c5bab843bd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Config">
+      <UniqueIdentifier>{4e0e401f-9b82-42f3-ac89-ead0f4b72838}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -67,6 +70,9 @@
     </ClCompile>
     <ClCompile Include="Player.cpp">
       <Filter>소스 파일\LoginServer</Filter>
+    </ClCompile>
+    <ClCompile Include="MyConfig.cpp">
+      <Filter>소스 파일\Config</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -111,6 +117,9 @@
     </ClInclude>
     <ClInclude Include="Player.h">
       <Filter>소스 파일\LoginServer</Filter>
+    </ClInclude>
+    <ClInclude Include="MyConfig.h">
+      <Filter>소스 파일\Config</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

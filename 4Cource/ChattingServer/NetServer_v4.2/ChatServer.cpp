@@ -1,4 +1,9 @@
 #include "stdafx.h"
+
+#include <cpp_redis/cpp_redis>
+#pragma comment (lib, "cpp_redis.lib")
+#pragma comment (lib, "tacopie.lib")
+
 #include "Monitoring.h"
 #include "NetServer.h"
 #include "PacketProc.h"
@@ -7,6 +12,8 @@
 #include "ChatServer.h"
 
 using namespace std;
+
+thread_local cpp_redis::client* redisClient;
 
 bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff = true)
 {
@@ -274,7 +281,19 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	Player* loginPlayer = tmpPlayerArr[idx];
 
 	INT64 accountNo;
+	WCHAR ID[20];
+	WCHAR NicnkName[20];
+	char sessionKey[64];
+
 	pPacket >> accountNo;
+	pPacket.GetData((char*)&ID, sizeof(WCHAR) * 20);
+	pPacket.GetData((char*)&NicnkName, sizeof(WCHAR) * 20);
+	pPacket.GetData(sessionKey, sizeof(char) * 64);
+
+	// 토큰 체크
+	bool isTokenValid = IsTokenValid(accountNo, sessionKey);
+	if (isTokenValid == false)
+		return;
 
 	// 중복로그인 체크
 	bool flag = CheckDuplicateLogin(accountNo);
@@ -299,14 +318,15 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	}
 	else
 	{
-		pPacket.GetData((char*)loginPlayer->ID, sizeof(WCHAR) * 20);
-		pPacket.GetData((char*)loginPlayer->nickName, sizeof(WCHAR) * 20);
-		pPacket.GetData(loginPlayer->sessionKey, 64);
-
 		loginPlayer->accountNo = accountNo;
+		loginPlayer->sessionID = sessionID;
+		wcscpy_s(loginPlayer->ID, ID);
+		wcscpy_s(loginPlayer->nickName, NicnkName);
+		memcpy(loginPlayer->sessionKey, sessionKey, 64);
+		
+		loginPlayer->heartbeat = timeGetTime();
 		loginPlayer->state = PLAYER_STATE::LOGIN;
 
-		
 		// tmp 자료구조 정리
 		int lastIdx = tmpPlayerArr.size() - 1;
 		if (idx != lastIdx)
@@ -349,6 +369,49 @@ bool ChatServer::CheckDuplicateLogin(INT64 accountNo)
 	}
 
 	return false;
+}
+
+bool ChatServer::IsTokenValid(INT64 accountNo, const char* sessionKey)
+{
+	// redis에서 해당 accountNo에 대한 sessionKey과 일치하는지 확인.
+
+	if (redisClient == NULL)
+	{
+		redisClient = new cpp_redis::client;
+		redisClient->connect();
+	}
+
+	string key = to_string(accountNo);
+	string token(sessionKey, 64);
+
+	static const string lua_script = R"(
+        local val = redis.call("GET", KEYS[1])
+        if not val then
+            return 0
+        end
+
+        if val ~= ARGV[1] then
+            return 0
+        end
+
+        redis.call("DEL", KEYS[1])
+        return 1
+    )";
+
+	auto future = redisClient->eval(lua_script, { key }, { token });
+	redisClient->sync_commit();
+
+	cpp_redis::reply reply = future.get();
+
+	if (!reply.is_integer())
+		return false;
+
+	if (reply.as_integer() == 1)
+	{
+		return true;
+	}
+	else
+		return false;
 }
 
 void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPacket)

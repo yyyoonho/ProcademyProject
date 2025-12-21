@@ -137,6 +137,7 @@
     <ClCompile Include="LoginServer.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="Monitoring.cpp" />
+    <ClCompile Include="MyConfig.cpp" />
     <ClCompile Include="NetCodec.cpp" />
     <ClCompile Include="NetServer.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -153,6 +154,7 @@
     <ClInclude Include="LoginServer.h" />
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="Monitoring.h" />
+    <ClInclude Include="MyConfig.h" />
     <ClInclude Include="NetCodec.h" />
     <ClInclude Include="NetServer.h" />
     <ClInclude Include="Net_SerializeBuffer.h" />
