@@ -134,6 +134,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DBConnector.cpp" />
+    <ClCompile Include="DBJob.cpp" />
     <ClCompile Include="LoginServer.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="Monitoring.cpp" />
@@ -150,6 +152,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonProtocol.h" />
+    <ClInclude Include="DBConnector.h" />
+    <ClInclude Include="DBJob.h" />
     <ClInclude Include="LockFree_Queue.h" />
     <ClInclude Include="LoginServer.h" />
     <ClInclude Include="LogManager.h" />

@@ -6,20 +6,21 @@
 #include <iostream>
 #include <Windows.h>
 #include <queue>
-#include <string>
 #include <unordered_map>
+#include <string>
+#include <vector>
 
 #include "DBJob.h"
 
 
 using namespace std;
-using DBRow = unordered_map<string, string>;
-using DBResult = vector<DBRow>;
+
+int g_number;
 
 void DBLevelUP::Exec(MYSQL* connection)
 {
 	// 쿼리 생성 및 전송
-	string query =
+	/*string query =
 		"UPDATE account SET level = " + to_string(_level) +
 		" WHERE accountNo = " + to_string(accountNo);
 
@@ -27,6 +28,25 @@ void DBLevelUP::Exec(MYSQL* connection)
 	{
 		printf("DBLevelUP error: %s\n", mysql_error(connection));
 		return;
+	}*/
+
+	// INSERT 테스트
+	for (int i = 0; i < 3; i++)
+	{
+		g_number++;
+
+		string query =
+			"INSERT INTO `new_table` (`accountNo`) VALUES ('" + to_string(g_number) + "');";
+
+		int query_stat;
+
+		// Insert 쿼리문
+		query_stat = mysql_query(connection, query.c_str());
+		if (query_stat != 0)
+		{
+			printf("Mysql query error : %s", mysql_error(connection));
+			return;
+		}
 	}
 }
 
@@ -35,7 +55,7 @@ void DBQuestComplete::Exec(MYSQL* connection)
 	// 쿼리 생성 및 전송
 	string query =
 		"INSERT INTO quest_log(accountNo, questID) VALUES (" +
-		to_string(accountNo) + ", " + to_string(questID) + ")";
+		to_string(_accountNo) + ", " + to_string(_questID) + ")";
 
 	if (mysql_query(connection, query.c_str()) != 0)
 	{
@@ -43,10 +63,10 @@ void DBQuestComplete::Exec(MYSQL* connection)
 	}
 }
 
-void DBCheckAccountInfo::Exec(MYSQL* connection)
+void DBCheckAccountInfo::Exec(MYSQL* connection, DBResult& queryResult)
 {
 	// Select 쿼리문
-	string query = "SELECT * FROM account";	// From 다음 DB에 존재하는 테이블 명으로 수정하세요
+	string query = "SELECT * FROM new_table";	// From 다음 DB에 존재하는 테이블 명으로 수정하세요
 	int query_stat = mysql_query(connection, query.c_str());
 	if (query_stat != 0)
 	{
@@ -63,7 +83,6 @@ void DBCheckAccountInfo::Exec(MYSQL* connection)
 	unsigned int colCount = mysql_num_fields(sql_result);
 	MYSQL_FIELD* fields = mysql_fetch_fields(sql_result);
 
-	DBResult result;
 	while ((sql_row = mysql_fetch_row(sql_result)) != NULL)
 	{
 		DBRow oneRow;
@@ -76,7 +95,7 @@ void DBCheckAccountInfo::Exec(MYSQL* connection)
 			oneRow.emplace(colName, value);
 		}
 		
-		result.push_back(oneRow);
+		queryResult.push_back(oneRow);
 	}
 
 	mysql_free_result(sql_result);

@@ -1,18 +1,49 @@
 #pragma once
 
+/*
+사용법
+
+// Read
+	DBResult queryRes;
+	DBConnector::GetInstance()->QueryRead(new DBCheckAccountInfo, queryRes);
+	for (int i = 0; i < queryRes.size(); i++)
+	{
+		cout << queryRes[i]["accountNo"] << endl;
+	}
+
+// Write
+	DBConnector::GetInstance().QueryWrite(mapId, new DBSavePlayer(playerData);
+
+*/
+
+enum class DB_FIELD
+{
+	FIELD_0 = 0,
+	FIELD_1,
+	FIELD_2,
+
+	DB_FIELD_COUNT,
+};
+
 class DBConnector
 {
 public:
+	static DBConnector* _pDBConnector;
+	static DBConnector* GetInstance();
+
+private:
 	DBConnector();
 	~DBConnector();
 
 public:
-	// TLS 전용 - SELECT
-	void Query(IDBJob* job);
+	void Start();
+	void Stop();
 
-	// DBWriter 전용 - UPDATE/DELETE/INSERT
-	void Query_Save();
-	void PushQuery(IDBJob* job);
+public:
+	void QueryRead(IDBJob_Read* job, DBResult& queryResult);
+	void QueryWrite(int fieldID, IDBJob_Write* job);
+
+/**************************************************/
 
 private:
 	std::string		_ip;
@@ -20,9 +51,47 @@ private:
 	std::string		_user;
 	std::string		_password;
 
-	MYSQL conn;
-	MYSQL* connection = NULL;
+private:
+	struct DBConnTLS
+	{
+		MYSQL readConn;
+		MYSQL* readConnection = nullptr;
+	};
 
-	std::mutex _queueLock;
-	std::queue<IDBJob*> _DBJobQueue;
+	static thread_local DBConnTLS conn_tls;
+
+/**************************************************/
+
+private:
+	class WriteWorker
+	{
+	public:
+		void Start(std::string ip, USHORT port, std::string user, std::string password);
+		void Stop();
+		void Push(IDBJob_Write* job);
+
+	private:
+		static void WorkerThreadRunProc(LPVOID* lParam);
+		void Run();
+
+	private:
+		std::string		_ip;
+		USHORT			_port;
+		std::string		_user;
+		std::string		_password;
+
+		MYSQL _writeConn;
+		MYSQL* _writeConnection;
+
+	private:
+		std::queue<IDBJob_Write*> _JobQueue;
+		std::mutex _queueLock;
+		HANDLE _hWriteThread;
+		HANDLE _hEventJobQueue;
+		HANDLE _hEventQuit;
+	};
+
+/**************************************************/
+private:
+	WriteWorker _writeWorkers[(int)DB_FIELD::DB_FIELD_COUNT];
 };

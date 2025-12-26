@@ -23,12 +23,6 @@ enum class MonitorType : int
 	RecvMessageTPS,			// 초당 받은 메시지 수					(O)
 	SendMessageTPS,			// 초당 보낸 메시지 수					(O)
 
-	RecvMessageLoginTPS,	// 초당 받은 메시지 수 (login)			(O)
-	RecvMessageMoveTPS,		// 초당 받은 메시지 수 (move)				(O)
-	RecvMessageChatTPS,		// 초당 받은 메시지 수 (chat)				(O)
-
-	DisconnectTotal_alreadyLogin,
-
 	COUNT,
 };
 

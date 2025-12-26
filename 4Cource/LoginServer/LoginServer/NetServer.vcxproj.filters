@@ -39,6 +39,9 @@
     <Filter Include="소스 파일\Config">
       <UniqueIdentifier>{4e0e401f-9b82-42f3-ac89-ead0f4b72838}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\DB">
+      <UniqueIdentifier>{02585b17-3ca2-4c40-b220-6e09bb6bd6f0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -73,6 +76,12 @@
     </ClCompile>
     <ClCompile Include="MyConfig.cpp">
       <Filter>소스 파일\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="DBJob.cpp">
+      <Filter>소스 파일\DB</Filter>
+    </ClCompile>
+    <ClCompile Include="DBConnector.cpp">
+      <Filter>소스 파일\DB</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -120,6 +129,12 @@
     </ClInclude>
     <ClInclude Include="MyConfig.h">
       <Filter>소스 파일\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="DBJob.h">
+      <Filter>소스 파일\DB</Filter>
+    </ClInclude>
+    <ClInclude Include="DBConnector.h">
+      <Filter>소스 파일\DB</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -392,6 +392,8 @@ void CNetServer::ReleaseProc(Session* pSession)
 		}
 	}
 
+	pSession->recvQ.ClearBuffer();
+
 	OnRelease(pSession->sessionID);
 
 	unsigned int idx = GetIdxFromSessionID(pSession->sessionID);
@@ -657,6 +659,10 @@ void CNetServer::AcceptThread()
 
 			_sessionArray[idx].LockFreeSendQ.Clear();
 		}
+
+		_sessionArray[idx].LockFreeSendQ.Clear();
+
+		_sessionArray[idx].recvQ.ClearBuffer();
 
 		_sessionArray[idx].loginCheck = FALSE;
 

@@ -1,5 +1,7 @@
 #pragma once
 
+
+#pragma comment(lib, "libmysql.lib")
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "RingBuffer.lib")
@@ -8,6 +10,8 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
+#include "mysql/include/mysql.h"
+#include "mysql/include/errmsg.h"
 #include <stdio.h>
 #include <iostream>
 #include <thread>
@@ -20,6 +24,8 @@
 #include <stack>
 #include <conio.h>
 #include <queue>
+#include <string>
+#include <mutex>
 
 #include "CrashDump.h"
 

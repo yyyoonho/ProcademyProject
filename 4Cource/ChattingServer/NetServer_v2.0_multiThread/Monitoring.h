@@ -27,6 +27,10 @@ enum class MonitorType : int
 	RecvMessageMoveTPS,		// 초당 받은 메시지 수 (move)				(O)
 	RecvMessageChatTPS,		// 초당 받은 메시지 수 (chat)				(O)
 
+	tmpPlayerArrSize,
+	PlayerArrSize,
+	TokenFailed,
+
 	DisconnectTotal_alreadyLogin,
 
 	COUNT,
@@ -50,7 +54,7 @@ public:
 	void PrintMonitoring();
 	void Clear();
 
-private:
+public:
 	LONG _monitoringArr[(int)MonitorType::COUNT];
 	
 };

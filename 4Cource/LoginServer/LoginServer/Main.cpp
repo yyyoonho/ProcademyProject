@@ -21,7 +21,7 @@ int main()
 
 	InitLog();
 
-	loginServer1.Start(L"127.0.0.1", 20602, 100, 2, TRUE, 40000, TRUE);
+	loginServer1.Start(L"127.0.0.1", 20602, 100, 20, TRUE, 40000, TRUE);
 
 	while (1)
 	{

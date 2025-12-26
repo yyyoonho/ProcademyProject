@@ -31,14 +31,20 @@ private:
 
 private:
 	void PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket);
-	bool AuthorizeToken(const char* token);
+	bool AuthorizeToken(INT64 accountNo, const char* token);
 	bool SaveTokenToRedis(INT64 accountNo, const char* sessionKey);
 	void SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID);
+
+	void UpdateHeartbeat(DWORD64 sessionID);
 
 private:
 	HANDLE hThread_Monitoring;
 	static void MonitorThreadRun(LPVOID* lParam);
 	void MonitorThread();
+
+	HANDLE hThread_Heartbeat;
+	static void HeartbeatThreadRun(LPVOID* lParam);
+	void HeartbeatThread();
 
 private:
 	HANDLE hEvent_Quit;
@@ -46,9 +52,8 @@ private:
 private:
 	procademy::MemoryPool_TLS<Player> mp{ 0,false };
 
-	mutex _playeLock;
-	unordered_map<DWORD64, int> sessionIDToIdx;
-	vector<Player*> _playerVec;
+	mutex SIDToPlayerLock;
+	unordered_map<DWORD64, Player*> SIDToPlayer;
 
 private:
 	void ConvertToUTF16();
@@ -59,5 +64,9 @@ private:
 
 	in_addr _dummyIpAddr1;
 	in_addr _dummyIpAddr2;
+
+	cpp_redis::client* redisClient = NULL;
+	std::mutex redisLock;
+
 };
 

@@ -15,7 +15,7 @@ int main()
 
 	InitLog();
 
-	bool serverSet = chattingServer.Start(L"127.0.0.1", 20601, 20, 2, TRUE, 40000, TRUE);
+	bool serverSet = chattingServer.Start(L"127.0.0.1", 20601, 30, 4, TRUE, 40000, TRUE);
 	if (serverSet == false)
 	{
 		printf("server start error\n");

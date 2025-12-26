@@ -10,6 +10,8 @@
 
 using namespace std;
 
+MyConfig myConfig;
+
 bool MyConfig::Load(const char* fileName)
 {
 	FILE* fp;
@@ -94,6 +96,26 @@ void MyConfig::ApplyValue(const string& section, const string& key, const string
         else if (key == "DUMMYIP_2")
         {
             loginServerConfig.dummy_ip2 = value;
+        }
+    }
+
+    if (section == "MySQL")
+    {
+        if (key == "IP")
+        {
+            mySQLConfig.ip = value;
+        }
+        else if (key == "PORT")
+        {
+            mySQLConfig.port = stoi(value);
+        }
+        else if (key == "USER")
+        {
+            mySQLConfig.user = value;
+        }
+        else if (key == "PASSWORD")
+        {
+            mySQLConfig.password = value;
         }
     }
 }

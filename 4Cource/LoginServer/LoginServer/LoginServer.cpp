@@ -7,12 +7,15 @@
 #include "MyConfig.h"
 #include "CommonProtocol.h"
 #include "Monitoring.h"
+
+#include "DBJob.h"
+#include "DBConnector.h"
+
 #include "Player.h"
 #include "NetServer.h"
 #include "LoginServer.h"
 
-MyConfig myConfig;
-thread_local cpp_redis::client* client;
+
 
 LoginServer::LoginServer()
 {
@@ -32,7 +35,7 @@ void LoginServer::ConvertToUTF16()
 			CP_UTF8,
 			0,
 			myConfig.loginServerConfig.chatServer_ip1.data(),
-			myConfig.loginServerConfig.chatServer_ip1.size(),
+			(int)myConfig.loginServerConfig.chatServer_ip1.size(),
 			nullptr,
 			0);
 
@@ -42,7 +45,7 @@ void LoginServer::ConvertToUTF16()
 			CP_UTF8,
 			0,
 			myConfig.loginServerConfig.chatServer_ip1.data(),
-			myConfig.loginServerConfig.chatServer_ip1.size(),
+			(int)myConfig.loginServerConfig.chatServer_ip1.size(),
 			&wideStr[0],
 			len);
 
@@ -56,7 +59,7 @@ void LoginServer::ConvertToUTF16()
 			CP_UTF8,
 			0,
 			myConfig.loginServerConfig.chatServer_ip2.c_str(),
-			myConfig.loginServerConfig.chatServer_ip2.size(),
+			(int)myConfig.loginServerConfig.chatServer_ip2.size(),
 			nullptr,
 			0);
 
@@ -66,7 +69,7 @@ void LoginServer::ConvertToUTF16()
 			CP_UTF8,
 			0,
 			myConfig.loginServerConfig.chatServer_ip2.c_str(),
-			myConfig.loginServerConfig.chatServer_ip2.size(),
+			(int)myConfig.loginServerConfig.chatServer_ip2.size(),
 			&wideStr[0],
 			len);
 
@@ -80,7 +83,7 @@ void LoginServer::ConvertToUTF16()
 			CP_UTF8,
 			0,
 			myConfig.loginServerConfig.dummy_ip1.c_str(),
-			myConfig.loginServerConfig.dummy_ip1.size(),
+			(int)myConfig.loginServerConfig.dummy_ip1.size(),
 			nullptr,
 			0);
 
@@ -90,7 +93,7 @@ void LoginServer::ConvertToUTF16()
 			CP_UTF8,
 			0,
 			myConfig.loginServerConfig.dummy_ip1.c_str(),
-			myConfig.loginServerConfig.dummy_ip1.size(),
+			(int)myConfig.loginServerConfig.dummy_ip1.size(),
 			&wideStr[0],
 			len);
 
@@ -105,7 +108,7 @@ void LoginServer::ConvertToUTF16()
 			CP_UTF8,
 			0,
 			myConfig.loginServerConfig.dummy_ip2.c_str(),
-			myConfig.loginServerConfig.dummy_ip2.size(),
+			(int)myConfig.loginServerConfig.dummy_ip2.size(),
 			nullptr,
 			0);
 
@@ -115,7 +118,7 @@ void LoginServer::ConvertToUTF16()
 			CP_UTF8,
 			0,
 			myConfig.loginServerConfig.dummy_ip2.c_str(),
-			myConfig.loginServerConfig.dummy_ip2.size(),
+			(int)myConfig.loginServerConfig.dummy_ip2.size(),
 			&wideStr[0],
 			len);
 
@@ -143,6 +146,8 @@ bool LoginServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 		return false;
 
 	hThread_Monitoring = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThreadRun, this, NULL, NULL);
+	hThread_Heartbeat = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&HeartbeatThreadRun, this, NULL, NULL);
+
 
 	return true;
 }
@@ -164,40 +169,35 @@ void LoginServer::OnAccept(DWORD64 sessionID, SOCKADDR_IN addr)
 {
 	Player* newPlayer = mp.Alloc();
 
-	newPlayer->sessionID = sessionID;
-	newPlayer->_addr = addr;
+	{
+		lock_guard<mutex> lock(newPlayer->playerLock);
+		newPlayer->sessionID = sessionID;
+		newPlayer->_addr = addr;
+		newPlayer->heartbeat = GetTickCount64();
+	}
 
 	{
-		lock_guard<mutex> lock(_playeLock);
-		_playerVec.push_back(newPlayer);
-		sessionIDToIdx.insert({ sessionID, _playerVec.size() - 1 });
+		lock_guard<mutex> lock(SIDToPlayerLock);
+		SIDToPlayer.insert({sessionID, newPlayer});
 	}
 }
 
 void LoginServer::OnRelease(DWORD64 sessionID)
 {
-	lock_guard<mutex> lock(_playeLock);
-
-	auto iter = sessionIDToIdx.find(sessionID);
-	if (iter == sessionIDToIdx.end())
+	Player* removed = NULL;
 	{
-		DebugBreak();
+		lock_guard<mutex> lock(SIDToPlayerLock);
+
+		auto iter = SIDToPlayer.find(sessionID);
+		if (iter == SIDToPlayer.end())
+		{
+			DebugBreak();
+		}
+
+		removed = iter->second;
+		SIDToPlayer.erase(iter);
 	}
 
-	int idx = iter->second;
-	int lastIdx = _playerVec.size() - 1;
-	Player* removed = _playerVec[idx];
-	
-	if (idx != lastIdx)
-	{
-		Player* moved = _playerVec[lastIdx];
-		_playerVec[idx] = moved;
-		sessionIDToIdx[moved->sessionID] = idx;
-	}
-
-	_playerVec.pop_back();
-
-	sessionIDToIdx.erase(sessionID);
 	mp.Free(removed);
 }
 
@@ -222,7 +222,7 @@ void LoginServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		break;
 	}
 
-	// TODO: Accept후 3초간 아무 반응이 없다면, 내보내자.
+	
 }
 
 void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -234,7 +234,7 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 	pPacket.GetData(sessionKey, sizeof(char) * 64);
 
 	// 1단계: 토큰인증
-	if (AuthorizeToken(sessionKey) == false)
+	if (AuthorizeToken(accountNo, sessionKey) == false)
 		return;
 
 	// 2단계: Redis에 토큰 저장
@@ -244,32 +244,60 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 	SendPacket_RES_LOGIN(accountNo, sessionID);
 }
 
-bool LoginServer::AuthorizeToken(const char* token)
+bool LoginServer::AuthorizeToken(INT64 accountNo, const char* token)
 {
 	// TODO: 플랫폼 API를 대신하여 회원DB를 한번 다녀오는 절차.
 	// DB를 읽는것으로 블락 유도.
+
+	DBCheckAccountInfo* job = new DBCheckAccountInfo;
+	job->_accountNo = accountNo;
+
+	DBResult queryResult;
+	DBConnector::GetInstance()->QueryRead(job, queryResult);
+
+	string tmpToken = queryResult[0]["sessionkey"];
 
 	return true;
 }
 
 bool LoginServer::SaveTokenToRedis(INT64 accountNo, const char* sessionKey)
 {
-	if (client == NULL)
+	/*static thread_local cpp_redis::client redisClient;
+
+	if (!redisClient.is_connected())
 	{
-		client = new cpp_redis::client;
-		client->connect();
+		redisClient.connect();
+		redisClient.sync_commit();
 	}
 
 	string key = to_string(accountNo);
 	string token = string(sessionKey, 64);
 
-	client->setex(key, 10, token);
-	
-	/*client->get(key, [](cpp_redis::reply& reply) {
-		std::cout << reply << std::endl;
-		});*/
+	redisClient.send({ "SET",key,token,"EX","10" });
 
-	client->sync_commit();
+	redisClient.sync_commit();
+
+	return true;*/
+
+
+	lock_guard<mutex> lock(redisLock);
+	if (redisClient == NULL)
+	{
+		redisClient = new cpp_redis::client;
+	}
+
+	if (!redisClient->is_connected())
+	{
+		redisClient->connect();
+		redisClient->sync_commit();
+	}
+
+	string key = to_string(accountNo);
+	string token = string(sessionKey, 64);
+
+	redisClient->send({ "SET",key,token,"EX","10" });
+
+	redisClient->sync_commit();
 
 	return true;
 }
@@ -277,24 +305,20 @@ bool LoginServer::SaveTokenToRedis(INT64 accountNo, const char* sessionKey)
 void LoginServer::SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID)
 {
 	sockaddr_in playerAddr;
+	Player* targetPlayer = NULL;
+
 	{
-		lock_guard<mutex> lock(_playeLock);
-
-		if (sessionIDToIdx.find(sessionID) == sessionIDToIdx.end())
+		lock_guard<mutex> lock(SIDToPlayerLock);
+		auto iter = SIDToPlayer.find(sessionID);
+		if (iter == SIDToPlayer.end())
 		{
 			DebugBreak();
 		}
-
-		int idx = sessionIDToIdx[sessionID];
-
-		if (_playerVec[idx]->sessionID != sessionID)
-		{
-			DebugBreak();
-		}
-
-		playerAddr = _playerVec[idx]->_addr;
+		
+		targetPlayer = iter->second;
 	}
 
+	playerAddr = targetPlayer->_addr;
 
 	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 	newPacket.Clear();
@@ -309,6 +333,8 @@ void LoginServer::SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID)
 	USHORT GameServerPort;
 	WCHAR ChatServerIP[16] = { 0 };
 	USHORT ChatServerPort;
+
+	
 
 	swprintf_s(ID, 20, L"ID_%lld", accountNo);
 	swprintf_s(Nickname, 20, L"Nickname_%lld", accountNo);
@@ -348,6 +374,34 @@ void LoginServer::SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID)
 	return;
 }
 
+void LoginServer::UpdateHeartbeat(DWORD64 sessionID)
+{
+	Player* pPlayer;
+
+	{
+		lock_guard<mutex> lock(SIDToPlayerLock);
+
+		auto iter = SIDToPlayer.find(sessionID);
+		if (iter == SIDToPlayer.end())
+		{
+			DebugBreak();
+		}
+
+		pPlayer = iter->second;
+	}
+
+	{
+		lock_guard<mutex> lock(pPlayer->playerLock);
+
+		if (pPlayer->sessionID != sessionID)
+		{
+			DebugBreak();
+		}
+
+		pPlayer->heartbeat = GetTickCount64();
+	}
+}
+
 void LoginServer::MonitorThreadRun(LPVOID* lParam)
 {
 	LoginServer* self = (LoginServer*)lParam;
@@ -366,5 +420,50 @@ void LoginServer::MonitorThread()
 
 		Monitoring::GetInstance()->PrintMonitoring();
 		Monitoring::GetInstance()->Clear();
+	}
+}
+
+void LoginServer::HeartbeatThreadRun(LPVOID* lParam)
+{
+	LoginServer* self = (LoginServer*)lParam;
+	self->HeartbeatThread();
+}
+
+void LoginServer::HeartbeatThread()
+{
+	while (1)
+	{
+		DWORD ret = WaitForSingleObject(hEvent_Quit, 10000);
+		if (ret == WAIT_OBJECT_0)
+		{
+			break;
+		}
+
+		DWORD64 nowTime = GetTickCount64();
+		vector<DWORD64> kickVec;
+
+		{
+			lock_guard<mutex> lock(SIDToPlayerLock);
+
+			auto iter = SIDToPlayer.begin();
+			for (; iter != SIDToPlayer.end(); ++iter)
+			{
+				Player* pPlayer = iter->second;
+				{
+					lock_guard<mutex> lock2(pPlayer->playerLock);
+					DWORD64 heartbeat = pPlayer->heartbeat;
+
+					if (nowTime - heartbeat >= 5000)
+					{
+						kickVec.push_back(pPlayer->sessionID);
+					}
+				}
+			}
+		}
+		
+		for (int i = 0; i < kickVec.size(); i++)
+		{
+			Disconnect(kickVec[i]);
+		}
 	}
 }

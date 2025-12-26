@@ -21,7 +21,7 @@ HANDLE hHeartbeatThread;
 HANDLE hThread_Monitoring;
 HANDLE hEvent_Quit;
 
-thread_local cpp_redis::client* redisClient;
+
 
 bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff = true)
 {
@@ -102,7 +102,6 @@ void ChatServer::OnRelease(DWORD64 sessionID)
 		return;
 
 	ReleaseOriginPlayer(sessionID);
-
 }
 
 void ChatServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -164,7 +163,12 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	// 토큰 체크
 	bool isTokenValid = IsTokenValid(accountNo, sessionKey);
 	if (isTokenValid == false)
+	{
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::TokenFailed);
+		Disconnect(sessionID);
 		return;
+	}
+		
 
 	// 중복로그인 체크
 	bool isAlreadyLoggedin = CheckDuplicateLogin(accountNo);
@@ -256,9 +260,6 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		loginPlayer->sessionID = sessionID;
 		loginPlayer->accountNo = accountNo;
-		//pPacket.GetData((char*)loginPlayer->ID, sizeof(WCHAR) * 20);
-		//pPacket.GetData((char*)loginPlayer->nickName, sizeof(WCHAR) * 20);
-		//pPacket.GetData(loginPlayer->sessionKey, sizeof(char) * 64);
 		wcscpy_s(loginPlayer->ID, ID);
 		wcscpy_s(loginPlayer->nickName, NicnkName);
 		memcpy(loginPlayer->sessionKey, sessionKey, 64);
@@ -303,44 +304,50 @@ bool ChatServer::CheckDuplicateLogin(INT64 accountNo)
 bool ChatServer::IsTokenValid(INT64 accountNo, const char* sessionKey)
 {
 	// redis에서 해당 accountNo에 대한 sessionKey과 일치하는지 확인.
-	
-	if (redisClient == NULL)
+	//static thread_local cpp_redis::client* redisClient = NULL;
+
+	//if (redisClient == NULL)
+	//{
+	//	redisClient = new cpp_redis::client;
+	//	redisClient->connect();
+	//}
+
+	//string key = to_string(accountNo);
+	//string token(sessionKey, 64);
+
+	//bool flag = false;
+	//redisClient->get(key, [&token, &flag, key](cpp_redis::reply& reply) {
+	//	if (reply.is_string() && reply.as_string() == token)
+	//	{
+	//		//redisClient->del({ key });
+	//		flag = true;
+	//	}
+	//	});
+
+	//redisClient->sync_commit();
+
+	//return flag;
+
+	static thread_local cpp_redis::client redisClient;
+
+	if (!redisClient.is_connected())
 	{
-		redisClient = new cpp_redis::client;
-		redisClient->connect();
+		redisClient.connect();
+		redisClient.sync_commit();
 	}
+		
 
 	string key = to_string(accountNo);
 	string token(sessionKey, 64);
 
-	static const string lua_script = R"(
-        local val = redis.call("GET", KEYS[1])
-        if not val then
-            return 0
-        end
+	auto future = redisClient.get(key);
+	redisClient.sync_commit();
 
-        if val ~= ARGV[1] then
-            return 0
-        end
-
-        redis.call("DEL", KEYS[1])
-        return 1
-    )";
-
-	auto future = redisClient->eval(lua_script, { key }, { token });
-	redisClient->sync_commit();
-
-	cpp_redis::reply reply = future.get();
-
-	if (!reply.is_integer())
+	auto reply = future.get();
+	if (!reply.is_string())
 		return false;
 
-	if (reply.as_integer() == 1)
-	{
-		return true;
-	}
-	else
-		return false;
+	return reply.as_string() == token;
 }
 
 void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -518,23 +525,29 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	newPacket << msgLen;
 	newPacket.Putdata((char*)msg, msgLen);
 
-
+	vector<DWORD64> targets;
 	LockAroundSector_Shared(sectorY, sectorX);
 	for (int i = 0; i < 9; i++)
 	{
-		WORD nextY = sectorY + dy[i];
-		WORD nextX = sectorX + dx[i];
+		WORD nextY = (int)sectorY + dy[i];
+		WORD nextX = (int)sectorX + dx[i];
 
 		if (nextY < 0 || nextY >= MAX_SECTOR_Y || nextX < 0 || nextX >= MAX_SECTOR_X)
 			continue;
 
 		for (int j = 0; j < sector[nextY][nextX].size(); j++)
 		{
-			SendPacket(sector[nextY][nextX][j], newPacket);
+			targets.push_back(sector[nextY][nextX][j]);
+			//SendPacket(sector[nextY][nextX][j], newPacket);
 		}
 	}
 
 	UnLockAroundSector_Shared(sectorY, sectorX);
+
+	for (int i = 0; i < targets.size(); i++)
+	{
+		SendPacket(targets[i], newPacket);
+	}
 
 }
 
@@ -627,6 +640,18 @@ bool ChatServer::ReleaseOriginPlayer(DWORD64 sessionID)
 	SIDToPlayer.erase(iter);
 	ReleaseSRWLockExclusive(&SIDToPlayerLock);
 
+	AcquireSRWLockExclusive(&playerArrLock);
+	for (int i = 0; i < playerArr.size(); i++)
+	{
+		if (playerArr[i] != removed)
+			continue;
+
+		playerArr[i] = playerArr.back();
+		playerArr.pop_back();
+		break;
+	}
+	ReleaseSRWLockExclusive(&playerArrLock);
+
 	AcquireSRWLockShared(&removed->playerLock);
 	int accountNo = removed->accountNo;
 	PLAYER_STATE state = removed->state;
@@ -664,6 +689,8 @@ bool ChatServer::ReleaseOriginPlayer(DWORD64 sessionID)
 	}
 
 	playerPool.Free(removed);
+
+	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PlayerCount);
 
 	return true;
 }
@@ -734,5 +761,9 @@ void ChatServer::MonitorThread()
 
 		Monitoring::GetInstance()->PrintMonitoring();
 		Monitoring::GetInstance()->Clear();
+
+		// 임시
+		Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::tmpPlayerArrSize] = tmpPlayerArr.size();
+		Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::PlayerArrSize] = playerArr.size();
 	}
 }

@@ -130,6 +130,7 @@
   <ItemGroup>
     <ClCompile Include="DBConnector.cpp" />
     <ClCompile Include="DBJob.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="MyConfig.cpp" />
   </ItemGroup>
   <ItemGroup>

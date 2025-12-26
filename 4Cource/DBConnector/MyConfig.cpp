@@ -8,8 +8,6 @@
 
 using namespace std;
 
-MyConfig g_MyConfig;
-
 bool MyConfig::Load(const char* fileName)
 {
 	FILE* fp;

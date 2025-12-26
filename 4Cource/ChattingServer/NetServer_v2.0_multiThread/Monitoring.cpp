@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <iomanip>
 #include "Monitoring.h"
 
 Monitoring* Monitoring::_pMonitoring = NULL;
@@ -69,35 +70,71 @@ void Monitoring::Clear()
 
 void Monitoring::PrintMonitoring()
 {
+	constexpr int NAME_WIDTH = sizeof("Disconnect From Server:") - 1;
+
 	cout << "===============================================================================\n";
-	cout << "PacketPool_fullChunk: " << _monitoringArr[(int)MonitorType::PacketPool_FULL] << "\n";
-	cout << "PacketPool_emptyChunk: " << _monitoringArr[(int)MonitorType::PacketPool_EMPTY] << "\n";
-	cout << "\n";
-	cout << "RCBPool_fullChunk: " << _monitoringArr[(int)MonitorType::RCBPool_FULL] << "\n";
-	cout << "RCBPool_emptyChunk: " << _monitoringArr[(int)MonitorType::RCBPool_EMPTY] << "\n";
-	cout << "\n";
-	cout << "LockFreeQ_fullChunk: " << _monitoringArr[(int)MonitorType::lockfreeQ_FULL] << "\n";
-	cout << "LockFreeQ_emptyChunk: " << _monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] << "\n";
-	cout << "\n";
-	cout << "PacketUseSize: " << _monitoringArr[(int)MonitorType::PacketUseCount] << "\n";
+
+	cout << right << setw(NAME_WIDTH) << "PacketPool_fullChunk:" << " "
+		<< _monitoringArr[(int)MonitorType::PacketPool_FULL] << "\n";
+	cout << right << setw(NAME_WIDTH) << "PacketPool_emptyChunk:" << " "
+		<< _monitoringArr[(int)MonitorType::PacketPool_EMPTY] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "RCBPool_fullChunk:" << " "
+		<< _monitoringArr[(int)MonitorType::RCBPool_FULL] << "\n";
+	cout << right << setw(NAME_WIDTH) << "RCBPool_emptyChunk:" << " "
+		<< _monitoringArr[(int)MonitorType::RCBPool_EMPTY] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "LockFreeQ_fullChunk:" << " "
+		<< _monitoringArr[(int)MonitorType::lockfreeQ_FULL] << "\n";
+	cout << right << setw(NAME_WIDTH) << "LockFreeQ_emptyChunk:" << " "
+		<< _monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "PacketUseSize:" << " "
+		<< _monitoringArr[(int)MonitorType::PacketUseCount] << "\n";
+
+	cout << "-------------------------------------------------------------------------------\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "SessionNum:" << " "
+		<< _monitoringArr[(int)MonitorType::SessionNum] << "\n";
+	cout << right << setw(NAME_WIDTH) << "PlayerCount:" << " "
+		<< _monitoringArr[(int)MonitorType::PlayerCount] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "AcceptTotal:" << " "
+		<< _monitoringArr[(int)MonitorType::AcceptTotal] << "\n";
+	cout << right << setw(NAME_WIDTH) << "AcceptTPS:" << " "
+		<< _monitoringArr[(int)MonitorType::AcceptTPS] << "\n";
+	cout << right << setw(NAME_WIDTH) << "UpdateTPS:" << " "
+		<< _monitoringArr[(int)MonitorType::UpdateTPS] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "RecvMessageTPS:" << " "
+		<< _monitoringArr[(int)MonitorType::RecvMessageTPS] << "\n";
+	cout << right << setw(NAME_WIDTH) << "SendMessageTPS:" << " "
+		<< _monitoringArr[(int)MonitorType::SendMessageTPS] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "RecvMessageLogin:" << " "
+		<< _monitoringArr[(int)MonitorType::RecvMessageLoginTPS] << "\n";
+	cout << right << setw(NAME_WIDTH) << "RecvMessageMove:" << " "
+		<< _monitoringArr[(int)MonitorType::RecvMessageMoveTPS] << "\n";
+	cout << right << setw(NAME_WIDTH) << "RecvMessageChat:" << " "
+		<< _monitoringArr[(int)MonitorType::RecvMessageChatTPS] << "\n\n";
+
 	cout << "-------------------------------------------------------------------------------\n";
-	cout << "\n";
-	cout << "SessionNum: " << _monitoringArr[(int)MonitorType::SessionNum] << "\n";
-	cout << "PlayerCount: " << _monitoringArr[(int)MonitorType::PlayerCount] << "\n";
-	cout << "\n";
-	cout << "AcceptTotal: " << _monitoringArr[(int)MonitorType::AcceptTotal] << "\n";
-	cout << "AcceptTPS: " << _monitoringArr[(int)MonitorType::AcceptTPS] << "\n";
-	cout << "UpdateTPS: " << _monitoringArr[(int)MonitorType::UpdateTPS] << "\n";
-	cout << "\n";
-	cout << "RecvMessageTPS: " << _monitoringArr[(int)MonitorType::RecvMessageTPS] << "\n";
-	cout << "SendMessageTPS: " << _monitoringArr[(int)MonitorType::SendMessageTPS] << "\n";
-	cout << "\n";
-	cout << "RecvMessageLogin: " << _monitoringArr[(int)MonitorType::RecvMessageLoginTPS] << "\n";
-	cout << "RecvMessageMove: " << _monitoringArr[(int)MonitorType::RecvMessageMoveTPS] << "\n";
-	cout << "RecvMessageChat: " << _monitoringArr[(int)MonitorType::RecvMessageChatTPS] << "\n";
-	cout << "\n";
-	cout << "Disconnect(중복로그인): " << _monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin] << "\n";
-	cout << "===============================================================================\n";
-	cout << "\n";
+
+	cout << right << setw(NAME_WIDTH) << "tmpPlayerArrSize:" << " "
+		<< _monitoringArr[(int)MonitorType::tmpPlayerArrSize] << "\n";
+	cout << right << setw(NAME_WIDTH) << "PlayerArrSize:" << " "
+		<< _monitoringArr[(int)MonitorType::PlayerArrSize] << "\n";
+
+	cout << "-------------------------------------------------------------------------------\n";
+
+	cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
+		<< (_monitoringArr[(int)MonitorType::TokenFailed] +
+			_monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin]) << "\n";
+	cout << right << setw(NAME_WIDTH) << "Invalid Token:" << " "
+		<< _monitoringArr[(int)MonitorType::TokenFailed] << "\n";
+	cout << right << setw(NAME_WIDTH) << "Duplicate Login:" << " "
+		<< _monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin] << "\n";
+
+	cout << "===============================================================================\n\n";
 
 }
