@@ -27,7 +27,7 @@ public:
 		WORD sectorY;
 		WORD sectorX;
 
-		DWORD heartbeat;
+		DWORD64 heartbeat;
 
 		PLAYER_STATE state;
 
@@ -77,17 +77,15 @@ private:
 
 private:
 	void PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket);
-	void PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket);
+	bool PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket);
 	bool CheckDuplicateLogin(INT64 accountNo);
 	bool IsTokenValid(INT64 accountNo, const char* sessionKey);
 
-	void PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPacket);
-	void PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacket);
-	void PacketProc_Heartbeat(DWORD64 sessionID);
+	bool PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPacket);
+	bool PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacket);
+	bool PacketProc_Heartbeat(DWORD64 sessionID);
 
 	void UpdateHeartbeat(DWORD64 sessionID);
-
-	void DisconnectUnresponsivePlayers();
 
 	bool ReleaseTmpPlayer(DWORD64 sessionID);
 	bool ReleaseOriginPlayer(DWORD64 sessionID);

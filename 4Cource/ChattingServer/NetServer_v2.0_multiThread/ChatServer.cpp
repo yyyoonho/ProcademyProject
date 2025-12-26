@@ -72,6 +72,7 @@ void ChatServer::OnAccept(DWORD64 sessionID)
 	{
 		InitializeSRWLock(&newPlayer->playerLock);
 		newPlayer->IsInitLock = true;
+		newPlayer->heartbeat = GetTickCount64();
 	}
 
 	{
@@ -118,32 +119,36 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 	WORD msgType;
 	pPacket >> msgType;
 
+	bool flag = true;
 	switch (msgType)
 	{
 	case en_PACKET_CS_CHAT_REQ_LOGIN:
-		PacketProc_Login(sessionID, pPacket);
+		flag = PacketProc_Login(sessionID, pPacket);
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageLoginTPS);
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
-		PacketProc_SectorMove(sessionID, pPacket);
+		flag = PacketProc_SectorMove(sessionID, pPacket);
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageMoveTPS);
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_MESSAGE:
-		PacketProc_Message(sessionID, pPacket);
+		flag = PacketProc_Message(sessionID, pPacket);
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageChatTPS);
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
-		PacketProc_Heartbeat(sessionID);
+		flag = PacketProc_Heartbeat(sessionID);
 		break;
 	}
 
-	//UpdateHeartbeat(sessionID);
+	if (flag == true)
+	{
+		UpdateHeartbeat(sessionID);
+	}
 }
 
-void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
+bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
 	INT64 accountNo;
 	WCHAR ID[20];
@@ -166,7 +171,7 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	{
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::TokenFailed);
 		Disconnect(sessionID);
-		return;
+		return false;
 	}
 		
 
@@ -196,7 +201,7 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		if (iter == accountNoToPlayer.end())
 		{
 			ReleaseSRWLockShared(&accountNoToPlayerLock);
-			return;
+			return false;
 		}
 
 		Player* originPlayer = iter->second;
@@ -206,7 +211,7 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		if (originPlayer->accountNo != accountNo)
 		{
 			ReleaseSRWLockShared(&originPlayer->playerLock);
-			return;
+			return false;
 		}
 
 		DWORD64 originSID = originPlayer->sessionID;
@@ -215,6 +220,8 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 
 		Disconnect(originSID);
+
+		return false;
 	}
 
 	// 정상로그인 O
@@ -233,7 +240,7 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		{
 			DebugBreak();
 			ReleaseSRWLockExclusive(&tmpSIDToPlayerLock);
-			return;
+			return false;
 		}
 
 		Player* loginPlayer = iter->second;
@@ -264,7 +271,7 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		wcscpy_s(loginPlayer->nickName, NicnkName);
 		memcpy(loginPlayer->sessionKey, sessionKey, 64);
 
-		loginPlayer->heartbeat = timeGetTime();
+		loginPlayer->heartbeat = GetTickCount64();
 		loginPlayer->state = PLAYER_STATE::LOGIN;
 
 		ReleaseSRWLockExclusive(&loginPlayer->playerLock);
@@ -284,6 +291,8 @@ void ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		SendPacket(sessionID, newPacket);
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::PlayerCount);
+
+		return true;
 	}
 }
 
@@ -350,7 +359,7 @@ bool ChatServer::IsTokenValid(INT64 accountNo, const char* sessionKey)
 	return reply.as_string() == token;
 }
 
-void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPacket)
+bool ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
 	INT64 accountNo;
 	WORD newSectorY;
@@ -365,7 +374,7 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 	if (iter == SIDToPlayer.end())
 	{
 		ReleaseSRWLockShared(&SIDToPlayerLock);
-		return;
+		return false;
 	}
 
 	Player* movePlayer = iter->second;
@@ -376,7 +385,7 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 	if (movePlayer->sessionID != sessionID)
 	{
 		ReleaseSRWLockExclusive(&movePlayer->playerLock);
-		return;
+		return false;
 	}
 
 	if (movePlayer->state == PLAYER_STATE::LOGIN)
@@ -474,9 +483,11 @@ void ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 	newPacket << newSectorY;
 
 	SendPacket(sessionID, newPacket);
+
+	return true;
 }
 
-void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacket)
+bool ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
 	INT64 accountNo;
 	WORD msgLen;
@@ -499,7 +510,7 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	if (iter == SIDToPlayer.end())
 	{
 		ReleaseSRWLockShared(&SIDToPlayerLock);
-		return;
+		return false;
 	}
 
 	Player* msgPlayer = iter->second;
@@ -511,7 +522,7 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	if (msgPlayer->sessionID != sessionID)
 	{
 		ReleaseSRWLockShared(&msgPlayer->playerLock);
-		return;
+		return false;
 	}
 
 	WORD sectorY = msgPlayer->sectorY;
@@ -549,11 +560,14 @@ void ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 		SendPacket(targets[i], newPacket);
 	}
 
+	return true;
 }
 
-void ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
+bool ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
 {
 	UpdateHeartbeat(sessionID);
+
+	return false;
 }
 
 void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
@@ -562,29 +576,15 @@ void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
 	auto iter = SIDToPlayer.find(sessionID);
 	if (iter == SIDToPlayer.end())
 	{
-		ReleaseSRWLockShared(&SIDToPlayerLock);
-		return;
+		DebugBreak();
 	}
 
-	Player* targetPlayer = iter->second;
+	Player* pPlayer = iter->second;
 	ReleaseSRWLockShared(&SIDToPlayerLock);
 
-
-	AcquireSRWLockExclusive(&targetPlayer->playerLock);
-	if (targetPlayer->sessionID != sessionID)
-	{
-		ReleaseSRWLockExclusive(&targetPlayer->playerLock);
-		return;
-	}
-
-	targetPlayer->heartbeat = timeGetTime();
-	ReleaseSRWLockExclusive(&targetPlayer->playerLock);
-}
-
-void ChatServer::DisconnectUnresponsivePlayers()
-{
-	
-
+	AcquireSRWLockShared(&pPlayer->playerLock);
+	pPlayer->heartbeat = GetTickCount64();
+	ReleaseSRWLockShared(&pPlayer->playerLock);
 }
 
 bool ChatServer::ReleaseTmpPlayer(DWORD64 sessionID)
@@ -733,13 +733,50 @@ void ChatServer::HeartbeatThread()
 {
 	while (1)
 	{
-		DWORD ret = WaitForSingleObject(hEvent_Quit, 2000);
+		DWORD ret = WaitForSingleObject(hEvent_Quit, 5000);
 		if (ret == WAIT_OBJECT_0)
 			break;
 
-		DWORD nowTime = timeGetTime();
+		DWORD nowTime = GetTickCount64();
 
-		
+		// 로그인은 5초
+		// 플레이는 30초
+
+		vector<DWORD64> unresponsivePlayers;
+
+		AcquireSRWLockShared(&tmpPlayerArrLock);
+		for (int i = 0; i < tmpPlayerArr.size(); i++)
+		{
+			AcquireSRWLockShared(&tmpPlayerArr[i]->playerLock);
+			if (nowTime - tmpPlayerArr[i]->heartbeat >= 5000)
+			{
+				//Disconnect(tmpPlayerArr[i]->sessionID);
+				unresponsivePlayers.push_back(tmpPlayerArr[i]->sessionID);
+			}
+
+			ReleaseSRWLockShared(&tmpPlayerArr[i]->playerLock);
+		}
+		ReleaseSRWLockShared(&tmpPlayerArrLock);
+
+
+		AcquireSRWLockShared(&playerArrLock);
+		for (int i = 0; i < playerArr.size(); i++)
+		{
+			AcquireSRWLockShared(&playerArr[i]->playerLock);
+			if (nowTime - playerArr[i]->heartbeat >= 30000)
+			{
+				//Disconnect(playerArr[i]->sessionID);
+				unresponsivePlayers.push_back(playerArr[i]->sessionID);
+			}
+
+			ReleaseSRWLockShared(&playerArr[i]->playerLock);
+		}
+		ReleaseSRWLockShared(&playerArrLock);
+
+		for (int i = 0; i < unresponsivePlayers.size(); i++)
+		{
+			Disconnect(unresponsivePlayers[i]);
+		}
 	}
 }
 
