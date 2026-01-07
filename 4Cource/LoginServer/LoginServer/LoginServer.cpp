@@ -127,9 +127,14 @@ void LoginServer::ConvertToUTF16()
 	}
 }
 
-bool LoginServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff)
+void LoginServer::RegisterNetServer(NetClient_Monitoring* pNetClient)
 {
-	bool ret = CNetServer::Start(ipAddress, port, workerThreadCount, coreSkip, isNagle, maximumSessionCount, codecOnOff);
+	this->pNetClient = pNetClient;
+}
+
+bool LoginServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff, BYTE fixedKey, BYTE code)
+{
+	bool ret = CNetServer::Start(ipAddress, port, workerThreadCount, coreSkip, isNagle, maximumSessionCount, codecOnOff, fixedKey, code);
 	if (ret == false)
 	{
 		return false;
@@ -174,31 +179,23 @@ void LoginServer::OnAccept(DWORD64 sessionID, SOCKADDR_IN addr)
 		newPlayer->sessionID = sessionID;
 		newPlayer->_addr = addr;
 		newPlayer->heartbeat = GetTickCount64();
+		newPlayer->duplicateKick = false;
 	}
 
 	{
-		lock_guard<mutex> lock(SIDToPlayerLock);
-		SIDToPlayer.insert({sessionID, newPlayer});
+		lock_guard<mutex> lock(tmpSIDToPlayerLock);
+		tmpSIDToPlayer.insert({sessionID, newPlayer});
 	}
 }
 
 void LoginServer::OnRelease(DWORD64 sessionID)
 {
-	Player* removed = NULL;
-	{
-		lock_guard<mutex> lock(SIDToPlayerLock);
+	bool ret = ReleaseTmpPlayer(sessionID);
 
-		auto iter = SIDToPlayer.find(sessionID);
-		if (iter == SIDToPlayer.end())
-		{
-			DebugBreak();
-		}
+	if (ret == false)
+		ReleaseOriginPlayer(sessionID);
 
-		removed = iter->second;
-		SIDToPlayer.erase(iter);
-	}
-
-	mp.Free(removed);
+	return;
 }
 
 void LoginServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -222,7 +219,7 @@ void LoginServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		break;
 	}
 
-	
+	UpdateHeartbeat(sessionID);
 }
 
 void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -233,7 +230,80 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 	pPacket >> accountNo;
 	pPacket.GetData(sessionKey, sizeof(char) * 64);
 
-	// 1단계: 토큰인증
+	// TODO: 중복로그인절차
+	bool isAlreadyLoggedin = CheckDuplicateLogin(accountNo);
+
+	do
+	{
+		if (isAlreadyLoggedin == TRUE)
+		{
+			Player* originPlayer = NULL;
+
+			// old Disconnect
+			{
+				lock_guard<mutex> lock(accountNoToPlayerLock);
+
+				auto iter = accountNoToPlayer.find(accountNo);
+				if (iter == accountNoToPlayer.end())
+				{
+					break;
+				}
+
+				originPlayer = iter->second;
+			}
+
+			DWORD64 SID = 0;
+			{
+				lock_guard<mutex> lock(originPlayer->playerLock);
+
+				if (originPlayer->accountNo == accountNo)
+				{
+					SID = originPlayer->sessionID;
+					originPlayer->duplicateKick = true;
+				}
+			}
+
+			if (SID != 0)
+				Disconnect(SID);
+		}
+	} while (0);
+
+	// 정상 로그인
+	{
+		Player* newPlayer;
+
+		{
+			lock_guard<mutex> lock(tmpSIDToPlayerLock);
+		
+			auto iter = tmpSIDToPlayer.find(sessionID);
+			if (iter == tmpSIDToPlayer.end())
+			{
+				return;
+			}
+
+			newPlayer = iter->second;
+
+			tmpSIDToPlayer.erase(iter);
+		}
+		
+		{
+			lock_guard<mutex> lock(newPlayer->playerLock);
+			newPlayer->accountNo = accountNo;
+		}
+
+		{
+			lock_guard<mutex> lock(SIDToPlayerLock);
+			SIDToPlayer.insert({ sessionID, newPlayer });
+		}
+
+		{
+			lock_guard<mutex> lock(accountNoToPlayerLock);
+			accountNoToPlayer[accountNo] = newPlayer;
+		}
+	}
+
+	
+	// 1단계: 토큰인증(=플랫폼API 다녀오는 절차)
 	if (AuthorizeToken(accountNo, sessionKey) == false)
 		return;
 
@@ -242,6 +312,8 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 
 	// 3단계: Send RES
 	SendPacket_RES_LOGIN(accountNo, sessionID);
+
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::AuthTPS);
 }
 
 bool LoginServer::AuthorizeToken(INT64 accountNo, const char* token)
@@ -262,24 +334,6 @@ bool LoginServer::AuthorizeToken(INT64 accountNo, const char* token)
 
 bool LoginServer::SaveTokenToRedis(INT64 accountNo, const char* sessionKey)
 {
-	/*static thread_local cpp_redis::client redisClient;
-
-	if (!redisClient.is_connected())
-	{
-		redisClient.connect();
-		redisClient.sync_commit();
-	}
-
-	string key = to_string(accountNo);
-	string token = string(sessionKey, 64);
-
-	redisClient.send({ "SET",key,token,"EX","10" });
-
-	redisClient.sync_commit();
-
-	return true;*/
-
-
 	lock_guard<mutex> lock(redisLock);
 	if (redisClient == NULL)
 	{
@@ -295,7 +349,8 @@ bool LoginServer::SaveTokenToRedis(INT64 accountNo, const char* sessionKey)
 	string key = to_string(accountNo);
 	string token = string(sessionKey, 64);
 
-	redisClient->send({ "SET",key,token,"EX","10" });
+	//redisClient->send({ "SET",key,token,"EX","10" });
+	redisClient->send({ "SET",key,token,"EX","20" });
 
 	redisClient->sync_commit();
 
@@ -402,6 +457,107 @@ void LoginServer::UpdateHeartbeat(DWORD64 sessionID)
 	}
 }
 
+bool LoginServer::CheckDuplicateLogin(INT64 accountNo)
+{
+	bool ret = false;
+
+	Player* oldPlayer = NULL;
+	{
+		lock_guard<mutex> lock(accountNoToPlayerLock);
+
+		auto iter = accountNoToPlayer.find(accountNo);
+		if (iter == accountNoToPlayer.end())
+		{
+			ret = false;
+		}
+		else
+		{
+			oldPlayer = iter->second;
+		}
+	}
+	if (oldPlayer == NULL)
+	{
+		return ret;
+	}
+
+
+	{
+		lock_guard<mutex> lock(oldPlayer->playerLock);
+
+		if (oldPlayer->duplicateKick == true)
+		{
+			ret = false;
+		}
+		else
+		{
+			ret = true;
+		}
+	}
+
+	return ret;
+}
+
+bool LoginServer::ReleaseTmpPlayer(DWORD64 sessionID)
+{
+	Player* removed;
+	{
+		lock_guard<mutex> lock(tmpSIDToPlayerLock);
+
+		auto iter = tmpSIDToPlayer.find(sessionID);
+		if (iter == tmpSIDToPlayer.end())
+		{
+			return false;
+		}
+
+		removed = iter->second;
+		tmpSIDToPlayer.erase(iter);
+	}
+
+	mp.Free(removed);
+
+	return true;
+}
+
+bool LoginServer::ReleaseOriginPlayer(DWORD64 sessionID)
+{
+	Player* removed;
+	{
+		lock_guard<mutex> lock(SIDToPlayerLock);
+		
+		auto iter = SIDToPlayer.find(sessionID);
+		if (iter == SIDToPlayer.end())
+		{
+			DebugBreak();
+			return false;
+		}
+
+		removed = iter->second;
+		SIDToPlayer.erase(iter);
+	}
+
+	INT64 accountNo;
+	{
+		lock_guard<mutex> lock(removed->playerLock);
+
+		accountNo = removed->accountNo;
+	}
+
+	{
+		lock_guard<mutex> lock(accountNoToPlayerLock);
+
+		auto iter = accountNoToPlayer.find(accountNo);
+		if (iter != accountNoToPlayer.end() && iter->second == removed)
+		{
+			accountNoToPlayer.erase(iter);
+		}
+	}
+
+	mp.Free(removed);
+
+	return true;
+}
+
+
 void LoginServer::MonitorThreadRun(LPVOID* lParam)
 {
 	LoginServer* self = (LoginServer*)lParam;
@@ -418,6 +574,9 @@ void LoginServer::MonitorThread()
 			break;
 		}
 
+		Monitoring::GetInstance()->UpdatePDHnCpuUsage();
+		TossMonitoringData();
+
 		Monitoring::GetInstance()->PrintMonitoring();
 		Monitoring::GetInstance()->Clear();
 	}
@@ -433,7 +592,7 @@ void LoginServer::HeartbeatThread()
 {
 	while (1)
 	{
-		DWORD ret = WaitForSingleObject(hEvent_Quit, 10000);
+		DWORD ret = WaitForSingleObject(hEvent_Quit, 5000);
 		if (ret == WAIT_OBJECT_0)
 		{
 			break;
@@ -453,6 +612,26 @@ void LoginServer::HeartbeatThread()
 					lock_guard<mutex> lock2(pPlayer->playerLock);
 					DWORD64 heartbeat = pPlayer->heartbeat;
 
+					if (nowTime - heartbeat >= 15000)
+					{
+						kickVec.push_back(pPlayer->sessionID);
+					}
+				}
+			}
+		}
+
+		nowTime = GetTickCount64();
+		{
+			lock_guard<mutex> lock(tmpSIDToPlayerLock);
+
+			auto iter = tmpSIDToPlayer.begin();
+			for (; iter != tmpSIDToPlayer.end(); ++iter)
+			{
+				Player* pPlayer = iter->second;
+				{
+					lock_guard<mutex> lock2(pPlayer->playerLock);
+					DWORD64 heartbeat = pPlayer->heartbeat;
+
 					if (nowTime - heartbeat >= 5000)
 					{
 						kickVec.push_back(pPlayer->sessionID);
@@ -460,6 +639,7 @@ void LoginServer::HeartbeatThread()
 				}
 			}
 		}
+		
 		
 		for (int i = 0; i < kickVec.size(); i++)
 		{

@@ -35,10 +35,11 @@ enum class MSG_CATEGORY
 
 enum class PLAYER_STATE
 {
+	NONE = 0,
+
 	ACCEPT,
 	LOGIN,
 	PLAY,
-	DISCONNECTING,
 
 	INVALID,
 };

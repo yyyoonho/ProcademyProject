@@ -8,10 +8,19 @@ Code(1byte) - Len(2byte) - RandKey(1byte) - CheckSum(1byte) - Payload(Len byte)
 @ Len 과 RandKey 는 암호화 하지 않고 그대로 노출 합니다.
 */
 
+class NetCodec
+{
+public:
+	bool EncodingPacket(SerializePacketPtr sPacketPtr);
+	bool DecodingPacket(SerializePacketPtr sPacketPtr, stNetHeader netHeader);
 
-BYTE GetRandomKey();
+	bool JustPushHeader(SerializePacketPtr sPacketPtr);
 
-bool EncodingPacket(SerializePacketPtr sPacketPtr);
-bool DecodingPacket(SerializePacketPtr sPacketPtr, stNetHeader netHeader);
+	void SetFixedKey(BYTE fixedKey);
+	void SetCode(BYTE code);
 
-bool JustPushHeader(SerializePacketPtr sPacketPtr);
+private:
+	BYTE _fixedKey;
+	BYTE _code;
+};
+

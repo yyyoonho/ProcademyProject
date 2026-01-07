@@ -16,10 +16,11 @@ public:
 		unsigned short coreSkip, 
 		bool isNagle, 
 		unsigned int maximumSessionCount,
-		bool codecOnOff);
+		bool codecOnOff,
+		BYTE fixedKey,
+		BYTE code);
 
 	virtual void Stop();
-	int GetSessionCount();
 
 	// 콘텐츠에서 호출하는 함수
 	bool Disconnect(DWORD64 sessionID);
@@ -48,21 +49,14 @@ private:
 	void WorkerThread();
 	static void AcceptThreadRun(LPVOID* lParam);
 	void AcceptThread();
-	static void MonitorThreadRun(LPVOID* lParam);
-	void MonitorThread();
 	
 public:
 	// 핸들링 함수
 	virtual bool OnConnectionRequest(SOCKADDR_IN clientAddr) = 0;
-	virtual void OnAccept(DWORD64 sessionID) = 0;
+	virtual void OnAccept(DWORD64 sessionID, SOCKADDR_IN addr) = 0;
 	virtual void OnRelease(DWORD64 sessionID) = 0;
 	virtual void OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket) = 0;
 	virtual void OnError(int errorCode, WCHAR* errorComment) = 0;
-
-	// 모니터링 함수
-	int GetAcceptTPS();
-	int GetRecvMessageTPS();
-	int GetSendMessageTPS();
 
 private:
 	// 멤버변수: 쓰레드
@@ -99,4 +93,14 @@ private:
 private:
 	// 멤버변수: 이벤트
 	HANDLE _hEvent_Quit;
+
+	// PQCS용 오버랩객체
+	virtual void OnSendJob() = 0;
+	myOverlapped sendJobIOCP;
+public:
+	void PQCSSendJob();
+
+private:
+	// NetCodec
+	NetCodec* _netCodec;
 };

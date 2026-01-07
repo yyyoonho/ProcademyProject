@@ -1,6 +1,7 @@
 #pragma once
 
 class Session;
+class NetCodec;
 
 class CNetServer
 {
@@ -16,7 +17,9 @@ public:
 		unsigned short coreSkip, 
 		bool isNagle, 
 		unsigned int maximumSessionCount,
-		bool codecOnOff);
+		bool codecOnOff,
+		BYTE fixedKey,
+		BYTE code);
 
 	virtual void Stop();
 
@@ -78,7 +81,7 @@ private:
 
 public:
 	// 멤버 변수: 세션배열관리
-	Session _sessionArray[50000];
+	Session _sessionArray[20000];
 	LockFreeStack<unsigned int> _releaseIdxLockFreeStack;
 
 private:
@@ -91,4 +94,7 @@ private:
 private:
 	// 멤버변수: 이벤트
 	HANDLE _hEvent_Quit;
+
+private:
+	NetCodec* _netCodec;
 };

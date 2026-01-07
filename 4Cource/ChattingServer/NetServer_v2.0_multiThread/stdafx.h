@@ -4,7 +4,6 @@
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "RingBuffer.lib")
-#pragma comment(lib, "CustomProfiler.lib")
 
 //#pragma comment (lib, "cpp_redis.lib")
 //#pragma comment (lib, "tacopie.lib")

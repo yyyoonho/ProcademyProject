@@ -49,6 +49,10 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	if (hEvent_Quit == 0)
 		return 0;
 
+	{
+		// TODO:  모니터링 서버와 연결
+	}
+
 	hThread_Monitoring = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThreadRun, this, NULL, NULL);
 
 	return true;
@@ -70,15 +74,17 @@ void ChatServer::OnAccept(DWORD64 sessionID)
 
 	if (newPlayer->IsInitLock == false)
 	{
-		InitializeSRWLock(&newPlayer->playerLock);
+		InitializeSRWLock(&newPlayer->playerLock);	
 		newPlayer->IsInitLock = true;
-		newPlayer->heartbeat = GetTickCount64();
 	}
 
 	{
 		AcquireSRWLockExclusive(&newPlayer->playerLock);
 		newPlayer->sessionID = sessionID;
 		newPlayer->state = PLAYER_STATE::ACCEPT;
+		newPlayer->duplicateKick = false;
+
+		newPlayer->heartbeat = GetTickCount64();
 		ReleaseSRWLockExclusive(&newPlayer->playerLock);
 	}
 	
@@ -99,10 +105,10 @@ void ChatServer::OnRelease(DWORD64 sessionID)
 {
 	bool ret = ReleaseTmpPlayer(sessionID);
 
-	if (ret == true)
-		return;
+	if(ret ==false)
+		ReleaseOriginPlayer(sessionID);
 
-	ReleaseOriginPlayer(sessionID);
+	return;
 }
 
 void ChatServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -116,6 +122,8 @@ void ChatServer::OnError(int errorCode, WCHAR* errorComment)
 
 void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
+	PRO_BEGIN("Proc");
+
 	WORD msgType;
 	pPacket >> msgType;
 
@@ -128,17 +136,23 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
+		PRO_BEGIN("Move");
 		flag = PacketProc_SectorMove(sessionID, pPacket);
+		PRO_END("Move");
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageMoveTPS);
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_MESSAGE:
+		PRO_BEGIN("Message");
 		flag = PacketProc_Message(sessionID, pPacket);
+		PRO_END("Message");
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageChatTPS);
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
+		PRO_BEGIN("HB");
 		flag = PacketProc_Heartbeat(sessionID);
+		PRO_END("HB");
 		break;
 	}
 
@@ -146,6 +160,8 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 	{
 		UpdateHeartbeat(sessionID);
 	}
+
+	PRO_END("Proc");
 }
 
 bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -178,54 +194,44 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	// 중복로그인 체크
 	bool isAlreadyLoggedin = CheckDuplicateLogin(accountNo);
 
+	// 테스트
 	// 중복로그인 O
-	if (isAlreadyLoggedin == TRUE)
+	do
 	{
-		_LOG(dfLOG_LEVEL_DEBUG, L"%ls %ld\n", L"중복로그인 accountNo: ", accountNo);
-
-		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::DisconnectTotal_alreadyLogin);
-
-		WORD type = en_PACKET_CS_CHAT_RES_LOGIN;
-		newPacket << type;
-		status = 0;
-		newPacket << status;
-		newPacket << accountNo;
-
-		// new disconnect
-		SendPacket(sessionID, newPacket);
-		Disconnect(sessionID);
-		
-		// old disconnect
-		AcquireSRWLockShared(&accountNoToPlayerLock);
-		auto iter = accountNoToPlayer.find(accountNo);
-		if (iter == accountNoToPlayer.end())
+		if (isAlreadyLoggedin == TRUE)
 		{
+			//_LOG(dfLOG_LEVEL_DEBUG, L"%ls %ld\n", L"중복로그인 accountNo: ", accountNo);
+
+			// old disconnect
+			AcquireSRWLockShared(&accountNoToPlayerLock);
+			auto iter = accountNoToPlayer.find(accountNo);
+			if (iter == accountNoToPlayer.end())
+			{
+				ReleaseSRWLockShared(&accountNoToPlayerLock);
+				break;
+			}
+
+			Player* originPlayer = iter->second;
 			ReleaseSRWLockShared(&accountNoToPlayerLock);
-			return false;
+
+
+			AcquireSRWLockExclusive(&originPlayer->playerLock);
+			if (originPlayer->accountNo != accountNo)
+			{
+				ReleaseSRWLockExclusive(&originPlayer->playerLock);
+				break;
+			}
+
+			DWORD64 originSID = originPlayer->sessionID;
+			originPlayer->duplicateKick = true;
+			ReleaseSRWLockExclusive(&originPlayer->playerLock);
+
+			Disconnect(originSID);
 		}
-
-		Player* originPlayer = iter->second;
-		ReleaseSRWLockShared(&accountNoToPlayerLock);
-		
-		AcquireSRWLockShared(&originPlayer->playerLock);
-		if (originPlayer->accountNo != accountNo)
-		{
-			ReleaseSRWLockShared(&originPlayer->playerLock);
-			return false;
-		}
-
-		DWORD64 originSID = originPlayer->sessionID;
-
-		ReleaseSRWLockShared(&originPlayer->playerLock);
-
-
-		Disconnect(originSID);
-
-		return false;
-	}
+	} while (0);
 
 	// 정상로그인 O
-	else
+	//else
 	{
 		WORD type = en_PACKET_CS_CHAT_RES_LOGIN;
 		newPacket << type;
@@ -286,7 +292,8 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		ReleaseSRWLockExclusive(&SIDToPlayerLock);
 
 		AcquireSRWLockExclusive(&accountNoToPlayerLock);
-		accountNoToPlayer.insert({ accountNo, loginPlayer });
+		//accountNoToPlayer.insert({ accountNo, loginPlayer });
+		accountNoToPlayer[accountNo] = loginPlayer;
 		ReleaseSRWLockExclusive(&accountNoToPlayerLock);
 
 		SendPacket(sessionID, newPacket);
@@ -300,12 +307,39 @@ bool ChatServer::CheckDuplicateLogin(INT64 accountNo)
 {
 	bool ret = false;
 
+	Player* oldPlayer = NULL;
+
 	AcquireSRWLockShared(&accountNoToPlayerLock);
-
-	if (accountNoToPlayer.find(accountNo) != accountNoToPlayer.end())
-		ret = true;
-
+	auto iter = accountNoToPlayer.find(accountNo);
+	if (iter == accountNoToPlayer.end())
+	{
+		ret = false;
+	}
+	else
+	{
+		oldPlayer = iter->second;
+	}
 	ReleaseSRWLockShared(&accountNoToPlayerLock);
+
+	if (oldPlayer == NULL)
+	{
+		return ret;
+	}
+
+	AcquireSRWLockExclusive(&oldPlayer->playerLock);
+	if (oldPlayer->duplicateKick == true)
+	{
+		// 테스트
+		//ret = true;
+		ret = false;
+	}
+	else
+	{
+		// 테스트
+		//ret = false;
+		ret = true;
+	}
+	ReleaseSRWLockExclusive(&oldPlayer->playerLock);
 
 	return ret;
 }
@@ -313,29 +347,6 @@ bool ChatServer::CheckDuplicateLogin(INT64 accountNo)
 bool ChatServer::IsTokenValid(INT64 accountNo, const char* sessionKey)
 {
 	// redis에서 해당 accountNo에 대한 sessionKey과 일치하는지 확인.
-	//static thread_local cpp_redis::client* redisClient = NULL;
-
-	//if (redisClient == NULL)
-	//{
-	//	redisClient = new cpp_redis::client;
-	//	redisClient->connect();
-	//}
-
-	//string key = to_string(accountNo);
-	//string token(sessionKey, 64);
-
-	//bool flag = false;
-	//redisClient->get(key, [&token, &flag, key](cpp_redis::reply& reply) {
-	//	if (reply.is_string() && reply.as_string() == token)
-	//	{
-	//		//redisClient->del({ key });
-	//		flag = true;
-	//	}
-	//	});
-
-	//redisClient->sync_commit();
-
-	//return flag;
 
 	static thread_local cpp_redis::client redisClient;
 
@@ -582,9 +593,9 @@ void ChatServer::UpdateHeartbeat(DWORD64 sessionID)
 	Player* pPlayer = iter->second;
 	ReleaseSRWLockShared(&SIDToPlayerLock);
 
-	AcquireSRWLockShared(&pPlayer->playerLock);
+	AcquireSRWLockExclusive(&pPlayer->playerLock);
 	pPlayer->heartbeat = GetTickCount64();
-	ReleaseSRWLockShared(&pPlayer->playerLock);
+	ReleaseSRWLockExclusive(&pPlayer->playerLock);
 }
 
 bool ChatServer::ReleaseTmpPlayer(DWORD64 sessionID)
@@ -653,23 +664,24 @@ bool ChatServer::ReleaseOriginPlayer(DWORD64 sessionID)
 	ReleaseSRWLockExclusive(&playerArrLock);
 
 	AcquireSRWLockShared(&removed->playerLock);
-	int accountNo = removed->accountNo;
+	INT64 accountNo = removed->accountNo;
 	PLAYER_STATE state = removed->state;
 	WORD sectorY = removed->sectorY;
 	WORD sectorX = removed->sectorX;
+	bool dup = removed->duplicateKick;
+	if (dup == true)
+	{
+		//Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::DisconnectTotal_alreadyLogin);
+	}
 	ReleaseSRWLockShared(&removed->playerLock);
 
 
 	AcquireSRWLockExclusive(&accountNoToPlayerLock);
 	auto iter2 = accountNoToPlayer.find(accountNo);
-	if (iter2 == accountNoToPlayer.end())
+	if (iter2 != accountNoToPlayer.end() && iter2->second == removed)
 	{
-		DebugBreak();
-		ReleaseSRWLockExclusive(&accountNoToPlayerLock);
-		return false;
+		accountNoToPlayer.erase(iter2);
 	}
-
-	accountNoToPlayer.erase(iter2);
 	ReleaseSRWLockExclusive(&accountNoToPlayerLock);
 
 	if (state == PLAYER_STATE::PLAY)
@@ -694,6 +706,7 @@ bool ChatServer::ReleaseOriginPlayer(DWORD64 sessionID)
 
 	return true;
 }
+
 
 void ChatServer::LockAroundSector_Shared(WORD sectorY, WORD sectorX)
 {

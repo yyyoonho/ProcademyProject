@@ -65,6 +65,9 @@
     <ClCompile Include="LogManager.cpp">
       <Filter>소스 파일\Monitor</Filter>
     </ClCompile>
+    <ClCompile Include="CustomProfiler.cpp">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -104,6 +107,9 @@
       <Filter>소스 파일\Monitor</Filter>
     </ClInclude>
     <ClInclude Include="LockFree_Queue.h">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomProfiler.h">
       <Filter>소스 파일\NetLib\Utils</Filter>
     </ClInclude>
   </ItemGroup>

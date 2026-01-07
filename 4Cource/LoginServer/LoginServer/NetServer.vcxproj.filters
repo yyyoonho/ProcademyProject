@@ -33,14 +33,26 @@
     <Filter Include="소스 파일\NetLib\Utils">
       <UniqueIdentifier>{4eb0ba91-c6ea-4ddd-89b1-3151e7950538}</UniqueIdentifier>
     </Filter>
-    <Filter Include="소스 파일\LoginServer">
-      <UniqueIdentifier>{b607fd00-95c6-4832-9198-07c5bab843bd}</UniqueIdentifier>
-    </Filter>
     <Filter Include="소스 파일\Config">
       <UniqueIdentifier>{4e0e401f-9b82-42f3-ac89-ead0f4b72838}</UniqueIdentifier>
     </Filter>
     <Filter Include="소스 파일\DB">
       <UniqueIdentifier>{02585b17-3ca2-4c40-b220-6e09bb6bd6f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetLib\BaseClient">
+      <UniqueIdentifier>{06be5caa-86bf-4b28-ba07-18c2b6452108}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\LoginServer">
+      <UniqueIdentifier>{b607fd00-95c6-4832-9198-07c5bab843bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\LoginServer\CS">
+      <UniqueIdentifier>{bdf49fd4-d162-4036-ab5a-e20ff65a9c93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\LoginServer\SS">
+      <UniqueIdentifier>{57e3b1d3-b14b-48ad-9e6a-123e57294a77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\LoginServer\SendJob">
+      <UniqueIdentifier>{5066696d-2f87-492a-ad48-e8c283f97778}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -68,9 +80,6 @@
     <ClCompile Include="LogManager.cpp">
       <Filter>소스 파일\Monitor</Filter>
     </ClCompile>
-    <ClCompile Include="LoginServer.cpp">
-      <Filter>소스 파일\LoginServer</Filter>
-    </ClCompile>
     <ClCompile Include="Player.cpp">
       <Filter>소스 파일\LoginServer</Filter>
     </ClCompile>
@@ -82,6 +91,21 @@
     </ClCompile>
     <ClCompile Include="DBConnector.cpp">
       <Filter>소스 파일\DB</Filter>
+    </ClCompile>
+    <ClCompile Include="NetClient.cpp">
+      <Filter>소스 파일\NetLib\BaseClient</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginServer.cpp">
+      <Filter>소스 파일\LoginServer\CS</Filter>
+    </ClCompile>
+    <ClCompile Include="NetClient_Monitoring.cpp">
+      <Filter>소스 파일\LoginServer\SS</Filter>
+    </ClCompile>
+    <ClCompile Include="CpuUsage.cpp">
+      <Filter>소스 파일\Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginServer_Monitoring.cpp">
+      <Filter>소스 파일\LoginServer\CS</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -118,9 +142,6 @@
     <ClInclude Include="CommonProtocol.h">
       <Filter>소스 파일\Protocol</Filter>
     </ClInclude>
-    <ClInclude Include="LoginServer.h">
-      <Filter>소스 파일\LoginServer</Filter>
-    </ClInclude>
     <ClInclude Include="LockFree_Queue.h">
       <Filter>소스 파일\NetLib\Utils</Filter>
     </ClInclude>
@@ -135,6 +156,21 @@
     </ClInclude>
     <ClInclude Include="DBConnector.h">
       <Filter>소스 파일\DB</Filter>
+    </ClInclude>
+    <ClInclude Include="NetClient.h">
+      <Filter>소스 파일\NetLib\BaseClient</Filter>
+    </ClInclude>
+    <ClInclude Include="LoginServer.h">
+      <Filter>소스 파일\LoginServer\CS</Filter>
+    </ClInclude>
+    <ClInclude Include="NetClient_Monitoring.h">
+      <Filter>소스 파일\LoginServer\SS</Filter>
+    </ClInclude>
+    <ClInclude Include="SendJob.h">
+      <Filter>소스 파일\LoginServer\SendJob</Filter>
+    </ClInclude>
+    <ClInclude Include="CpuUsage.h">
+      <Filter>소스 파일\Monitor</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

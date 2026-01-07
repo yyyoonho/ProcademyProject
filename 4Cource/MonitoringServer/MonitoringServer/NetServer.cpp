@@ -15,7 +15,7 @@ CNetServer::~CNetServer()
 {
 }
 
-bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff=true)
+bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff, BYTE fixedKey, BYTE code)
 {
 	_ipAddress = ipAddress;
 	_port = port;
@@ -38,6 +38,10 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	bool ret = NetInit();
 	if (ret == false)
 		return false;
+
+	_netCodec = new NetCodec;
+	_netCodec->SetFixedKey(fixedKey);
+	_netCodec->SetCode(code);
 
 	_hThread_Accept = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&CNetServer::AcceptThreadRun, this, NULL, NULL);
 	if (_hThread_Accept == NULL)
@@ -160,7 +164,7 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		if (!pPacket.IsEncoded())
 		{
-			JustPushHeader(pPacket);
+			_netCodec->JustPushHeader(pPacket);
 			pPacket.MarkEncoded();	// -> 여기서는 header를 push하는걸 1회만 하기위해 체크하는 용도.
 		}
 	}
@@ -168,7 +172,7 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	{
 		if (!pPacket.IsEncoded())
 		{
-			EncodingPacket(pPacket);
+			_netCodec->EncodingPacket(pPacket);
 			pPacket.MarkEncoded();
 		}
 	}
@@ -448,10 +452,17 @@ void CNetServer::WorkerThread()
 		}
 
 
-		// TODO: ReleaseProc() 호출
+		// ReleaseProc() 호출
 		if (pMyOverlapped == NULL && pSession != NULL)
 		{
 			ReleaseProc(pSession);
+			continue;
+		}
+
+		// ReleaseProc() 호출
+		if (pMyOverlapped == &sendJobIOCP)
+		{
+			OnSendJob();
 			continue;
 		}
 
@@ -520,7 +531,7 @@ void CNetServer::WorkerThread()
 				// 디코딩
 				if (_codecOnOff == TRUE)
 				{
-					bool decodingRet = DecodingPacket(pPacket, header);
+					bool decodingRet = _netCodec->DecodingPacket(pPacket, header);
 					if (decodingRet == FALSE)
 					{
 						continue;
@@ -607,7 +618,7 @@ void CNetServer::AcceptThread()
 
 		//InterlockedIncrement(&_acceptTPS);
 		Monitoring::GetInstance()->Increase(MonitorType::AcceptTotal);
-		Monitoring::GetInstance()->Increase(MonitorType::AcceptTPS);
+		//Monitoring::GetInstance()->Increase(MonitorType::AcceptTPS);
 
 		// OnConnectionRequest
 		OnConnectionRequest(clientAddr);
@@ -685,7 +696,7 @@ void CNetServer::AcceptThread()
 
 		// OnAccept
 		{
-			OnAccept(_sessionArray[idx].sessionID);
+			OnAccept(_sessionArray[idx].sessionID, clientAddr);
 		}
 
 		// 비동기 IO 걸어두기
@@ -702,4 +713,9 @@ void CNetServer::AcceptThread()
 			_sessionArray[idx].loginCheck = TRUE;
 		}
 	}
+}
+
+void CNetServer::PQCSSendJob()
+{
+	PostQueuedCompletionStatus(_hIOCP, NULL, NULL, (LPOVERLAPPED) & sendJobIOCP);
 }

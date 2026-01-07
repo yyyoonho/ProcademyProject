@@ -1,6 +1,7 @@
 #pragma once
 
 class Player;
+class NetClient_Monitoring;
 
 class LoginServer : public CNetServer
 {
@@ -15,7 +16,9 @@ public:
 		unsigned short coreSkip,
 		bool isNagle,
 		unsigned int maximumSessionCount,
-		bool codecOnOff);
+		bool codecOnOff,
+		BYTE fixedKey,
+		BYTE code);
 
 	virtual void Stop();
 
@@ -37,6 +40,13 @@ private:
 
 	void UpdateHeartbeat(DWORD64 sessionID);
 
+	bool CheckDuplicateLogin(INT64 accountNo);
+
+	bool ReleaseTmpPlayer(DWORD64 sessionID);
+	bool ReleaseOriginPlayer(DWORD64 sessionID);
+
+	void TossMonitoringData();
+
 private:
 	HANDLE hThread_Monitoring;
 	static void MonitorThreadRun(LPVOID* lParam);
@@ -46,14 +56,22 @@ private:
 	static void HeartbeatThreadRun(LPVOID* lParam);
 	void HeartbeatThread();
 
+
+
 private:
 	HANDLE hEvent_Quit;
 
 private:
 	procademy::MemoryPool_TLS<Player> mp{ 0,false };
 
+	mutex tmpSIDToPlayerLock;
+	unordered_map<DWORD64, Player*> tmpSIDToPlayer;
+
 	mutex SIDToPlayerLock;
 	unordered_map<DWORD64, Player*> SIDToPlayer;
+
+	mutex accountNoToPlayerLock;
+	unordered_map<INT64, Player*> accountNoToPlayer;
 
 private:
 	void ConvertToUTF16();
@@ -68,5 +86,9 @@ private:
 	cpp_redis::client* redisClient = NULL;
 	std::mutex redisLock;
 
+private:
+	NetClient_Monitoring* pNetClient;
+public:
+	void RegisterNetServer(NetClient_Monitoring* pNetClient);
 };
 

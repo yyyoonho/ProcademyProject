@@ -1,28 +1,9 @@
 #pragma once
 
-enum class SESSION_ROLE
-{
-	None = 0,
-	Accept,
-	MonitoringTool,
-
-	ChatServer,			// ServerNo: 10~19
-	LoginServer,		// ServerNo: 20~29
-	GameServer,			// ServerNo: 30~39
-};
-
-struct Client
+struct NetClient
 {
 	DWORD64			sessionID;
 	SOCKADDR_IN		addr;
-
-	BYTE			serverNo;
-	SESSION_ROLE	sessionRole;
-
-	int				dataCount;
-	DWORD64			sumData[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
-	DWORD64			minData[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
-	DWORD64			maxData[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
 };
 
 class MonitoringServer : public CNetServer
@@ -38,7 +19,9 @@ public:
 		unsigned short coreSkip,
 		bool isNagle,
 		unsigned int maximumSessionCount,
-		bool codecOnOff);
+		bool codecOnOff,
+		BYTE fixedKey,
+		BYTE code);
 
 	virtual void Stop();
 
@@ -49,28 +32,31 @@ public:
 	virtual void OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket);
 	virtual void OnError(int errorCode, WCHAR* errorComment);
 
+	// 자체 핸들링 함수
+	virtual void OnSendJob();
+
+public:
+	void EnqueueSendJob(stSendJob sendJob);
+
+private:
+	LockFreeQueue<stSendJob> sendJobQ;
+
 private:
 	void PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket);
-	void PacketProc_ServerLogin(DWORD64 sessionID, SerializePacketPtr pPacket);
-	void PacketProc_DataUpdate(DWORD64 sessionID, SerializePacketPtr pPacket);
 	void PacketProc_MonitorToolLogin(DWORD64 sessionID, SerializePacketPtr pPacket);
 
 private:
 	bool ReleaseTmpclient(DWORD64 sessionID);
-	bool ReleaseOriginClient(DWORD64 sessionID);
 	bool ReleaseToolclient(DWORD64 sessionID);
 
 private:
-	procademy::MemoryPool_TLS<Client> mp{ 0,false };
+	procademy::MemoryPool_TLS<NetClient> mp{ 0,false };
 
 	std::mutex tmpClientMapLock;
-	std::unordered_map<DWORD64, Client*> tmpClientMap;
-
-	std::mutex clientMapLock;
-	std::unordered_map<DWORD64, Client*> clientMap;
+	std::unordered_map<DWORD64, NetClient*> tmpClientMap;
 
 	std::mutex monitoringToolArrLock;
-	std::vector<Client*> monitoringToolArr;
+	std::vector<NetClient*> monitoringToolArr;
 
 	const char* loginSessionKey = "ajfw@!cv980dSZ[fje#@fdj123948djf";
 

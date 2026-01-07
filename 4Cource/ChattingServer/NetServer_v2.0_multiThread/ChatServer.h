@@ -30,6 +30,7 @@ public:
 		DWORD64 heartbeat;
 
 		PLAYER_STATE state;
+		bool duplicateKick;
 
 		SRWLOCK playerLock;
 		bool IsInitLock = false;

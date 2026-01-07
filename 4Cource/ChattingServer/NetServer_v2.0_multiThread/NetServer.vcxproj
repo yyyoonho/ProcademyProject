@@ -135,6 +135,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ChatServer.cpp" />
+    <ClCompile Include="CustomProfiler.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="Monitoring.cpp" />
     <ClCompile Include="NetCodec.cpp" />
@@ -149,6 +150,7 @@
   <ItemGroup>
     <ClInclude Include="ChatServer.h" />
     <ClInclude Include="CommonProtocol.h" />
+    <ClInclude Include="CustomProfiler.h" />
     <ClInclude Include="LockFree_Queue.h" />
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="Monitoring.h" />

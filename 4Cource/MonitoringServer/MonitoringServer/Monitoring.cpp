@@ -48,24 +48,8 @@ void Monitoring::DecreaseInterlocked(MonitorType type)
 
 void Monitoring::Clear()
 {
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::AcceptTPS], 0);
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::UpdateTPS], 0);
-
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvMessageTPS], 0);
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::SendMessageTPS], 0);
-
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvMessageLoginTPS], 0);
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvMessageMoveTPS], 0);
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvMessageChatTPS], 0);
-
-	_monitoringArr[(int)MonitorType::PacketPool_FULL] = procademy::MemoryPool_TLS<Net_SerializePacket>::fullChunkStackCount;
-	_monitoringArr[(int)MonitorType::PacketPool_EMPTY] = procademy::MemoryPool_TLS<Net_SerializePacket>::emptyChunkStackCount;
-
-	_monitoringArr[(int)MonitorType::RCBPool_FULL] = procademy::MemoryPool_TLS<RefCountBlock>::fullChunkStackCount;	
-	_monitoringArr[(int)MonitorType::RCBPool_EMPTY] = procademy::MemoryPool_TLS<RefCountBlock>::emptyChunkStackCount;
-
-	_monitoringArr[(int)MonitorType::lockfreeQ_FULL] = LockFreeQueue<RawPtr>::mp.fullChunkStackCount;
-	_monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] = LockFreeQueue<RawPtr>::mp.emptyChunkStackCount;	
+	InterlockedExchange(&_monitoringArr[(int)MonitorType::RecvMessageTPS], 0);
+	InterlockedExchange(&_monitoringArr[(int)MonitorType::SendMessageTPS], 0);
 }
 
 void Monitoring::PrintMonitoring()
@@ -74,67 +58,26 @@ void Monitoring::PrintMonitoring()
 
 	cout << "===============================================================================\n";
 
-	cout << right << setw(NAME_WIDTH) << "PacketPool_fullChunk:" << " "
-		<< _monitoringArr[(int)MonitorType::PacketPool_FULL] << "\n";
-	cout << right << setw(NAME_WIDTH) << "PacketPool_emptyChunk:" << " "
-		<< _monitoringArr[(int)MonitorType::PacketPool_EMPTY] << "\n\n";
+	cout << right << setw(NAME_WIDTH) << "ConnectedMonitoringToolCount:" << " "
+		<< _monitoringArr[(int)MonitorType::ConnectedMonitoringToolCount] << "\n\n";
 
-	cout << right << setw(NAME_WIDTH) << "RCBPool_fullChunk:" << " "
-		<< _monitoringArr[(int)MonitorType::RCBPool_FULL] << "\n";
-	cout << right << setw(NAME_WIDTH) << "RCBPool_emptyChunk:" << " "
-		<< _monitoringArr[(int)MonitorType::RCBPool_EMPTY] << "\n\n";
-
-	cout << right << setw(NAME_WIDTH) << "LockFreeQ_fullChunk:" << " "
-		<< _monitoringArr[(int)MonitorType::lockfreeQ_FULL] << "\n";
-	cout << right << setw(NAME_WIDTH) << "LockFreeQ_emptyChunk:" << " "
-		<< _monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] << "\n\n";
-
-	cout << right << setw(NAME_WIDTH) << "PacketUseSize:" << " "
-		<< _monitoringArr[(int)MonitorType::PacketUseCount] << "\n";
-
-	cout << "-------------------------------------------------------------------------------\n\n";
-
-	cout << right << setw(NAME_WIDTH) << "SessionNum:" << " "
-		<< _monitoringArr[(int)MonitorType::SessionNum] << "\n";
-	cout << right << setw(NAME_WIDTH) << "PlayerCount:" << " "
-		<< _monitoringArr[(int)MonitorType::PlayerCount] << "\n\n";
+	cout << right << setw(NAME_WIDTH) << "ConnectedLoginServerCount:" << " "
+		<< _monitoringArr[(int)MonitorType::ConnectedLoginServerCount] << "\n";
+	cout << right << setw(NAME_WIDTH) << "ConnectedChatServerCount:" << " "
+		<< _monitoringArr[(int)MonitorType::ConnectedChatServerCount] << "\n";
+	cout << right << setw(NAME_WIDTH) << "ConnectedGameServerCount:" << " "
+		<< _monitoringArr[(int)MonitorType::ConnectedGameServerCount] << "\n\n";
 
 	cout << right << setw(NAME_WIDTH) << "AcceptTotal:" << " "
 		<< _monitoringArr[(int)MonitorType::AcceptTotal] << "\n";
-	cout << right << setw(NAME_WIDTH) << "AcceptTPS:" << " "
-		<< _monitoringArr[(int)MonitorType::AcceptTPS] << "\n";
-	cout << right << setw(NAME_WIDTH) << "UpdateTPS:" << " "
-		<< _monitoringArr[(int)MonitorType::UpdateTPS] << "\n\n";
-
 	cout << right << setw(NAME_WIDTH) << "RecvMessageTPS:" << " "
 		<< _monitoringArr[(int)MonitorType::RecvMessageTPS] << "\n";
 	cout << right << setw(NAME_WIDTH) << "SendMessageTPS:" << " "
 		<< _monitoringArr[(int)MonitorType::SendMessageTPS] << "\n\n";
 
-	cout << right << setw(NAME_WIDTH) << "RecvMessageLogin:" << " "
-		<< _monitoringArr[(int)MonitorType::RecvMessageLoginTPS] << "\n";
-	cout << right << setw(NAME_WIDTH) << "RecvMessageMove:" << " "
-		<< _monitoringArr[(int)MonitorType::RecvMessageMoveTPS] << "\n";
-	cout << right << setw(NAME_WIDTH) << "RecvMessageChat:" << " "
-		<< _monitoringArr[(int)MonitorType::RecvMessageChatTPS] << "\n\n";
-
-	cout << "-------------------------------------------------------------------------------\n";
-
-	cout << right << setw(NAME_WIDTH) << "tmpPlayerArrSize:" << " "
-		<< _monitoringArr[(int)MonitorType::tmpPlayerArrSize] << "\n";
-	cout << right << setw(NAME_WIDTH) << "PlayerArrSize:" << " "
-		<< _monitoringArr[(int)MonitorType::PlayerArrSize] << "\n";
-
-	cout << "-------------------------------------------------------------------------------\n";
-
-	cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
-		<< (_monitoringArr[(int)MonitorType::TokenFailed] +
-			_monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin]) << "\n";
-	cout << right << setw(NAME_WIDTH) << "Invalid Token:" << " "
-		<< _monitoringArr[(int)MonitorType::TokenFailed] << "\n";
-	cout << right << setw(NAME_WIDTH) << "Duplicate Login:" << " "
-		<< _monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin] << "\n";
-
+	cout << right << setw(NAME_WIDTH) << "SendJobQ:" << " "
+		<< _monitoringArr[(int)MonitorType::SendJobQ] << "\n";
+	
 	cout << "===============================================================================\n\n";
 
 }

@@ -10,6 +10,8 @@ struct Player
 	WCHAR ID[20];
 	WCHAR NickName[20];
 
+	bool duplicateKick;
+
 	std::mutex playerLock;
 	DWORD64 heartbeat;
 };

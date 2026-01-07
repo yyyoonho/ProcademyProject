@@ -1,5 +1,10 @@
 #pragma once
 // 모니터링 항목
+
+#include <Pdh.h>
+// 모니터링 항목
+class CCpuUsage;
+
 enum class MonitorType : int
 {
 	PacketPool_FULL,		// packet 메모리풀_full					()	-> 초기화 x
@@ -23,6 +28,12 @@ enum class MonitorType : int
 	RecvMessageTPS,			// 초당 받은 메시지 수					(O)
 	SendMessageTPS,			// 초당 보낸 메시지 수					(O)
 
+	HB_Kick,				// 하트비트 초과로 연결끊음
+
+	SendJobQ,
+
+	AuthTPS,
+
 	COUNT,
 };
 
@@ -44,8 +55,20 @@ public:
 	void PrintMonitoring();
 	void Clear();
 
-private:
+public:
+	void UpdatePDHnCpuUsage();
+
+	int GetCpuUsage();
+	int GetPrivateBytes();
+
+
+public:
 	LONG _monitoringArr[(int)MonitorType::COUNT];
+	CCpuUsage* _cpu;
 
+	// PDH 쿼리 핸들 생성
+	PDH_HQUERY _cpuQuery;
+
+	// PDH 리소스 카운터 생성 (여러개 수집시 이를 여러개 생성)
+	PDH_HCOUNTER _privateBytes;
 };
-

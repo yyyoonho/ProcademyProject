@@ -4,10 +4,6 @@ void ProfileBegin(const char* targetName);
 void ProfileEnd(const char* targetName);
 void ProfilerInput();
 
-// TODO:
-// 4. 객체생성소멸 이용을 위한 클래스 생성 (선택)
-// 5. 파일저장시, 이름을 현재시간으로 만들기 
-
 #define PROFILE
 
 #ifdef PROFILE
@@ -17,3 +13,31 @@ void ProfilerInput();
 #define PRO_BEGIN(TagName)  
 #define PRO_END(TagName)  
 #endif
+
+enum class PROFILESTATE
+{
+	PROFILE_BEGIN,
+	PROFILE_END,
+	PROFILE_RESET,
+	PROFILE_ERROR,
+};
+
+class stProfile
+{
+public:
+	stProfile();
+	~stProfile();
+	
+	char tagName[64];
+	LARGE_INTEGER start;
+
+	DWORD64 call;
+	DWORD64 total;
+	DWORD64 max;
+	DWORD64 min;
+
+	PROFILESTATE state;
+
+	int profileArrSize;
+	DWORD threadID;
+};

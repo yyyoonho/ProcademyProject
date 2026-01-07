@@ -136,6 +136,8 @@
   <ItemGroup>
     <ClCompile Include="DBConnector.cpp" />
     <ClCompile Include="DBJob.cpp" />
+    <ClCompile Include="LanMonitoringServer.cpp" />
+    <ClCompile Include="LanMonitoringServer_PacketProc.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="Monitoring.cpp" />
     <ClCompile Include="MonitoringServer.cpp" />
@@ -154,6 +156,7 @@
     <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="DBConnector.h" />
     <ClInclude Include="DBJob.h" />
+    <ClInclude Include="LanMonitoringServer.h" />
     <ClInclude Include="LockFree_Queue.h" />
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="Monitoring.h" />
@@ -164,6 +167,7 @@
     <ClInclude Include="Net_SerializeBuffer.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="SerializeBufferPtr.h" />
+    <ClInclude Include="SendJob.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Struct.h" />
     <ClInclude Include="TLS_MemoryPool.h" />

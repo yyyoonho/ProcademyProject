@@ -47,4 +47,8 @@
 
 #include "Struct.h"
 
+
 #include "Protocol.h"
+
+
+#include "NetCodec.h"

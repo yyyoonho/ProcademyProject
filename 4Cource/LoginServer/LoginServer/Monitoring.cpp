@@ -1,6 +1,14 @@
 #include "stdafx.h"
-
+#include <stdio.h>
 #include <iomanip>
+#include <Pdh.h>
+#include <psapi.h>
+#include <tchar.h>
+
+#pragma comment(lib,"Pdh.lib")
+#pragma comment(lib, "psapi.lib")
+
+#include "CpuUsage.h"
 #include "Monitoring.h"
 
 Monitoring* Monitoring::_pMonitoring = NULL;
@@ -11,10 +19,31 @@ Monitoring::Monitoring()
 	{
 		_monitoringArr[i] = 0;
 	}
+
+	_cpu = new CCpuUsage();
+
+	PdhOpenQuery(NULL, NULL, &_cpuQuery);
+
+	WCHAR processName[MAX_PATH] = { 0 };
+	GetModuleBaseName(GetCurrentProcess(), NULL, processName, MAX_PATH);
+
+	// ".exe" 확장자 제거
+	std::wstring baseName(processName);
+	size_t pos = baseName.find(L".exe");
+	if (pos != std::wstring::npos)
+		baseName = baseName.substr(0, pos);
+
+	// PDH 카운터 경로 생성
+	std::wstring counterPath = L"\\Process(" + baseName + L")\\Private Bytes";
+
+	PdhAddCounter(_cpuQuery, counterPath.c_str(), NULL, &_privateBytes);
+
+	PdhCollectQueryData(_cpuQuery);
 }
 
 Monitoring::~Monitoring()
 {
+	delete _cpu;
 }
 
 Monitoring* Monitoring::GetInstance()
@@ -53,6 +82,7 @@ void Monitoring::Clear()
 	InterlockedExchange(&_monitoringArr[(int)::MonitorType::UpdateTPS], 0);
 	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvMessageTPS], 0);
 	InterlockedExchange(&_monitoringArr[(int)::MonitorType::SendMessageTPS], 0);
+	InterlockedExchange(&_monitoringArr[(int)::MonitorType::AuthTPS], 0);
 
 	_monitoringArr[(int)MonitorType::PacketPool_FULL] = procademy::MemoryPool_TLS<Net_SerializePacket>::fullChunkStackCount;
 	_monitoringArr[(int)MonitorType::PacketPool_EMPTY] = procademy::MemoryPool_TLS<Net_SerializePacket>::emptyChunkStackCount;
@@ -64,11 +94,34 @@ void Monitoring::Clear()
 	_monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] = LockFreeQueue<RawPtr>::mp.emptyChunkStackCount;
 }
 
+void Monitoring::UpdatePDHnCpuUsage()
+{
+	_cpu->UpdateCpuTime();
+	PdhCollectQueryData(_cpuQuery);
+}
+
+int Monitoring::GetCpuUsage()
+{
+	float a = _cpu->ProcessUser();
+	return (int)a;
+}
+
+int Monitoring::GetPrivateBytes()
+{
+	// 갱신 데이터 얻음
+	PDH_FMT_COUNTERVALUE counterVal;
+	PdhGetFormattedCounterValue(_privateBytes, PDH_FMT_DOUBLE, NULL, &counterVal);
+
+	int mBytes = (int)(counterVal.doubleValue / (1024 * 1024));
+
+	return mBytes;
+}
+
 void Monitoring::PrintMonitoring()
 {
 	const int NAME_WIDTH = 24;
 
-	cout << "<로그인 서버>=====================================================================\n";
+	cout << "=============================<로그인 서버>============================\n";
 
 	cout << right << setw(NAME_WIDTH) << "PacketPool_fullChunk:"
 		<< " " << _monitoringArr[(int)MonitorType::PacketPool_FULL] << "\n";
@@ -103,13 +156,21 @@ void Monitoring::PrintMonitoring()
 		<< " " << _monitoringArr[(int)MonitorType::AcceptTotal] << "\n";
 	cout << right << setw(NAME_WIDTH) << "AcceptTPS:"
 		<< " " << _monitoringArr[(int)MonitorType::AcceptTPS] << "\n";
-	cout << right << setw(NAME_WIDTH) << "UpdateTPS:"
-		<< " " << _monitoringArr[(int)MonitorType::UpdateTPS] << "\n";
+	cout << right << setw(NAME_WIDTH) << "AuthTPS:"
+		<< " " << _monitoringArr[(int)MonitorType::AuthTPS] << "\n";
 
 	cout << right << setw(NAME_WIDTH) << "RecvMessageTPS:"
 		<< " " << _monitoringArr[(int)MonitorType::RecvMessageTPS] << "\n";
 	cout << right << setw(NAME_WIDTH) << "SendMessageTPS:"
 		<< " " << _monitoringArr[(int)MonitorType::SendMessageTPS] << "\n";
+	cout << "-------------------------------------------------------------------------------\n\n";
+	cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
+		<< (_monitoringArr[(int)MonitorType::HB_Kick]) << "\n";
+	cout << right << setw(NAME_WIDTH) << "HB_Kick:" << " "
+		<< _monitoringArr[(int)MonitorType::HB_Kick] << "\n";
+	cout << "-------------------------------------------------------------------------------\n";
+	cout << right << setw(NAME_WIDTH) << "SendJobQ Size:" << " "
+		<< _monitoringArr[(int)MonitorType::SendJobQ] << "\n";
 
 	cout << "===============================================================================\n";
 

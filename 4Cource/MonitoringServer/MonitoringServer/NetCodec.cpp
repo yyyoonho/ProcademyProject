@@ -1,9 +1,10 @@
 #include "stdafx.h"
+
 #include "NetCodec.h"
 
 using namespace std;
 
-BYTE fixedKey = 0x32;
+//BYTE fixedKey = 0x32;
 
 BYTE GetRandomKey()
 {
@@ -12,7 +13,7 @@ BYTE GetRandomKey()
 	return 0;
 }
 
-bool EncodingPacket(SerializePacketPtr sPacketPtr)
+bool NetCodec::EncodingPacket(SerializePacketPtr sPacketPtr)
 {
 	// TODO: 랜덤키 생성
 	BYTE randomKey = 0x31;
@@ -34,7 +35,8 @@ bool EncodingPacket(SerializePacketPtr sPacketPtr)
 	// Push Header (Code(1) + Len(2) + RK(1) + CheckSum(1))
 	stNetHeader header;
 
-	header.code = 0x77;
+	//header.code = 0x77;
+	header.code = _code;
 	memcpy_s(&header.len, sizeof(BYTE) * 2, (char*)&payloadLen, sizeof(BYTE) * 2);
 	header.randomKey = randomKey;
 	header.checkSum = checkSum;
@@ -57,7 +59,7 @@ bool EncodingPacket(SerializePacketPtr sPacketPtr)
 	unsigned char E = 0;
 	for (int i = 0; i < payloadLen + 1; i++)
 	{
-		unsigned char tmpE = *(target + i) ^ (E + fixedKey + (i + 1));
+		unsigned char tmpE = *(target + i) ^ (E + _fixedKey + (i + 1));
 		E = tmpE;
 
 		*(target + i) = tmpE;
@@ -68,7 +70,7 @@ bool EncodingPacket(SerializePacketPtr sPacketPtr)
 	return true;
 }
 
-bool DecodingPacket(SerializePacketPtr sPacketPtr, stNetHeader netHeader)
+bool NetCodec::DecodingPacket(SerializePacketPtr sPacketPtr, stNetHeader netHeader)
 {
 	unsigned char* target = (unsigned char*)sPacketPtr.GetBufferPtr();
 
@@ -76,17 +78,17 @@ bool DecodingPacket(SerializePacketPtr sPacketPtr, stNetHeader netHeader)
 	BYTE checkSum = netHeader.checkSum;
 
 	int len = sPacketPtr.GetDataSize();
-	
+
 
 	// 1단계 디코딩
 	unsigned char E = checkSum;
-	checkSum = E ^ (fixedKey + 1);
+	checkSum = E ^ (_fixedKey + 1);
 
 	for (int i = 0; i < len; i++)
 	{
 		unsigned char tmpE = *(target + i);
 
-		unsigned char P = (*(target + i)) ^ (E + fixedKey + (i + 2));
+		unsigned char P = (*(target + i)) ^ (E + _fixedKey + (i + 2));
 		*(target + i) = P;
 
 		E = tmpE;
@@ -120,7 +122,7 @@ bool DecodingPacket(SerializePacketPtr sPacketPtr, stNetHeader netHeader)
 		return false;
 }
 
-bool JustPushHeader(SerializePacketPtr sPacketPtr)
+bool NetCodec::JustPushHeader(SerializePacketPtr sPacketPtr)
 {
 	// TODO: 랜덤키 생성
 	BYTE randomKey = 0x31;
@@ -144,7 +146,7 @@ bool JustPushHeader(SerializePacketPtr sPacketPtr)
 		return false;
 	}
 
-	header.code = 0xbb;
+	header.code = _code;
 	memcpy_s(&header.len, sizeof(BYTE) * 2, (char*)&payloadLen, sizeof(BYTE) * 2);
 	header.randomKey = randomKey;
 	header.checkSum = checkSum;
@@ -152,4 +154,14 @@ bool JustPushHeader(SerializePacketPtr sPacketPtr)
 	sPacketPtr.PushHeader((char*)&header, sizeof(stNetHeader));
 
 	return true;
+}
+
+void NetCodec::SetFixedKey(BYTE fixedKey)
+{
+	_fixedKey = fixedKey;
+}
+
+void NetCodec::SetCode(BYTE code)
+{
+	_code = code;
 }

@@ -6,6 +6,11 @@
 
 #include "LogManager.h"
 
+#include "SendJob.h"
+
+#include "NetClient.h"
+#include "NetClient_Monitoring.h"
+
 #include "NetServer.h"
 #include "LoginServer.h"
 
@@ -13,7 +18,8 @@ using namespace std;
 
 procademy::CCrashDump dump;
 
-LoginServer loginServer1;
+LoginServer				loginServer1;
+NetClient_Monitoring	MonitoringClient;
 
 int main()
 {
@@ -21,7 +27,25 @@ int main()
 
 	InitLog();
 
-	loginServer1.Start(L"127.0.0.1", 20602, 100, 20, TRUE, 40000, TRUE);
+	bool serverSet = loginServer1.Start(L"127.0.0.1", 20602, 20, 20, TRUE, 20000, TRUE, 0x32, 0x77);
+	if (serverSet == false)
+	{
+		printf("server start error\n");
+
+		return 0;
+	}
+
+	bool clientSet = MonitoringClient.Connect(L"127.0.0.1", 20604, 10, 20, TRUE, TRUE, 0x32, 0x77);
+	if (clientSet == false)
+	{
+		printf("server start error\n");
+
+		return 0;
+	}
+
+	loginServer1.RegisterNetServer(&MonitoringClient);
+
+
 
 	while (1)
 	{

@@ -42,6 +42,15 @@
     <Filter Include="소스 파일\Config">
       <UniqueIdentifier>{cfe9339d-70d2-4929-ab57-19102b3fa7f2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\MonitoringServer\sendJob">
+      <UniqueIdentifier>{a5c78e72-caeb-421f-93d1-0527aa5dffc5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\MonitoringServer\SS_MonitoringServer">
+      <UniqueIdentifier>{ed5b31d2-4036-4d27-a471-a4555bd76bbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\MonitoringServer\CS_MonitoringServer">
+      <UniqueIdentifier>{b1ff43d3-a2b5-4392-8bac-84ef51de6b22}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -68,12 +77,6 @@
     <ClCompile Include="LogManager.cpp">
       <Filter>소스 파일\Monitor</Filter>
     </ClCompile>
-    <ClCompile Include="MonitoringServer.cpp">
-      <Filter>소스 파일\MonitoringServer</Filter>
-    </ClCompile>
-    <ClCompile Include="MonitoringServer_PacketProc.cpp">
-      <Filter>소스 파일\MonitoringServer</Filter>
-    </ClCompile>
     <ClCompile Include="DBConnector.cpp">
       <Filter>소스 파일\DB</Filter>
     </ClCompile>
@@ -82,6 +85,18 @@
     </ClCompile>
     <ClCompile Include="MyConfig.cpp">
       <Filter>소스 파일\Config</Filter>
+    </ClCompile>
+    <ClCompile Include="MonitoringServer.cpp">
+      <Filter>소스 파일\MonitoringServer\CS_MonitoringServer</Filter>
+    </ClCompile>
+    <ClCompile Include="MonitoringServer_PacketProc.cpp">
+      <Filter>소스 파일\MonitoringServer\CS_MonitoringServer</Filter>
+    </ClCompile>
+    <ClCompile Include="LanMonitoringServer.cpp">
+      <Filter>소스 파일\MonitoringServer\SS_MonitoringServer</Filter>
+    </ClCompile>
+    <ClCompile Include="LanMonitoringServer_PacketProc.cpp">
+      <Filter>소스 파일\MonitoringServer\SS_MonitoringServer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -121,9 +136,6 @@
     <ClInclude Include="LockFree_Queue.h">
       <Filter>소스 파일\NetLib\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="MonitoringServer.h">
-      <Filter>소스 파일\MonitoringServer</Filter>
-    </ClInclude>
     <ClInclude Include="DBConnector.h">
       <Filter>소스 파일\DB</Filter>
     </ClInclude>
@@ -132,6 +144,15 @@
     </ClInclude>
     <ClInclude Include="MyConfig.h">
       <Filter>소스 파일\Config</Filter>
+    </ClInclude>
+    <ClInclude Include="SendJob.h">
+      <Filter>소스 파일\MonitoringServer\sendJob</Filter>
+    </ClInclude>
+    <ClInclude Include="MonitoringServer.h">
+      <Filter>소스 파일\MonitoringServer\CS_MonitoringServer</Filter>
+    </ClInclude>
+    <ClInclude Include="LanMonitoringServer.h">
+      <Filter>소스 파일\MonitoringServer\SS_MonitoringServer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
