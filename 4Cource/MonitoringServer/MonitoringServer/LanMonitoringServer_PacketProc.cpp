@@ -46,11 +46,13 @@ void LanMonitoringServer::PakcetProc_Login(DWORD64 sessionID, SerializePacketPtr
 	}
 
 	newClient->serverNo = serverNo;
-	newClient->count = 0;
+	
 
 	for (int i = 0; i < en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT; i++)
 	{
-		newClient->sumData[i] = 0;
+		newClient->count[i] = 0;
+		newClient->activeData[i] = false;
+		newClient->avgData[i] = 0;
 		newClient->minData[i] = INT32_MAX;
 		newClient->maxData[i] = 0;
 	}
@@ -105,8 +107,9 @@ void LanMonitoringServer::PakcetProc_DataUpdate(DWORD64 sessionID, SerializePack
 	{
 		lock_guard<mutex> lock(pClient->LanClientLock);
 		
-		pClient->count++;
-		pClient->sumData[dataType] += dataValue;
+		pClient->count[dataType]++;
+		pClient->activeData[dataType] = true;
+		pClient->avgData[dataType] += (dataValue - pClient->avgData[dataType]) / pClient->count[dataType];
 		pClient->minData[dataType] = min(pClient->minData[dataType], dataValue);
 		pClient->maxData[dataType] = max(pClient->maxData[dataType], dataValue);
 

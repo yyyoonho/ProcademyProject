@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Monitoring.h"
+#include "MyConfig.h"
 
 #include "LogManager.h"
 #include "NetServer.h"
@@ -20,21 +21,21 @@ int main()
 
 	InitLog();
 
-	
+	myConfig.Load("MonitoringConfig.ini");
 
 	MonitoringServer Net_monitoringServer;
 	LanMonitoringServer Lan_monitoringServer;
 
 	Lan_monitoringServer.RegisterNetServer(&Net_monitoringServer);
 
-	bool serverRet = Net_monitoringServer.Start(L"127.0.0.1", 20603, 4, 20, TRUE, 40000, TRUE, 30, 109);
+	bool serverRet = Net_monitoringServer.Start(L"127.0.0.1", 20603, 4, 20, TRUE, 20000, TRUE, 30, 109);
 	if (serverRet == false)
 	{
 		printf("NetServer start error\n");
 		return 0;
 	}
 
-	serverRet = Lan_monitoringServer.Start(L"127.0.0.1", 20604, 4, 20, TRUE, 40000, TRUE, 0x32, 0x77);
+	serverRet = Lan_monitoringServer.Start(L"127.0.0.1", 20604, 4, 20, TRUE, 20000, TRUE, 0x32, 0x77);
 	if (serverRet == false)
 	{
 		printf("NetServer start error\n");

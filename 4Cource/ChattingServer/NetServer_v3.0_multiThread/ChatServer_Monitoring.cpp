@@ -113,7 +113,7 @@ void ChatServer::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::PacketPool_FULL];
+		int dataValue = (int)Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::PacketPool_FULL];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;

@@ -816,6 +816,7 @@ void ChatServer::MonitorThread()
 		Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::PlayerArrSize] = playerArr.size();
 
 		Monitoring::GetInstance()->UpdatePDHnCpuUsage();
+
 		TossMonitoringData();
 
 		Monitoring::GetInstance()->PrintMonitoring();

@@ -52,3 +52,16 @@ public:
 	INT64 _accountNo;
 	int _questID;
 };
+
+class DBMonitoringLog :public IDBJob_Write
+{
+public:
+	void Exec(MYSQL* connection) override;
+
+	int _serverNo;
+	int _dataType;
+	int _avg;
+	int _min;
+	int _max;
+
+};

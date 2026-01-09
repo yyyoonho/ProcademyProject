@@ -4,6 +4,8 @@
 #include "CommonProtocol.h"
 #include "MyConfig.h"
 #include "SendJob.h"
+#include "DBJob.h"
+#include "DBConnector.h"
 
 #include "LanMonitoringServer.h"
 
@@ -23,15 +25,22 @@ bool LanMonitoringServer::Start(const WCHAR* ipAddress, unsigned short port, uns
 		return false;
 	}
 
-	// TODO: 수정예정
-	//myConfig.Load("LoginConfig.ini");
+	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
+	hThread_DB = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&DBContentRun, this, NULL, NULL);
+	if (hThread_DB == NULL)
+	{
+		return false;
+	}
 
 	return true;
 }
 
 void LanMonitoringServer::Stop()
 {
+	SetEvent(hEvent_Quit);
+
+	CNetServer::Stop();
 }
 
 bool LanMonitoringServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
@@ -145,4 +154,76 @@ bool LanMonitoringServer::ReleaseOriginclient(DWORD64 sessionID)
 
 	mp.Free(removed);
 	return true;
+}
+
+void LanMonitoringServer::DBContentRun(LPVOID* lParam)
+{
+	LanMonitoringServer* self = (LanMonitoringServer*)lParam;
+	self->DBContentThread();
+}
+
+void LanMonitoringServer::DBContentThread()
+{
+	while (1)
+	{
+		DWORD ret = WaitForSingleObject(hEvent_Quit, 1000 * 60 * 10);
+		if (ret == WAIT_OBJECT_0)
+		{
+			break;
+		}
+
+		// DB 저장할 Job 만들어서 DBWorker에 토스.
+		
+		vector<MonitoringSnapshot> snapShots;
+
+		{
+			lock_guard<mutex> lock(clientMapLock);
+
+			auto iter = clientMap.begin();
+			for (; iter != clientMap.end(); ++iter)
+			{
+				LanClient* client = iter->second;
+
+				lock_guard<mutex> lock2(client->LanClientLock);
+
+				for (int i = 0; i < en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT; i++)
+				{
+					if (client->activeData[i] != true)
+						continue;
+
+					snapShots.push_back({
+						client->serverNo,
+						i,
+						client->avgData[i],
+						client->minData[i],
+						client->maxData[i]
+						});
+
+					client->ResetData(i);
+				}
+			}
+		}
+
+		for (int i = 0; i < snapShots.size(); i++)
+		{
+			auto job = new DBMonitoringLog;
+
+			job->_serverNo = snapShots[i].serverNo;
+			job->_dataType = snapShots[i].dataType;
+			job->_avg = snapShots[i].avg;
+			job->_min = snapShots[i].min;
+			job->_max = snapShots[i].max;
+
+			DBConnector::GetInstance()->QueryWrite(0, job);
+		}
+	}
+}
+
+void LanClient::ResetData(int i)
+{
+	count[i] = 0;
+	activeData[i] = false;
+	avgData[i] = 0;
+	minData[i] = INT32_MAX;
+	maxData[i] = 0;
 }

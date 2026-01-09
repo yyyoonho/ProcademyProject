@@ -103,3 +103,21 @@ void DBCheckAccountInfo::Exec(MYSQL* connection, DBResult& queryResult)
 
 	mysql_free_result(sql_result);
 }
+
+void DBMonitoringLog::Exec(MYSQL* connection)
+{
+	string query =
+		"INSERT INTO monitorlog (logtime, serverno, type, avg, min, max) VALUES ("
+		"NOW(), " +
+		to_string(_serverNo) + ", " +
+		to_string(_dataType) + ", " +
+		to_string(_avg) + ", " +
+		to_string(_min) + ", " +
+		to_string(_max) +
+		")";
+
+	if (mysql_query(connection, query.c_str()) != 0)
+	{
+		printf("DBQuestComplete error: %s\n", mysql_error(connection));
+	}
+}

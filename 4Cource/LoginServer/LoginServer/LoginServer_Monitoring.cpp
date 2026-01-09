@@ -100,7 +100,7 @@ void LoginServer::TossMonitoringData()
 	// 6. 패킷풀 사용량
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
-		BYTE dataType = dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL;
+		BYTE dataType = dfMONITOR_DATA_TYPE_LOGIN_PACKET_POOL;
 		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::PacketPool_FULL];
 		int timeStamp = (int)time(nullptr);
 

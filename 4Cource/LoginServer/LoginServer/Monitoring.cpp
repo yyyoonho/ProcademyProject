@@ -102,7 +102,8 @@ void Monitoring::UpdatePDHnCpuUsage()
 
 int Monitoring::GetCpuUsage()
 {
-	float a = _cpu->ProcessUser();
+	//float a = _cpu->ProcessUser();
+	float a = _cpu->ProcessTotal();
 	return (int)a;
 }
 

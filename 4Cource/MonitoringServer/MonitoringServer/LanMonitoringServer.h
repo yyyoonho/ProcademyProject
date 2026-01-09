@@ -12,10 +12,22 @@ struct LanClient
 
 	// µ•¿Ã≈Õ
 	std::mutex		LanClientLock;
-	int				count;
-	int				sumData[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
+	int				count[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
+	bool			activeData[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
+	int				avgData[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
 	int				minData[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
 	int				maxData[en_PACKET_SS_MONITOR_DATA_UPDATE::COUNT];
+
+	void			ResetData(int i);
+};
+
+struct MonitoringSnapshot
+{
+	int serverNo;
+	int dataType;
+	int avg;
+	int min;
+	int max;
 };
 
 class LanMonitoringServer : public CNetServer
@@ -67,5 +79,12 @@ private:
 
 private:
 	MonitoringServer* pNetMonitoringServer;
+
+private:
+	HANDLE hThread_DB;
+	HANDLE hEvent_Quit;
+
+	static void DBContentRun(LPVOID* lParam);
+	void DBContentThread();
 };
 
