@@ -42,5 +42,7 @@ public:
 public:
 	LONG _monitoringArr[(int)MonitorType::COUNT];
 	
+	// TODO: 서버 전체 모니터링 
+	// (CPU토탈/ 논페이지 메모리/ 네트워크 수신량/ 네트워크 송신량/ 사용가능 메모리)
 };
 

@@ -31,6 +31,8 @@ bool MonitoringServer::Start(const WCHAR* ipAddress, unsigned short port, unsign
 	if (hEvent_Quit == 0)
 		return false;*/
 
+
+
 	return true;
 }
 

@@ -9,6 +9,7 @@
 #include "CommonProtocol.h"
 #include "MonitoringServer.h"
 #include "LanMonitoringServer.h"
+#include "LocalMonitoring.h"
 
 using namespace std;
 
@@ -23,10 +24,12 @@ int main()
 
 	myConfig.Load("MonitoringConfig.ini");
 
-	MonitoringServer Net_monitoringServer;
+	MonitoringServer	Net_monitoringServer;
 	LanMonitoringServer Lan_monitoringServer;
+	LocalMonitoring		Local_monitoring;
 
 	Lan_monitoringServer.RegisterNetServer(&Net_monitoringServer);
+	Local_monitoring.RegisterNetServer(&Net_monitoringServer);
 
 	bool serverRet = Net_monitoringServer.Start(L"127.0.0.1", 20603, 4, 20, TRUE, 20000, TRUE, 30, 109);
 	if (serverRet == false)
@@ -41,6 +44,8 @@ int main()
 		printf("NetServer start error\n");
 		return 0;
 	}
+
+	Local_monitoring.Start();
 
 
 	while (1)

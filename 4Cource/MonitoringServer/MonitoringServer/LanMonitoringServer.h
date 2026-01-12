@@ -1,5 +1,6 @@
 #pragma once
-
+#include <Pdh.h>
+class CCpuUsage;
 class MonitoringServer;
 
 struct LanClient
@@ -21,17 +22,19 @@ struct LanClient
 	void			ResetData(int i);
 };
 
-struct MonitoringSnapshot
-{
-	int serverNo;
-	int dataType;
-	int avg;
-	int min;
-	int max;
-};
 
 class LanMonitoringServer : public CNetServer
 {
+public:
+	struct MonitoringSnapshot
+	{
+		int serverNo;
+		int dataType;
+		int avg;
+		int min;
+		int max;
+	};
+
 public:
 	LanMonitoringServer();
 	~LanMonitoringServer();
@@ -81,10 +84,12 @@ private:
 	MonitoringServer* pNetMonitoringServer;
 
 private:
+	HANDLE hThread_ServerMonitoring;
 	HANDLE hThread_DB;
 	HANDLE hEvent_Quit;
 
 	static void DBContentRun(LPVOID* lParam);
 	void DBContentThread();
+
 };
 

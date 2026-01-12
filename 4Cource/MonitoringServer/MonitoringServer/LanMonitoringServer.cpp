@@ -1,4 +1,5 @@
 #include "stdafx.h"
+
 #include "Monitoring.h"
 #include "NetServer.h"
 #include "CommonProtocol.h"
@@ -15,6 +16,7 @@ LanMonitoringServer::LanMonitoringServer()
 
 LanMonitoringServer::~LanMonitoringServer()
 {
+	
 }
 
 bool LanMonitoringServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff, BYTE fixedKey, BYTE code)
@@ -218,6 +220,7 @@ void LanMonitoringServer::DBContentThread()
 		}
 	}
 }
+
 
 void LanClient::ResetData(int i)
 {

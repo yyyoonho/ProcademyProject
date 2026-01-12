@@ -134,10 +134,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CpuUsage.cpp" />
     <ClCompile Include="DBConnector.cpp" />
     <ClCompile Include="DBJob.cpp" />
     <ClCompile Include="LanMonitoringServer.cpp" />
     <ClCompile Include="LanMonitoringServer_PacketProc.cpp" />
+    <ClCompile Include="LocalMonitoring.cpp" />
     <ClCompile Include="LogManager.cpp" />
     <ClCompile Include="Monitoring.cpp" />
     <ClCompile Include="MonitoringServer.cpp" />
@@ -154,9 +156,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonProtocol.h" />
+    <ClInclude Include="CpuUsage.h" />
     <ClInclude Include="DBConnector.h" />
     <ClInclude Include="DBJob.h" />
     <ClInclude Include="LanMonitoringServer.h" />
+    <ClInclude Include="LocalMonitoring.h" />
     <ClInclude Include="LockFree_Queue.h" />
     <ClInclude Include="LogManager.h" />
     <ClInclude Include="Monitoring.h" />

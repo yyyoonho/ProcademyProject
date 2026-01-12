@@ -51,6 +51,9 @@
     <Filter Include="소스 파일\MonitoringServer\CS_MonitoringServer">
       <UniqueIdentifier>{b1ff43d3-a2b5-4392-8bac-84ef51de6b22}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\MonitoringServer\LocalMonitoring">
+      <UniqueIdentifier>{e4767728-1aa9-41a1-aa1e-dc4faedcdefb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -97,6 +100,12 @@
     </ClCompile>
     <ClCompile Include="LanMonitoringServer_PacketProc.cpp">
       <Filter>소스 파일\MonitoringServer\SS_MonitoringServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CpuUsage.cpp">
+      <Filter>소스 파일\Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="LocalMonitoring.cpp">
+      <Filter>소스 파일\MonitoringServer\LocalMonitoring</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -153,6 +162,12 @@
     </ClInclude>
     <ClInclude Include="LanMonitoringServer.h">
       <Filter>소스 파일\MonitoringServer\SS_MonitoringServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CpuUsage.h">
+      <Filter>소스 파일\Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="LocalMonitoring.h">
+      <Filter>소스 파일\MonitoringServer\LocalMonitoring</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
