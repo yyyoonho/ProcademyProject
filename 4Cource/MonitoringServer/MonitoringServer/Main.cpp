@@ -31,14 +31,14 @@ int main()
 	Lan_monitoringServer.RegisterNetServer(&Net_monitoringServer);
 	Local_monitoring.RegisterNetServer(&Net_monitoringServer);
 
-	bool serverRet = Net_monitoringServer.Start(L"127.0.0.1", 20603, 4, 20, TRUE, 20000, TRUE, 30, 109);
+	bool serverRet = Net_monitoringServer.Start(L"127.0.0.1", 20603, 6, 24, TRUE, 20000, TRUE, 30, 109);
 	if (serverRet == false)
 	{
 		printf("NetServer start error\n");
 		return 0;
 	}
 
-	serverRet = Lan_monitoringServer.Start(L"127.0.0.1", 20604, 4, 20, TRUE, 20000, TRUE, 0x32, 0x77);
+	serverRet = Lan_monitoringServer.Start(L"127.0.0.1", 20604, 6, 24, TRUE, 20000, TRUE, 0x32, 0x77);
 	if (serverRet == false)
 	{
 		printf("NetServer start error\n");

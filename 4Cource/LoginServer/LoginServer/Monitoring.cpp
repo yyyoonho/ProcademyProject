@@ -167,6 +167,8 @@ void Monitoring::PrintMonitoring()
 	cout << "-------------------------------------------------------------------------------\n\n";
 	cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
 		<< (_monitoringArr[(int)MonitorType::HB_Kick]) << "\n";
+	cout << right << setw(NAME_WIDTH) << "DuplicateLogin:" << " "
+		<< _monitoringArr[(int)MonitorType::DuplicateLogin] << "\n";
 	cout << right << setw(NAME_WIDTH) << "HB_Kick:" << " "
 		<< _monitoringArr[(int)MonitorType::HB_Kick] << "\n";
 	cout << "-------------------------------------------------------------------------------\n";

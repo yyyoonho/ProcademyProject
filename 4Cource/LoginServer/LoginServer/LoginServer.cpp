@@ -179,7 +179,6 @@ void LoginServer::OnAccept(DWORD64 sessionID, SOCKADDR_IN addr)
 		newPlayer->sessionID = sessionID;
 		newPlayer->_addr = addr;
 		newPlayer->heartbeat = GetTickCount64();
-		newPlayer->duplicateKick = false;
 	}
 
 	{
@@ -230,75 +229,55 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 	pPacket >> accountNo;
 	pPacket.GetData(sessionKey, sizeof(char) * 64);
 
-	// TODO: 중복로그인절차
-	bool isAlreadyLoggedin = CheckDuplicateLogin(accountNo);
+	// 중복로그인 검사 + 등록을 한번에.
+	DWORD oldSID = 0;
 
-	do
 	{
-		if (isAlreadyLoggedin == TRUE)
+		lock_guard<mutex> lock(accountNoToSIDLock);
+
+		auto iter = accountNoToSID.find(accountNo);
+		if (iter != accountNoToSID.end())
 		{
-			Player* originPlayer = NULL;
-
-			// old Disconnect
-			{
-				lock_guard<mutex> lock(accountNoToPlayerLock);
-
-				auto iter = accountNoToPlayer.find(accountNo);
-				if (iter == accountNoToPlayer.end())
-				{
-					break;
-				}
-
-				originPlayer = iter->second;
-			}
-
-			DWORD64 SID = 0;
-			{
-				lock_guard<mutex> lock(originPlayer->playerLock);
-
-				if (originPlayer->accountNo == accountNo)
-				{
-					SID = originPlayer->sessionID;
-					originPlayer->duplicateKick = true;
-				}
-			}
-
-			if (SID != 0)
-				Disconnect(SID);
+			oldSID = iter->second;
 		}
-	} while (0);
 
-	// 정상 로그인
+		accountNoToSID[accountNo] = sessionID;
+	}
+
+	// oldSID가 있고, 그게 지금 세션이 아리나면 중복로그인 -> old 끊기
+	if (oldSID != 0 && oldSID != sessionID)
 	{
-		Player* newPlayer;
+		Disconnect(oldSID);
+	}
 
+	// 정상로그인 O
+	{
+		Player* loginPlayer = NULL;
 		{
 			lock_guard<mutex> lock(tmpSIDToPlayerLock);
-		
+
 			auto iter = tmpSIDToPlayer.find(sessionID);
 			if (iter == tmpSIDToPlayer.end())
 			{
+				DebugBreak();
 				return;
 			}
 
-			newPlayer = iter->second;
-
+			loginPlayer = iter->second;
 			tmpSIDToPlayer.erase(iter);
 		}
-		
+
+		/**************************************************************/
 		{
-			lock_guard<mutex> lock(newPlayer->playerLock);
-			newPlayer->accountNo = accountNo;
+			lock_guard<mutex> lock(loginPlayer->playerLock);
+
+			loginPlayer->heartbeat = GetTickCount64();
 		}
 
 		{
 			lock_guard<mutex> lock(SIDToPlayerLock);
-			SIDToPlayer.insert({ sessionID, newPlayer });
-		}
 
-		{
-			lock_guard<mutex> lock(accountNoToPlayerLock);
-			accountNoToPlayer[accountNo] = newPlayer;
+			SIDToPlayer.insert({ sessionID, loginPlayer });
 		}
 	}
 
@@ -457,45 +436,6 @@ void LoginServer::UpdateHeartbeat(DWORD64 sessionID)
 	}
 }
 
-bool LoginServer::CheckDuplicateLogin(INT64 accountNo)
-{
-	bool ret = false;
-
-	Player* oldPlayer = NULL;
-	{
-		lock_guard<mutex> lock(accountNoToPlayerLock);
-
-		auto iter = accountNoToPlayer.find(accountNo);
-		if (iter == accountNoToPlayer.end())
-		{
-			ret = false;
-		}
-		else
-		{
-			oldPlayer = iter->second;
-		}
-	}
-	if (oldPlayer == NULL)
-	{
-		return ret;
-	}
-
-
-	{
-		lock_guard<mutex> lock(oldPlayer->playerLock);
-
-		if (oldPlayer->duplicateKick == true)
-		{
-			ret = false;
-		}
-		else
-		{
-			ret = true;
-		}
-	}
-
-	return ret;
-}
 
 bool LoginServer::ReleaseTmpPlayer(DWORD64 sessionID)
 {
@@ -543,12 +483,12 @@ bool LoginServer::ReleaseOriginPlayer(DWORD64 sessionID)
 	}
 
 	{
-		lock_guard<mutex> lock(accountNoToPlayerLock);
+		lock_guard<mutex> lock(accountNoToSIDLock);
 
-		auto iter = accountNoToPlayer.find(accountNo);
-		if (iter != accountNoToPlayer.end() && iter->second == removed)
+		auto iter = accountNoToSID.find(accountNo);
+		if (iter != accountNoToSID.end() && iter->second == sessionID)
 		{
-			accountNoToPlayer.erase(iter);
+			accountNoToSID.erase(iter);
 		}
 	}
 
@@ -592,13 +532,14 @@ void LoginServer::HeartbeatThread()
 {
 	while (1)
 	{
-		DWORD ret = WaitForSingleObject(hEvent_Quit, 5000);
+		DWORD ret = WaitForSingleObject(hEvent_Quit, 1000 * 5);
 		if (ret == WAIT_OBJECT_0)
 		{
 			break;
 		}
 
 		DWORD64 nowTime = GetTickCount64();
+
 		vector<DWORD64> kickVec;
 
 		{
@@ -608,19 +549,28 @@ void LoginServer::HeartbeatThread()
 			for (; iter != SIDToPlayer.end(); ++iter)
 			{
 				Player* pPlayer = iter->second;
+				
+				DWORD64 hb;
+				DWORD64 sid;
+
 				{
 					lock_guard<mutex> lock2(pPlayer->playerLock);
-					DWORD64 heartbeat = pPlayer->heartbeat;
 
-					if (nowTime - heartbeat >= 15000)
-					{
-						kickVec.push_back(pPlayer->sessionID);
-					}
+					hb = pPlayer->heartbeat;
+					sid = pPlayer->sessionID;
+				}
+
+				if (hb > nowTime)
+					continue;
+
+				DWORD64 diff = nowTime - hb;
+				if (diff > 1000 * 15)
+				{
+					kickVec.push_back(sid);
 				}
 			}
 		}
 
-		nowTime = GetTickCount64();
 		{
 			lock_guard<mutex> lock(tmpSIDToPlayerLock);
 
@@ -628,14 +578,24 @@ void LoginServer::HeartbeatThread()
 			for (; iter != tmpSIDToPlayer.end(); ++iter)
 			{
 				Player* pPlayer = iter->second;
+
+				DWORD64 hb;
+				DWORD64 sid;
+
 				{
 					lock_guard<mutex> lock2(pPlayer->playerLock);
-					DWORD64 heartbeat = pPlayer->heartbeat;
 
-					if (nowTime - heartbeat >= 5000)
-					{
-						kickVec.push_back(pPlayer->sessionID);
-					}
+					hb = pPlayer->heartbeat;
+					sid = pPlayer->sessionID;
+				}
+
+				if (hb > nowTime)
+					continue;
+
+				DWORD64 diff = nowTime - hb;
+				if (diff > 1000 * 15)
+				{
+					kickVec.push_back(sid);
 				}
 			}
 		}

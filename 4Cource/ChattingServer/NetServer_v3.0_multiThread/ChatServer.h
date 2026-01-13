@@ -31,7 +31,6 @@ public:
 		DWORD64 heartbeat;
 
 		PLAYER_STATE state;
-		bool duplicateKick;
 
 		SRWLOCK playerLock;
 		bool IsInitLock = false;
@@ -73,9 +72,11 @@ public:
 private:
 	bool _bShutdown = false;
 
+	HANDLE hEvent_Quit;
 
 	HANDLE _hMonitoringThread;	// 자체 콘솔 모니터링을 위한 쓰레드
 	HANDLE _hMonitoringThread2;	// 모니터링서버로 보내기위한 정보수집 쓰레드
+	HANDLE _hThread_Heartbeat;	
 
 	HANDLE _hEventMsg;
 	SRWLOCK _contentMSGLock;
@@ -83,7 +84,6 @@ private:
 private:
 	void PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket);
 	bool PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket);
-	bool CheckDuplicateLogin(INT64 accountNo);
 	bool IsTokenValid(INT64 accountNo, const char* sessionKey);
 
 	bool PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPacket);
@@ -123,8 +123,8 @@ public:
 	unordered_map<DWORD64, Player*>	SIDToPlayer;
 	SRWLOCK							SIDToPlayerLock;
 
-	unordered_map<INT64, Player*>	accountNoToPlayer;
-	SRWLOCK							accountNoToPlayerLock;
+	unordered_map<INT64, DWORD64>	accountNoToSID;
+	SRWLOCK							accountNoToSIDLock;
 
 	// 섹터
 	vector<DWORD64>					sector[MAX_SECTOR_Y][MAX_SECTOR_X];

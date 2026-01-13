@@ -40,8 +40,6 @@ private:
 
 	void UpdateHeartbeat(DWORD64 sessionID);
 
-	bool CheckDuplicateLogin(INT64 accountNo);
-
 	bool ReleaseTmpPlayer(DWORD64 sessionID);
 	bool ReleaseOriginPlayer(DWORD64 sessionID);
 
@@ -70,8 +68,8 @@ private:
 	mutex SIDToPlayerLock;
 	unordered_map<DWORD64, Player*> SIDToPlayer;
 
-	mutex accountNoToPlayerLock;
-	unordered_map<INT64, Player*> accountNoToPlayer;
+	mutex accountNoToSIDLock;
+	unordered_map<INT64, DWORD64>	accountNoToSID;
 
 private:
 	void ConvertToUTF16();

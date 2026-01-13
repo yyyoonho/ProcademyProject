@@ -29,6 +29,7 @@ enum class MonitorType : int
 	SendMessageTPS,			// 초당 보낸 메시지 수					(O)
 
 	HB_Kick,				// 하트비트 초과로 연결끊음
+	DuplicateLogin,				// 하트비트 초과로 연결끊음
 
 	SendJobQ,
 

@@ -20,11 +20,6 @@ using namespace std;
 int dy[9] = { -1,-1,-1,0,0,0,1,1,1 };
 int dx[9] = { -1,0,1,-1,0,1,-1,0,1 };
 
-HANDLE hHeartbeatThread;
-HANDLE hThread_Monitoring;
-HANDLE hEvent_Quit;
-
-
 
 bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned short workerThreadCount, unsigned short coreSkip, bool isNagle, unsigned int maximumSessionCount, bool codecOnOff, BYTE fixedKey, BYTE code)
 {
@@ -46,17 +41,14 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	InitializeSRWLock(&tmpSIDToPlayerLock);
 	InitializeSRWLock(&playerArrLock);
 	InitializeSRWLock(&SIDToPlayerLock);
-	InitializeSRWLock(&accountNoToPlayerLock);
+	InitializeSRWLock(&accountNoToSIDLock);
 
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	if (hEvent_Quit == 0)
 		return 0;
 
-	{
-		// TODO:  모니터링 서버와 연결
-	}
-
-	hThread_Monitoring = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThreadRun, this, NULL, NULL);
+	_hMonitoringThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThreadRun, this, NULL, NULL);
+	_hThread_Heartbeat = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&HeartbeatThreadRun, this, NULL, NULL);
 
 	return true;
 }
@@ -85,7 +77,6 @@ void ChatServer::OnAccept(DWORD64 sessionID)
 		AcquireSRWLockExclusive(&newPlayer->playerLock);
 		newPlayer->sessionID = sessionID;
 		newPlayer->state = PLAYER_STATE::ACCEPT;
-		newPlayer->duplicateKick = false;
 
 		newPlayer->heartbeat = GetTickCount64();
 		ReleaseSRWLockExclusive(&newPlayer->playerLock);
@@ -125,8 +116,6 @@ void ChatServer::OnError(int errorCode, WCHAR* errorComment)
 
 void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
-	PRO_BEGIN("Proc");
-
 	WORD msgType;
 	pPacket >> msgType;
 
@@ -139,23 +128,17 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
-		PRO_BEGIN("Move");
 		flag = PacketProc_SectorMove(sessionID, pPacket);
-		PRO_END("Move");
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageMoveTPS);
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_MESSAGE:
-		PRO_BEGIN("Message");
 		flag = PacketProc_Message(sessionID, pPacket);
-		PRO_END("Message");
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageChatTPS);
 		break;
 
 	case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
-		PRO_BEGIN("HB");
 		flag = PacketProc_Heartbeat(sessionID);
-		PRO_END("HB");
 		break;
 	}
 
@@ -164,7 +147,6 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		UpdateHeartbeat(sessionID);
 	}
 
-	PRO_END("Proc");
 }
 
 bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -194,47 +176,30 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	}
 		
 
-	// 중복로그인 체크
-	bool isAlreadyLoggedin = CheckDuplicateLogin(accountNo);
+	// 중복로그인 검사 + 등록을 한번에.
+	DWORD oldSID = 0;
 
-	// 중복로그인 O
-	// 테스트
-	do
+	AcquireSRWLockExclusive(&accountNoToSIDLock);
 	{
-		if (isAlreadyLoggedin == TRUE)
+		auto iter = accountNoToSID.find(accountNo);
+		if (iter != accountNoToSID.end())
 		{
-			//_LOG(dfLOG_LEVEL_DEBUG, L"%ls %ld\n", L"중복로그인 accountNo: ", accountNo);
-
-			// old disconnect
-			AcquireSRWLockShared(&accountNoToPlayerLock);
-			auto iter = accountNoToPlayer.find(accountNo);
-			if (iter == accountNoToPlayer.end())
-			{
-				ReleaseSRWLockShared(&accountNoToPlayerLock);
-				break;
-			}
-
-			Player* originPlayer = iter->second;
-			ReleaseSRWLockShared(&accountNoToPlayerLock);
-
-
-			AcquireSRWLockExclusive(&originPlayer->playerLock);
-			if (originPlayer->accountNo != accountNo)
-			{
-				ReleaseSRWLockExclusive(&originPlayer->playerLock);
-				break;
-			}
-
-			DWORD64 originSID = originPlayer->sessionID;
-			originPlayer->duplicateKick = true;
-			ReleaseSRWLockExclusive(&originPlayer->playerLock);
-
-			Disconnect(originSID);
+			oldSID = iter->second;
 		}
-	} while (0);
+
+		accountNoToSID[accountNo] = sessionID;
+	}
+	ReleaseSRWLockExclusive(&accountNoToSIDLock);
+
+
+	// oldSID가 있고, 그게 지금 세션이 아리나면 중복로그인 -> old 끊기
+	if (oldSID != 0 && oldSID != sessionID)
+	{
+		Disconnect(oldSID);
+	}
+
 
 	// 정상로그인 O
-	//else
 	{
 		WORD type = en_PACKET_CS_CHAT_RES_LOGIN;
 		newPacket << type;
@@ -294,11 +259,6 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		SIDToPlayer.insert({ sessionID,loginPlayer });
 		ReleaseSRWLockExclusive(&SIDToPlayerLock);
 
-		AcquireSRWLockExclusive(&accountNoToPlayerLock);
-		//accountNoToPlayer.insert({ accountNo, loginPlayer });
-		accountNoToPlayer[accountNo] = loginPlayer;
-		ReleaseSRWLockExclusive(&accountNoToPlayerLock);
-
 		SendPacket(sessionID, newPacket);
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::PlayerCount);
 
@@ -306,46 +266,6 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	}
 }
 
-bool ChatServer::CheckDuplicateLogin(INT64 accountNo)
-{
-	bool ret = false;
-
-	Player* oldPlayer = NULL;
-
-	AcquireSRWLockShared(&accountNoToPlayerLock);
-	auto iter = accountNoToPlayer.find(accountNo);
-	if (iter == accountNoToPlayer.end())
-	{
-		ret = false;
-	}
-	else
-	{
-		oldPlayer = iter->second;
-	}
-	ReleaseSRWLockShared(&accountNoToPlayerLock);
-
-	if (oldPlayer == NULL)
-	{
-		return ret;
-	}
-
-	AcquireSRWLockExclusive(&oldPlayer->playerLock);
-	if (oldPlayer->duplicateKick == true)
-	{
-		// 테스트
-		//ret = true;
-		ret = false;
-	}
-	else
-	{
-		// 테스트
-		//ret = false;
-		ret = true;
-	}
-	ReleaseSRWLockExclusive(&oldPlayer->playerLock);
-
-	return ret;
-}
 
 bool ChatServer::IsTokenValid(INT64 accountNo, const char* sessionKey)
 {
@@ -671,21 +591,16 @@ bool ChatServer::ReleaseOriginPlayer(DWORD64 sessionID)
 	PLAYER_STATE state = removed->state;
 	WORD sectorY = removed->sectorY;
 	WORD sectorX = removed->sectorX;
-	bool dup = removed->duplicateKick;
-	if (dup == true)
-	{
-		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::DisconnectTotal_alreadyLogin);
-	}
 	ReleaseSRWLockShared(&removed->playerLock);
 
 
-	AcquireSRWLockExclusive(&accountNoToPlayerLock);
-	auto iter2 = accountNoToPlayer.find(accountNo);
-	if (iter2 != accountNoToPlayer.end() && iter2->second == removed)
+	AcquireSRWLockExclusive(&accountNoToSIDLock);
+	auto iter2 = accountNoToSID.find(accountNo);
+	if (iter2 != accountNoToSID.end() && iter2->second == sessionID)
 	{
-		accountNoToPlayer.erase(iter2);
+		accountNoToSID.erase(iter2);
 	}
-	ReleaseSRWLockExclusive(&accountNoToPlayerLock);
+	ReleaseSRWLockExclusive(&accountNoToSIDLock);
 
 	if (state == PLAYER_STATE::PLAY)
 	{
@@ -749,13 +664,13 @@ void ChatServer::HeartbeatThread()
 {
 	while (1)
 	{
-		DWORD ret = WaitForSingleObject(hEvent_Quit, 5000);
+		DWORD ret = WaitForSingleObject(hEvent_Quit, 1000 * 5);
 		if (ret == WAIT_OBJECT_0)
 			break;
 
 		DWORD64 nowTime = GetTickCount64();
 
-		// 로그인은 5초
+		// 로그인은 15초
 		// 플레이는 30초
 
 		vector<DWORD64> unresponsivePlayers;
@@ -763,14 +678,23 @@ void ChatServer::HeartbeatThread()
 		AcquireSRWLockShared(&tmpPlayerArrLock);
 		for (int i = 0; i < tmpPlayerArr.size(); i++)
 		{
-			AcquireSRWLockShared(&tmpPlayerArr[i]->playerLock);
-			if (nowTime - tmpPlayerArr[i]->heartbeat >= 5000)
-			{
-				//Disconnect(tmpPlayerArr[i]->sessionID);
-				unresponsivePlayers.push_back(tmpPlayerArr[i]->sessionID);
-			}
+			DWORD64 hb;
+			DWORD64 sid;
 
+			AcquireSRWLockShared(&tmpPlayerArr[i]->playerLock);
+			hb = tmpPlayerArr[i]->heartbeat;
+			sid = tmpPlayerArr[i]->sessionID;
 			ReleaseSRWLockShared(&tmpPlayerArr[i]->playerLock);
+
+			if (hb > nowTime)
+				continue;
+
+			DWORD64 diff = nowTime - hb;
+			if (diff > 1000 * 15)
+			{
+				unresponsivePlayers.push_back(sid);
+				_LOG(dfLOG_LEVEL_SYSTEM, L"%ls %llu\n", L"diff: ", diff);
+			}
 		}
 		ReleaseSRWLockShared(&tmpPlayerArrLock);
 
@@ -778,14 +702,24 @@ void ChatServer::HeartbeatThread()
 		AcquireSRWLockShared(&playerArrLock);
 		for (int i = 0; i < playerArr.size(); i++)
 		{
+			DWORD64 hb;
+			DWORD64 sid;
+
 			AcquireSRWLockShared(&playerArr[i]->playerLock);
-			if (nowTime - playerArr[i]->heartbeat >= 30000)
+			hb = playerArr[i]->heartbeat;
+			sid = playerArr[i]->sessionID;
+			ReleaseSRWLockShared(&playerArr[i]->playerLock);
+
+			if (hb > nowTime)
+				continue;
+
+			DWORD64 diff = nowTime - hb;
+			if (diff > 1000 * 30)
 			{
-				//Disconnect(playerArr[i]->sessionID);
-				unresponsivePlayers.push_back(playerArr[i]->sessionID);
+				unresponsivePlayers.push_back(sid);
+				_LOG(dfLOG_LEVEL_SYSTEM, L"%ls %llu\n", L"diff: ", diff);
 			}
 
-			ReleaseSRWLockShared(&playerArr[i]->playerLock);
 		}
 		ReleaseSRWLockShared(&playerArrLock);
 
