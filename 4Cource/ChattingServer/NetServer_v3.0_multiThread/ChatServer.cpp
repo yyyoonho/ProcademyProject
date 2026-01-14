@@ -48,7 +48,7 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		return 0;
 
 	_hMonitoringThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThreadRun, this, NULL, NULL);
-	_hThread_Heartbeat = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&HeartbeatThreadRun, this, NULL, NULL);
+	//_hThread_Heartbeat = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&HeartbeatThreadRun, this, NULL, NULL);
 
 	return true;
 }
@@ -139,6 +139,12 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 	case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
 		flag = PacketProc_Heartbeat(sessionID);
+		break;
+
+	default:
+		flag = false;
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
 		break;
 	}
 

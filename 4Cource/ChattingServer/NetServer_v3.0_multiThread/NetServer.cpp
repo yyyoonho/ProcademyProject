@@ -519,6 +519,17 @@ void CNetServer::WorkerThread()
 				SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
 				pPacket.Clear();
 
+				// 어택#1 - code가 다른 패킷이 왔을 경우 킥.
+				{
+					BYTE packetCode = header.code;
+					if (_netCodec->isValidCode(packetCode) == false)
+					{
+						Disconnect(pSession->sessionID);
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #1 Disconnect");
+						break;
+					}
+				}
+
 				int ret = pSession->recvQ.Dequeue(pPacket.GetBufferPtr(), payloadLen);
 				pPacket.MoveWritePos(ret);
 

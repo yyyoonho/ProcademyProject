@@ -166,3 +166,11 @@ void NetCodec::SetCode(BYTE code)
 {
 	_code = code;
 }
+
+bool NetCodec::isValidCode(BYTE code)
+{
+	if (code == _code)
+		return true;
+	else
+		return false;	
+}
