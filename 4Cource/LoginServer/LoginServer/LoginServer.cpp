@@ -230,7 +230,7 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 	pPacket.GetData(sessionKey, sizeof(char) * 64);
 
 	// 중복로그인 검사 + 등록을 한번에.
-	DWORD oldSID = 0;
+	DWORD64 oldSID = 0;
 
 	{
 		lock_guard<mutex> lock(accountNoToSIDLock);

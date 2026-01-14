@@ -22,7 +22,6 @@ public:
 		BYTE code);
 
 	virtual void Stop();
-	int GetSessionCount();
 
 	// 콘텐츠에서 호출하는 함수
 	bool Disconnect(DWORD64 sessionID);
@@ -83,7 +82,7 @@ private:
 
 public:
 	// 멤버 변수: 세션배열관리
-	Session _sessionArray[20000];
+	Session _sessionArray[30000];
 	LockFreeStack<unsigned int> _releaseIdxLockFreeStack;
 
 private:

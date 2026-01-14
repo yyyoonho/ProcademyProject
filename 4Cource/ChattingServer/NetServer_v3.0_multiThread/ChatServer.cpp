@@ -37,6 +37,8 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		}
 	}
 
+	_maxPlayerCount = 20000;
+
 	InitializeSRWLock(&tmpPlayerArrLock);
 	InitializeSRWLock(&tmpSIDToPlayerLock);
 	InitializeSRWLock(&playerArrLock);
@@ -120,6 +122,7 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 	pPacket >> msgType;
 
 	bool flag = true;
+
 	switch (msgType)
 	{
 	case en_PACKET_CS_CHAT_REQ_LOGIN:
@@ -142,6 +145,7 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		break;
 
 	default:
+		// attack #2
 		flag = false;
 		Disconnect(sessionID);
 		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
@@ -169,21 +173,39 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 	BYTE status = 1;
 
-	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
-	newPacket.Clear();
+	
+	
+	// TODO: 최대 유저에 대한 제한.
+	// attack #6
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::LoginProcessingCount);
+	LONG estimated =
+		Monitoring::GetInstance()->GetInterlocked(MonitorType::PlayerCount) +
+		Monitoring::GetInstance()->GetInterlocked(MonitorType::LoginProcessingCount);
+
+	if (estimated > _maxPlayerCount)
+	{
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
+		Disconnect(sessionID);
+
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #6 Disconnect");
+
+		return false;
+	}
+
 
 	// 토큰 체크
 	bool isTokenValid = IsTokenValid(accountNo, sessionKey);
 	if (isTokenValid == false)
 	{
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::TokenFailed);
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
 		Disconnect(sessionID);
+
 		return false;
 	}
-		
 
 	// 중복로그인 검사 + 등록을 한번에.
-	DWORD oldSID = 0;
+	DWORD64 oldSID = 0;
 
 	AcquireSRWLockExclusive(&accountNoToSIDLock);
 	{
@@ -204,9 +226,11 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		Disconnect(oldSID);
 	}
 
-
 	// 정상로그인 O
 	{
+		SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
+		newPacket.Clear();
+
 		WORD type = en_PACKET_CS_CHAT_RES_LOGIN;
 		newPacket << type;
 		newPacket << status;
@@ -220,6 +244,7 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		{
 			DebugBreak();
 			ReleaseSRWLockExclusive(&tmpSIDToPlayerLock);
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
 			return false;
 		}
 
@@ -267,6 +292,7 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		SendPacket(sessionID, newPacket);
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::PlayerCount);
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
 
 		return true;
 	}
@@ -301,18 +327,29 @@ bool ChatServer::IsTokenValid(INT64 accountNo, const char* sessionKey)
 
 bool ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
-	INT64 accountNo;
-	WORD newSectorY;
-	WORD newSectorX;
+	INT64 accountNo = 0;
+	WORD newSectorY = 0;
+	WORD newSectorX = 0;
 
 	pPacket >> accountNo;
 	pPacket >> newSectorY;
 	pPacket >> newSectorX;
 
+	{
+		if (newSectorY >= MAX_SECTOR_Y || newSectorX >= MAX_SECTOR_X)
+		{
+			Disconnect(sessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
+			return false;
+		}
+	}
+
 	AcquireSRWLockShared(&SIDToPlayerLock);
 	auto iter = SIDToPlayer.find(sessionID);
 	if (iter == SIDToPlayer.end())
 	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #4 Disconnect");
 		ReleaseSRWLockShared(&SIDToPlayerLock);
 		return false;
 	}
@@ -435,7 +472,14 @@ bool ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 
 	pPacket >> accountNo;
 	pPacket >> msgLen;
-	pPacket.GetData((char*)msg, msgLen);
+	int len = pPacket.GetData((char*)msg, msgLen);
+
+	if (len != msgLen)
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
+		return false;
+	}
 
 	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 	newPacket.Clear();
@@ -449,6 +493,8 @@ bool ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	auto iter = SIDToPlayer.find(sessionID);
 	if (iter == SIDToPlayer.end())
 	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #4 Disconnect");
 		ReleaseSRWLockShared(&SIDToPlayerLock);
 		return false;
 	}

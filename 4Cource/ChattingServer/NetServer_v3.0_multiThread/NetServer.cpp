@@ -21,7 +21,6 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	_ipAddress = ipAddress;
 	_port = port;
 	_workerThreadCount = workerThreadCount;
-	//_workerThreadCount = 2;
 	_coreSkip = coreSkip;
 	_isNagle = isNagle;
 	_maximumSessionCount = maximumSessionCount;
@@ -29,9 +28,10 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 
 	_hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-	for (int i = 19999; i >= 0; i--)
+	//for (int i = 19999; i >= 0; i--)
+	for (int i = 29999; i >= 0; i--)
 	{
-		_sessionArray[i].recvQ.Resize(15000);
+		_sessionArray[i].recvQ.Resize(10000);
 
 		_releaseIdxLockFreeStack.Push(i);
 	}
@@ -621,7 +621,18 @@ void CNetServer::AcceptThread()
 			return;
 		}
 
-		//InterlockedIncrement(&_acceptTPS);
+		// TODO: 여기서 _maximumSessionCount 를 체크후, 초과 시 바로 disconnect
+		// attack #5
+		{
+			LONG sessionCount = Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SessionNum);
+			if ((unsigned int)sessionCount > _maximumSessionCount)
+			{
+				closesocket(clientSocket);
+				Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SessionNum);
+				continue;
+			}
+		}
+
 		Monitoring::GetInstance()->Increase(MonitorType::AcceptTotal);
 		Monitoring::GetInstance()->Increase(MonitorType::AcceptTPS);
 
@@ -694,7 +705,7 @@ void CNetServer::AcceptThread()
 		WCHAR addrBuf[40];
 		InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
 
-		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SessionNum);
+		//Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SessionNum);
 
 		// 소켓 <-> IOCP 연결
 		CreateIoCompletionPort((HANDLE)_sessionArray[idx].sock, _hIOCP, (ULONG_PTR)&_sessionArray[idx], NULL);

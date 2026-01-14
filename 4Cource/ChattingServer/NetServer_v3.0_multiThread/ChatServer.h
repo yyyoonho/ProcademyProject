@@ -135,6 +135,7 @@ private:
 public:
 	void RegisterNetServer(NetClient_Monitoring* pNetClient);
 
-
+private:
+	unsigned int					_maxPlayerCount;
 };
 
