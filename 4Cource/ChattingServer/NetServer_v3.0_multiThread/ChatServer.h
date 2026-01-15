@@ -105,6 +105,7 @@ private:
 	void MonitorThread();
 	void TossMonitoringData();
 
+	bool IsMyAccountNo(DWORD64 sessionID, INT64 accountNo);
 
 public:
 	procademy::MemoryPool_TLS<Player> playerPool{ 0,false };

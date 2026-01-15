@@ -29,7 +29,7 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	_hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
 	//for (int i = 19999; i >= 0; i--)
-	for (int i = 29999; i >= 0; i--)
+	for (int i = 24999; i >= 0; i--)
 	{
 		_sessionArray[i].recvQ.Resize(10000);
 
@@ -256,6 +256,12 @@ bool CNetServer::RecvProc(Session* pSession)
 	wsaBuf.buf = pSession->recvQ.GetRearBufferPtr();
 	wsaBuf.len = pSession->recvQ.DirectEnqueueSize();
 
+	// attack #8 테스트
+	if (wsaBuf.len == 0)
+	{
+		return false;
+	}
+
 	IncreaseIO_Count(pSession);
 
 	DWORD wsaRecvRet = WSARecv(pSession->sock, &wsaBuf, 1, &sendBytes, &flags, (LPWSAOVERLAPPED)&pSession->recvMyOverlapped, NULL);
@@ -474,6 +480,7 @@ void CNetServer::WorkerThread()
 			{
 				stNetHeader header;
 
+				// 헤더 만큼도 안들어와 있는 경우.
 				if (pSession->recvQ.GetUseSize() < sizeof(stNetHeader))
 				{
 					// 비동기IO: Recv 요청 후 break
@@ -482,10 +489,14 @@ void CNetServer::WorkerThread()
 						break;
 
 					bool ret = RecvProc(pSession);
-
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
+					}
+					if (ret == false)
+					{
+						Disconnect(pSession->sessionID);
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 					}
 
 
@@ -496,6 +507,8 @@ void CNetServer::WorkerThread()
 				unsigned short payloadLen;
 				memcpy_s(&payloadLen, sizeof(BYTE) * 2, header.len, sizeof(BYTE) * 2);
 
+
+				// 헤더에 기입된 len만큼 페이로드가 안들어온 경우.
 				if (pSession->recvQ.GetUseSize() < sizeof(stNetHeader) + payloadLen)
 				{
 					// 비동기IO: Recv 요청 후 break
@@ -504,10 +517,14 @@ void CNetServer::WorkerThread()
 						break;
 
 					bool ret = RecvProc(pSession);
-
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
+					}
+					if (ret == false)
+					{
+						Disconnect(pSession->sessionID);
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 					}
 
 
@@ -516,10 +533,7 @@ void CNetServer::WorkerThread()
 
 				pSession->recvQ.MoveFront(sizeof(header));
 
-				SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
-				pPacket.Clear();
-
-				// 어택#1 - code가 다른 패킷이 왔을 경우 킥.
+				// attack #1 - code가 다른 패킷이 왔을 경우 킥.
 				{
 					BYTE packetCode = header.code;
 					if (_netCodec->isValidCode(packetCode) == false)
@@ -530,6 +544,19 @@ void CNetServer::WorkerThread()
 					}
 				}
 
+				// attack #9
+				// 직렬화패킷의 기본 버퍼사이즈는 1400
+				// 그 이상 pPacket에 넣으려고 하면 오버런 가능성O
+				if (payloadLen > Net_SerializePacket::eBUFFER_DEFAULT)
+				{
+					Disconnect(pSession->sessionID);
+					_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #9 Disconnect");
+					break;
+				}
+
+				SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
+				pPacket.Clear();
+
 				int ret = pSession->recvQ.Dequeue(pPacket.GetBufferPtr(), payloadLen);
 				pPacket.MoveWritePos(ret);
 
@@ -539,7 +566,9 @@ void CNetServer::WorkerThread()
 					bool decodingRet = _netCodec->DecodingPacket(pPacket, header);
 					if (decodingRet == FALSE)
 					{
-						continue;
+						Disconnect(pSession->sessionID);
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #7 Disconnect");
+						break;
 					}
 				}
 

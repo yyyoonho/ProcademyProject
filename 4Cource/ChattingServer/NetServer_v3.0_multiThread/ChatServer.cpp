@@ -156,6 +156,11 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 	{
 		UpdateHeartbeat(sessionID);
 	}
+	else
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #10 Disconnect");
+	}
 
 }
 
@@ -335,6 +340,11 @@ bool ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 	pPacket >> newSectorY;
 	pPacket >> newSectorX;
 
+	
+	if (IsMyAccountNo(sessionID, accountNo) == false)
+		return false;
+
+
 	{
 		if (newSectorY >= MAX_SECTOR_Y || newSectorX >= MAX_SECTOR_X)
 		{
@@ -474,6 +484,9 @@ bool ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	pPacket >> msgLen;
 	int len = pPacket.GetData((char*)msg, msgLen);
 
+	if (IsMyAccountNo(sessionID, accountNo) == false)
+		return false;
+
 	if (len != msgLen)
 	{
 		Disconnect(sessionID);
@@ -551,6 +564,7 @@ bool ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 
 bool ChatServer::PacketProc_Heartbeat(DWORD64 sessionID)
 {
+
 	UpdateHeartbeat(sessionID);
 
 	return false;
@@ -814,4 +828,36 @@ void ChatServer::MonitorThread()
 void ChatServer::RegisterNetServer(NetClient_Monitoring* pNetClient)
 {
 	this->pNetClient = pNetClient;
+}
+
+
+bool ChatServer::IsMyAccountNo(DWORD64 sessionID, INT64 accountNo)
+{
+	Player* pPlayer = NULL;
+
+	AcquireSRWLockExclusive(&SIDToPlayerLock);
+
+	auto iter = SIDToPlayer.find(sessionID);
+	if (iter != SIDToPlayer.end())
+	{
+		pPlayer = iter->second;
+	}
+
+	ReleaseSRWLockExclusive(&SIDToPlayerLock);
+
+	if (pPlayer == NULL)
+	{
+		DebugBreak();
+		return false;
+	}
+
+
+	AcquireSRWLockExclusive(&pPlayer->playerLock);
+	INT64 playerAccountNo = pPlayer->accountNo;
+	ReleaseSRWLockExclusive(&pPlayer->playerLock);
+
+	if (playerAccountNo != accountNo)
+		return false;
+	else
+		return true;
 }

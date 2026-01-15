@@ -82,7 +82,7 @@ private:
 
 public:
 	// 멤버 변수: 세션배열관리
-	Session _sessionArray[30000];
+	Session _sessionArray[25000];
 	LockFreeStack<unsigned int> _releaseIdxLockFreeStack;
 
 private:
