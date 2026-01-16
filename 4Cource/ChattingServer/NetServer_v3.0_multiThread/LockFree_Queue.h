@@ -17,7 +17,7 @@ private:
     Node* _tail;
 
     int _useSize;
-    int maximumQSize = 100000;
+    int maximumQSize = 20000;
 
     LONG _uniqueCode;
 

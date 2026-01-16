@@ -182,7 +182,15 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	pPacket.GetRawPtr(&packetRawPtr);
 
 	packetRawPtr.IncreaseRefCount();
-	pSession->LockFreeSendQ.Enqueue(packetRawPtr);
+	bool ret = pSession->LockFreeSendQ.Enqueue(packetRawPtr);
+
+	// attack #11
+	if (ret == false)
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #11 Disconnect");
+		return false;
+	}
 
 	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendMessageTPS);
 
@@ -257,7 +265,7 @@ bool CNetServer::RecvProc(Session* pSession)
 	wsaBuf.len = pSession->recvQ.DirectEnqueueSize();
 
 	// attack #8 테스트
-	if (wsaBuf.len == 0)
+	if (pSession->recvQ.GetFreeSize() == 0)
 	{
 		return false;
 	}

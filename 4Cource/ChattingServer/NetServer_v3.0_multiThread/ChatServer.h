@@ -34,6 +34,12 @@ public:
 
 		SRWLOCK playerLock;
 		bool IsInitLock = false;
+
+
+		// RateLimit
+		DWORD rateLimitTick;
+		DWORD rateLimitMsgCount;
+		DWORD rateLimitOutCount;
 	};
 
 	struct Heartbeat
@@ -106,6 +112,8 @@ private:
 	void TossMonitoringData();
 
 	bool IsMyAccountNo(DWORD64 sessionID, INT64 accountNo);
+
+	bool CheckMessageRateLimit(DWORD64 sessionID);
 
 public:
 	procademy::MemoryPool_TLS<Player> playerPool{ 0,false };

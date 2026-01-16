@@ -154,14 +154,22 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 	if (flag == true)
 	{
+		// 하트비트 업데이트
 		UpdateHeartbeat(sessionID);
+
+		// TODO: 클라이언트가 1초에 10개 이상의 메시지를 보냈으면 킥. (단, 2OUT 시 킥)
+		bool rateRet = CheckMessageRateLimit(sessionID);
+		if (rateRet == false)
+		{
+			Disconnect(sessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #12 Disconnect");
+		}
 	}
 	else
 	{
 		Disconnect(sessionID);
 		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #10 Disconnect");
 	}
-
 }
 
 bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
@@ -860,4 +868,54 @@ bool ChatServer::IsMyAccountNo(DWORD64 sessionID, INT64 accountNo)
 		return false;
 	else
 		return true;
+}
+
+bool ChatServer::CheckMessageRateLimit(DWORD64 sessionID)
+{
+	AcquireSRWLockExclusive(&SIDToPlayerLock);
+	auto iter = SIDToPlayer.find(sessionID);
+	if (iter == SIDToPlayer.end())
+	{
+		ReleaseSRWLockExclusive(&SIDToPlayerLock);
+		return true;
+	}
+
+	Player* pPlayer = iter->second;
+	ReleaseSRWLockExclusive(&SIDToPlayerLock);
+
+
+	DWORD now = timeGetTime();
+	bool ret = true;
+
+	AcquireSRWLockExclusive(&pPlayer->playerLock);
+
+	// 1초 갱신
+	if (now - pPlayer->rateLimitTick >= 1000)
+	{
+		pPlayer->rateLimitTick = now;
+		pPlayer->rateLimitMsgCount = 0;
+	}
+
+	// 메시지 갯수 증가
+	pPlayer->rateLimitMsgCount++;
+	
+	// 아웃카운트 검사
+	if (pPlayer->rateLimitMsgCount > 10)
+	{
+		pPlayer->rateLimitOutCount++;
+
+		if (pPlayer->rateLimitOutCount >= 2)
+		{
+			ret = false;
+		}
+		else
+		{
+			pPlayer->rateLimitTick = now;
+			pPlayer->rateLimitMsgCount = 0;
+		}
+	}
+
+	ReleaseSRWLockExclusive(&pPlayer->playerLock);
+
+	return ret;
 }
