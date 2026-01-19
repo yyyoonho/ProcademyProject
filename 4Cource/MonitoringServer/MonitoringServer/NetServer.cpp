@@ -30,7 +30,7 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 
 	for (int i = 99; i >= 0; i--)
 	{
-		_sessionArray[i].recvQ.Resize(50000);
+		_sessionArray[i].recvQ.Resize(5000);
 
 		_releaseIdxLockFreeStack.Push(i);
 	}
@@ -181,7 +181,15 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	pPacket.GetRawPtr(&packetRawPtr);
 
 	packetRawPtr.IncreaseRefCount();
-	pSession->LockFreeSendQ.Enqueue(packetRawPtr);
+	bool ret = pSession->LockFreeSendQ.Enqueue(packetRawPtr);
+
+	// attack #11
+	if (ret == false)
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #11 Disconnect");
+		return false;
+	}
 
 	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendMessageTPS);
 
@@ -254,6 +262,12 @@ bool CNetServer::RecvProc(Session* pSession)
 	WSABUF wsaBuf;
 	wsaBuf.buf = pSession->recvQ.GetRearBufferPtr();
 	wsaBuf.len = pSession->recvQ.DirectEnqueueSize();
+
+	// attack #8 테스트
+	if (pSession->recvQ.GetFreeSize() == 0)
+	{
+		return false;
+	}
 
 	IncreaseIO_Count(pSession);
 
@@ -488,10 +502,14 @@ void CNetServer::WorkerThread()
 						break;
 
 					bool ret = RecvProc(pSession);
-
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
+					}
+					if (ret == false)
+					{
+						Disconnect(pSession->sessionID);
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 					}
 
 
@@ -510,10 +528,14 @@ void CNetServer::WorkerThread()
 						break;
 
 					bool ret = RecvProc(pSession);
-
 					if (ret == TRUE && pSession->cancelIOCheck == TRUE)
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
+					}
+					if (ret == false)
+					{
+						Disconnect(pSession->sessionID);
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 					}
 
 
@@ -522,6 +544,27 @@ void CNetServer::WorkerThread()
 
 				pSession->recvQ.MoveFront(sizeof(header));
 
+				// attack #1 - code가 다른 패킷이 왔을 경우 킥. O
+				{
+					BYTE packetCode = header.code;
+					if (_netCodec->isValidCode(packetCode) == false)
+					{
+						Disconnect(pSession->sessionID);
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #1 Disconnect");
+						break;
+					}
+				}
+
+				// attack #9
+				// 직렬화패킷의 기본 버퍼사이즈는 1400
+				// 그 이상 pPacket에 넣으려고 하면 오버런 가능성O
+				if (payloadLen > Net_SerializePacket::eBUFFER_DEFAULT)
+				{
+					Disconnect(pSession->sessionID);
+					_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #9 Disconnect");
+					break;
+				}
+
 				SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
 				pPacket.Clear();
 
@@ -529,11 +572,14 @@ void CNetServer::WorkerThread()
 				pPacket.MoveWritePos(ret);
 
 				// 디코딩
+				// attack #7
 				if (_codecOnOff == TRUE)
 				{
 					bool decodingRet = _netCodec->DecodingPacket(pPacket, header);
 					if (decodingRet == FALSE)
 					{
+						Disconnect(pSession->sessionID);
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #7 Disconnect");
 						continue;
 					}
 				}
@@ -616,12 +662,27 @@ void CNetServer::AcceptThread()
 			return;
 		}
 
-		//InterlockedIncrement(&_acceptTPS);
 		Monitoring::GetInstance()->Increase(MonitorType::AcceptTotal);
-		//Monitoring::GetInstance()->Increase(MonitorType::AcceptTPS);
 
 		// OnConnectionRequest
-		OnConnectionRequest(clientAddr);
+		bool connectionRet = OnConnectionRequest(clientAddr);
+		if (connectionRet == false)
+		{
+			closesocket(clientSocket);
+			continue;
+		}
+
+		// TODO: 여기서 _maximumSessionCount 를 체크후, 초과 시 바로 disconnect
+		// attack #5
+		{
+			LONG sessionCount = Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SessionNum);
+			if ((unsigned int)sessionCount > _maximumSessionCount)
+			{
+				closesocket(clientSocket);
+				Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SessionNum);
+				continue;
+			}
+		}
 
 		// 세션 할당 및 초기화
 		unsigned int idx;
@@ -689,7 +750,7 @@ void CNetServer::AcceptThread()
 		WCHAR addrBuf[40];
 		InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
 
-		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SessionNum);
+		//Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SessionNum);
 
 		// 소켓 <-> IOCP 연결
 		CreateIoCompletionPort((HANDLE)_sessionArray[idx].sock, _hIOCP, (ULONG_PTR)&_sessionArray[idx], NULL);

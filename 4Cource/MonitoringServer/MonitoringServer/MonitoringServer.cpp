@@ -31,6 +31,7 @@ bool MonitoringServer::Start(const WCHAR* ipAddress, unsigned short port, unsign
 	if (hEvent_Quit == 0)
 		return false;*/
 
+	_maxPlayerCount = 70;
 
 
 	return true;
@@ -42,7 +43,7 @@ void MonitoringServer::Stop()
 
 bool MonitoringServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
 {
-	return false;
+	return true;
 }
 
 void MonitoringServer::OnAccept(DWORD64 sessionID, SOCKADDR_IN addr)

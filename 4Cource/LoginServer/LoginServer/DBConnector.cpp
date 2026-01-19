@@ -88,6 +88,7 @@ void DBConnector::QueryRead(IDBJob_Read* job, DBResult& queryResult)
 
 	job->Exec(conn_tls.readConnection, queryResult);
 	delete job;
+
 }
 
 void DBConnector::QueryWrite(int fieldID, IDBJob_Write* job)

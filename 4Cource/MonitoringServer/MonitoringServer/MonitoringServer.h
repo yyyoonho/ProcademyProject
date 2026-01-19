@@ -60,4 +60,6 @@ private:
 
 	const char* loginSessionKey = "ajfw@!cv980dSZ[fje#@fdj123948djf";
 
+private:
+	unsigned int					_maxPlayerCount;
 };

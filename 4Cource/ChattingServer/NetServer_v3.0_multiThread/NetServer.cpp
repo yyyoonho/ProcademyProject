@@ -489,6 +489,7 @@ void CNetServer::WorkerThread()
 				stNetHeader header;
 
 				// 헤더 만큼도 안들어와 있는 경우.
+				int tmp = pSession->recvQ.GetUseSize();
 				if (pSession->recvQ.GetUseSize() < sizeof(stNetHeader))
 				{
 					// 비동기IO: Recv 요청 후 break
@@ -517,6 +518,7 @@ void CNetServer::WorkerThread()
 
 
 				// 헤더에 기입된 len만큼 페이로드가 안들어온 경우.
+				tmp = pSession->recvQ.GetUseSize();
 				if (pSession->recvQ.GetUseSize() < sizeof(stNetHeader) + payloadLen)
 				{
 					// 비동기IO: Recv 요청 후 break
@@ -541,7 +543,7 @@ void CNetServer::WorkerThread()
 
 				pSession->recvQ.MoveFront(sizeof(header));
 
-				// attack #1 - code가 다른 패킷이 왔을 경우 킥.
+				// attack #1 - code가 다른 패킷이 왔을 경우 킥. O
 				{
 					BYTE packetCode = header.code;
 					if (_netCodec->isValidCode(packetCode) == false)
@@ -569,6 +571,7 @@ void CNetServer::WorkerThread()
 				pPacket.MoveWritePos(ret);
 
 				// 디코딩
+				// attack #7 O
 				if (_codecOnOff == TRUE)
 				{
 					bool decodingRet = _netCodec->DecodingPacket(pPacket, header);
@@ -658,6 +661,12 @@ void CNetServer::AcceptThread()
 			return;
 		}
 
+		Monitoring::GetInstance()->Increase(MonitorType::AcceptTotal);
+		Monitoring::GetInstance()->Increase(MonitorType::AcceptTPS);
+
+		// OnConnectionRequest
+		OnConnectionRequest(clientAddr);
+
 		// TODO: 여기서 _maximumSessionCount 를 체크후, 초과 시 바로 disconnect
 		// attack #5
 		{
@@ -670,11 +679,7 @@ void CNetServer::AcceptThread()
 			}
 		}
 
-		Monitoring::GetInstance()->Increase(MonitorType::AcceptTotal);
-		Monitoring::GetInstance()->Increase(MonitorType::AcceptTPS);
-
-		// OnConnectionRequest
-		OnConnectionRequest(clientAddr);
+		
 
 		// 세션 할당 및 초기화
 		unsigned int idx;

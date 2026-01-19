@@ -19,6 +19,8 @@ public:
 	void SetFixedKey(BYTE fixedKey);
 	void SetCode(BYTE code);
 
+	bool isValidCode(BYTE code);
+
 private:
 	BYTE _fixedKey;
 	BYTE _code;

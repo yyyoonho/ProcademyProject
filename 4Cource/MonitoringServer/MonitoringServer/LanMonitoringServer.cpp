@@ -47,7 +47,14 @@ void LanMonitoringServer::Stop()
 
 bool LanMonitoringServer::OnConnectionRequest(SOCKADDR_IN clientAddr)
 {
-	return false;
+	DWORD ip = ntohl(clientAddr.sin_addr.S_un.S_addr);
+
+	if (ip != 0x7f000001)
+	{
+		return false;
+	}
+	
+	return true;
 }
 
 void LanMonitoringServer::OnAccept(DWORD64 sessionID, SOCKADDR_IN addr)

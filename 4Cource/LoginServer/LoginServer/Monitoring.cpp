@@ -61,9 +61,9 @@ void Monitoring::Increase(MonitorType type)
 	_monitoringArr[(int)type]++;
 }
 
-void Monitoring::IncreaseInterlocked(MonitorType type)
+LONG Monitoring::IncreaseInterlocked(MonitorType type)
 {
-	InterlockedIncrement(&_monitoringArr[(int)type]);
+	return InterlockedIncrement(&_monitoringArr[(int)type]);
 }
 
 void Monitoring::Decrease(MonitorType type)
@@ -92,6 +92,13 @@ void Monitoring::Clear()
 
 	_monitoringArr[(int)MonitorType::lockfreeQ_FULL] = LockFreeQueue<RawPtr>::mp.fullChunkStackCount;
 	_monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] = LockFreeQueue<RawPtr>::mp.emptyChunkStackCount;
+}
+
+LONG Monitoring::GetInterlocked(MonitorType type)
+{
+	LONG ret = InterlockedAdd(&_monitoringArr[(int)type], 0);
+
+	return ret;
 }
 
 void Monitoring::UpdatePDHnCpuUsage()

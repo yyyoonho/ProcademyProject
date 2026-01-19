@@ -31,7 +31,7 @@ int main()
 	Lan_monitoringServer.RegisterNetServer(&Net_monitoringServer);
 	Local_monitoring.RegisterNetServer(&Net_monitoringServer);
 
-	bool serverRet = Net_monitoringServer.Start(L"127.0.0.1", 20603, 6, 24, TRUE, 20000, TRUE, 30, 109);
+	bool serverRet = Net_monitoringServer.Start(L"127.0.0.1", 20603, 6, 24, TRUE, 100, TRUE, 30, 109);
 	if (serverRet == false)
 	{
 		printf("NetServer start error\n");

@@ -35,6 +35,9 @@ enum class MonitorType : int
 
 	AuthTPS,
 
+	LoginProcessingCount,
+
+
 	COUNT,
 };
 
@@ -50,11 +53,13 @@ private:
 public:
 	static Monitoring* GetInstance();
 	void Increase(MonitorType type);
-	void IncreaseInterlocked(MonitorType type);
+	LONG IncreaseInterlocked(MonitorType type);
 	void Decrease(MonitorType type);
 	void DecreaseInterlocked(MonitorType type);
 	void PrintMonitoring();
 	void Clear();
+
+	LONG GetInterlocked(MonitorType type);
 
 public:
 	void UpdatePDHnCpuUsage();

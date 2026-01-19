@@ -50,7 +50,7 @@ bool ChatServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		return 0;
 
 	_hMonitoringThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&MonitorThreadRun, this, NULL, NULL);
-	//_hThread_Heartbeat = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&HeartbeatThreadRun, this, NULL, NULL);
+	_hThread_Heartbeat = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&HeartbeatThreadRun, this, NULL, NULL);
 
 	return true;
 }
@@ -81,6 +81,12 @@ void ChatServer::OnAccept(DWORD64 sessionID)
 		newPlayer->state = PLAYER_STATE::ACCEPT;
 
 		newPlayer->heartbeat = GetTickCount64();
+
+		// rateLimit 초기화
+		newPlayer->rateLimitTick = timeGetTime();
+		newPlayer->rateLimitMsgCount = 0;
+		newPlayer->rateLimitOutCount = 0;
+
 		ReleaseSRWLockExclusive(&newPlayer->playerLock);
 	}
 	
@@ -145,11 +151,11 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		break;
 
 	default:
-		// attack #2
+		// attack #2 O
 		flag = false;
 		Disconnect(sessionID);
 		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
-		break;
+		return;
 	}
 
 	if (flag == true)
@@ -157,18 +163,13 @@ void ChatServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		// 하트비트 업데이트
 		UpdateHeartbeat(sessionID);
 
-		// TODO: 클라이언트가 1초에 10개 이상의 메시지를 보냈으면 킥. (단, 2OUT 시 킥)
+		// 클라이언트가 1초에 10개 이상의 메시지를 보냈으면 킥. (단, 2OUT 시 킥)
 		bool rateRet = CheckMessageRateLimit(sessionID);
 		if (rateRet == false)
 		{
 			Disconnect(sessionID);
 			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #12 Disconnect");
 		}
-	}
-	else
-	{
-		Disconnect(sessionID);
-		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #10 Disconnect");
 	}
 }
 
@@ -189,7 +190,7 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	
 	
 	// TODO: 최대 유저에 대한 제한.
-	// attack #6
+	// attack #6 O
 	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::LoginProcessingCount);
 	LONG estimated =
 		Monitoring::GetInstance()->GetInterlocked(MonitorType::PlayerCount) +
@@ -203,6 +204,53 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #6 Disconnect");
 
 		return false;
+	}
+
+	// attack 14
+	// 비정상 accountNo에 대한 컷
+	{
+		bool valid = false;
+
+		// 첫 구간: 1 ~ 5001
+		if (accountNo >= 1 && accountNo <= 5001)
+		{
+			valid = true;
+		}
+		else if (accountNo >= 10000 && accountNo <= 95000)
+		{
+			INT64 base = (accountNo / 10000) * 10000;
+			if (accountNo >= base && accountNo <= base + 5000)
+			{
+				valid = true;
+			}
+		}
+
+		if (!valid)
+		{
+			Disconnect(sessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #14");
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
+
+			return false;
+		}
+	}
+
+
+	// 이미 로그인된 세션이 다시 로그인 요청
+	// attack #13
+	{
+		AcquireSRWLockShared(&SIDToPlayerLock);
+		auto iter = SIDToPlayer.find(sessionID);
+		if (iter != SIDToPlayer.end())
+		{
+			ReleaseSRWLockShared(&SIDToPlayerLock);
+
+			// attack #13
+			Disconnect(sessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #LOGIN_DUP_SESSION");
+			return false;
+		}
+		ReleaseSRWLockShared(&SIDToPlayerLock);
 	}
 
 
@@ -350,16 +398,17 @@ bool ChatServer::PacketProc_SectorMove(DWORD64 sessionID, SerializePacketPtr pPa
 
 	
 	if (IsMyAccountNo(sessionID, accountNo) == false)
-		return false;
-
-
 	{
-		if (newSectorY >= MAX_SECTOR_Y || newSectorX >= MAX_SECTOR_X)
-		{
-			Disconnect(sessionID);
-			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
-			return false;
-		}
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #10 Disconnect");
+		return false;
+	}
+
+	if (newSectorY >= MAX_SECTOR_Y || newSectorX >= MAX_SECTOR_X)
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
+		return false;
 	}
 
 	AcquireSRWLockShared(&SIDToPlayerLock);
@@ -493,7 +542,11 @@ bool ChatServer::PacketProc_Message(DWORD64 sessionID, SerializePacketPtr pPacke
 	int len = pPacket.GetData((char*)msg, msgLen);
 
 	if (IsMyAccountNo(sessionID, accountNo) == false)
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #10 Disconnect");
 		return false;
+	}
 
 	if (len != msgLen)
 	{

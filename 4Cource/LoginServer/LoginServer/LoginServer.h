@@ -33,7 +33,7 @@ private:
 	void PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket);
 
 private:
-	void PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket);
+	bool PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket);
 	bool AuthorizeToken(INT64 accountNo, const char* token);
 	bool SaveTokenToRedis(INT64 accountNo, const char* sessionKey);
 	void SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID);
@@ -54,7 +54,7 @@ private:
 	static void HeartbeatThreadRun(LPVOID* lParam);
 	void HeartbeatThread();
 
-
+	bool CheckMessageRateLimit(DWORD64 sessionID);
 
 private:
 	HANDLE hEvent_Quit;
@@ -88,5 +88,8 @@ private:
 	NetClient_Monitoring* pNetClient;
 public:
 	void RegisterNetServer(NetClient_Monitoring* pNetClient);
+
+private:
+	unsigned int _maxPlayerCount;
 };
 

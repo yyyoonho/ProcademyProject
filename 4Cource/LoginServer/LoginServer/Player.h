@@ -12,4 +12,10 @@ struct Player
 
 	std::mutex playerLock;
 	DWORD64 heartbeat;
+
+
+	// RateLimit
+	DWORD rateLimitTick;
+	DWORD rateLimitMsgCount;
+	DWORD rateLimitOutCount;
 };

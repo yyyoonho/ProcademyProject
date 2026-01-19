@@ -31,9 +31,9 @@ void Monitoring::Increase(MonitorType type)
 	_monitoringArr[(int)type]++;
 }
 
-void Monitoring::IncreaseInterlocked(MonitorType type)
+LONG Monitoring::IncreaseInterlocked(MonitorType type)
 {
-	InterlockedIncrement(&_monitoringArr[(int)type]);
+	return InterlockedIncrement(&_monitoringArr[(int)type]);
 }
 
 void Monitoring::Decrease(MonitorType type)
@@ -50,6 +50,13 @@ void Monitoring::Clear()
 {
 	InterlockedExchange(&_monitoringArr[(int)MonitorType::RecvMessageTPS], 0);
 	InterlockedExchange(&_monitoringArr[(int)MonitorType::SendMessageTPS], 0);
+}
+
+LONG Monitoring::GetInterlocked(MonitorType type)
+{
+	LONG ret = InterlockedAdd(&_monitoringArr[(int)type], 0);
+
+	return ret;
 }
 
 void Monitoring::PrintMonitoring()

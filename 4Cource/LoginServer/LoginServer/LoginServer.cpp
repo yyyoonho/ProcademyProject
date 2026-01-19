@@ -4,6 +4,8 @@
 #pragma comment (lib, "cpp_redis.lib")
 #pragma comment (lib, "tacopie.lib")
 
+#include "LogManager.h"
+
 #include "MyConfig.h"
 #include "CommonProtocol.h"
 #include "Monitoring.h"
@@ -140,6 +142,8 @@ bool LoginServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 		return false;
 	}
 
+	_maxPlayerCount = 15000;
+
 	myConfig.Load("LoginConfig.ini");
 	ConvertToUTF16();
 
@@ -179,6 +183,11 @@ void LoginServer::OnAccept(DWORD64 sessionID, SOCKADDR_IN addr)
 		newPlayer->sessionID = sessionID;
 		newPlayer->_addr = addr;
 		newPlayer->heartbeat = GetTickCount64();
+
+		// rateLimit 초기화
+		newPlayer->rateLimitTick = timeGetTime();
+		newPlayer->rateLimitMsgCount = 0;
+		newPlayer->rateLimitOutCount = 0;
 	}
 
 	{
@@ -211,23 +220,115 @@ void LoginServer::PacketProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 	WORD msgType;
 	pPacket >> msgType;
 
+	bool flag = true;
+
 	switch (msgType)
 	{
 	case en_PACKET_CS_LOGIN_REQ_LOGIN:
-		PacketProc_Login(sessionID, pPacket);
+		flag = PacketProc_Login(sessionID, pPacket);
 		break;
+
+	default:
+		// attack #2
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
+		return;
 	}
 
-	UpdateHeartbeat(sessionID);
+	if (flag == true)
+	{
+		UpdateHeartbeat(sessionID);
+
+		// 클라이언트가 1초에 10개 이상의 메시지를 보냈으면 킥. (단, 2OUT 시 킥)
+		bool rateRet = CheckMessageRateLimit(sessionID);
+		if (rateRet == false)
+		{
+			Disconnect(sessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #12 Disconnect");
+		}
+	}
+	
 }
 
-void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
+bool LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 {
 	INT64 accountNo;
 	char sessionKey[64];
 
 	pPacket >> accountNo;
 	pPacket.GetData(sessionKey, sizeof(char) * 64);
+
+
+	// 최대 유저에 대한 제한.
+	// attack #6
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::LoginProcessingCount);
+	LONG estimated =
+		Monitoring::GetInstance()->GetInterlocked(MonitorType::PlayerCount) +
+		Monitoring::GetInstance()->GetInterlocked(MonitorType::LoginProcessingCount);
+
+	if (estimated > _maxPlayerCount)
+	{
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
+		Disconnect(sessionID);
+
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #6 Disconnect");
+
+		return false;
+	}
+
+	// attack 14
+	// 비정상 accountNo에 대한 컷
+	{
+		bool valid = false;
+
+		// 첫 구간: 1 ~ 5001
+		if (accountNo >= 1 && accountNo <= 5001)
+		{
+			valid = true;
+		}
+		else if (accountNo >= 10000 && accountNo <= 95000)
+		{
+			INT64 base = (accountNo / 10000) * 10000;
+			if (accountNo >= base && accountNo <= base + 5000)
+			{
+				valid = true;
+			}
+		}
+
+		if (!valid)
+		{
+			Disconnect(sessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #14");
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
+
+			return false;
+		}
+	}
+
+	// 이미 로그인된 세션이 다시 로그인 요청
+	{
+		lock_guard<mutex> lock(SIDToPlayerLock);
+		auto iter = SIDToPlayer.find(sessionID);
+		if (iter != SIDToPlayer.end())
+		{
+			// attack #13
+			Disconnect(sessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #LOGIN_DUP_SESSION");
+
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
+			return false;
+		}
+	}
+
+	// 1단계: 토큰인증(=플랫폼API 다녀오는 절차)
+	if (AuthorizeToken(accountNo, sessionKey) == false)
+	{
+		Disconnect(sessionID);
+
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
+		return false;
+	}
+
 
 	// 중복로그인 검사 + 등록을 한번에.
 	DWORD64 oldSID = 0;
@@ -260,7 +361,8 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 			if (iter == tmpSIDToPlayer.end())
 			{
 				DebugBreak();
-				return;
+				Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
+				return false;
 			}
 
 			loginPlayer = iter->second;
@@ -282,9 +384,7 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 	}
 
 	
-	// 1단계: 토큰인증(=플랫폼API 다녀오는 절차)
-	if (AuthorizeToken(accountNo, sessionKey) == false)
-		return;
+	
 
 	// 2단계: Redis에 토큰 저장
 	SaveTokenToRedis(accountNo, sessionKey);
@@ -292,7 +392,11 @@ void LoginServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket
 	// 3단계: Send RES
 	SendPacket_RES_LOGIN(accountNo, sessionID);
 
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::PlayerCount);
+	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::LoginProcessingCount);
 	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::AuthTPS);
+
+	return true;
 }
 
 bool LoginServer::AuthorizeToken(INT64 accountNo, const char* token)
@@ -306,7 +410,7 @@ bool LoginServer::AuthorizeToken(INT64 accountNo, const char* token)
 	DBResult queryResult;
 	DBConnector::GetInstance()->QueryRead(job, queryResult);
 
-	string tmpToken = queryResult[0]["sessionkey"];
+	//string tmpToken = queryResult[0]["sessionkey"];
 
 	return true;
 }
@@ -494,6 +598,8 @@ bool LoginServer::ReleaseOriginPlayer(DWORD64 sessionID)
 
 	mp.Free(removed);
 
+	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PlayerCount);
+
 	return true;
 }
 
@@ -606,4 +712,56 @@ void LoginServer::HeartbeatThread()
 			Disconnect(kickVec[i]);
 		}
 	}
+}
+
+bool LoginServer::CheckMessageRateLimit(DWORD64 sessionID)
+{
+	Player* pPlayer = NULL;
+	{
+		lock_guard<mutex> lock(SIDToPlayerLock);
+
+		auto iter = SIDToPlayer.find(sessionID);
+		if (iter == SIDToPlayer.end())
+		{
+			return false;
+		}
+
+		pPlayer = iter->second;
+	}
+
+	DWORD now = timeGetTime();
+	bool ret = true;
+
+	{
+		lock_guard<mutex> lock(pPlayer->playerLock);
+
+		// 1초 갱신
+		if (now - pPlayer->rateLimitTick >= 1000)
+		{
+			pPlayer->rateLimitTick = now;
+			pPlayer->rateLimitMsgCount = 0;
+		}
+
+		// 메시지 갯수 증가
+		pPlayer->rateLimitMsgCount++;
+
+		// 아웃카운트 검사
+		if (pPlayer->rateLimitMsgCount > 10)
+		{
+			pPlayer->rateLimitOutCount++;
+
+			if (pPlayer->rateLimitOutCount >= 2)
+			{
+				ret = false;
+			}
+			else
+			{
+				pPlayer->rateLimitTick = now;
+				pPlayer->rateLimitMsgCount = 0;
+			}
+		}
+
+	}
+
+	return ret;
 }
