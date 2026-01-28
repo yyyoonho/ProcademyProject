@@ -171,13 +171,13 @@ void Monitoring::PrintMonitoring()
 		<< " " << _monitoringArr[(int)MonitorType::RecvMessageTPS] << "\n";
 	cout << right << setw(NAME_WIDTH) << "SendMessageTPS:"
 		<< " " << _monitoringArr[(int)MonitorType::SendMessageTPS] << "\n";
-	cout << "-------------------------------------------------------------------------------\n\n";
-	cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
-		<< (_monitoringArr[(int)MonitorType::HB_Kick]) << "\n";
-	cout << right << setw(NAME_WIDTH) << "DuplicateLogin:" << " "
-		<< _monitoringArr[(int)MonitorType::DuplicateLogin] << "\n";
-	cout << right << setw(NAME_WIDTH) << "HB_Kick:" << " "
-		<< _monitoringArr[(int)MonitorType::HB_Kick] << "\n";
+	//cout << "-------------------------------------------------------------------------------\n\n";
+	//cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
+	//	<< (_monitoringArr[(int)MonitorType::HB_Kick]) << "\n";
+	//cout << right << setw(NAME_WIDTH) << "DuplicateLogin:" << " "
+	//	<< _monitoringArr[(int)MonitorType::DuplicateLogin] << "\n";
+	//cout << right << setw(NAME_WIDTH) << "HB_Kick:" << " "
+	//	<< _monitoringArr[(int)MonitorType::HB_Kick] << "\n";
 	cout << "-------------------------------------------------------------------------------\n";
 	cout << right << setw(NAME_WIDTH) << "SendJobQ Size:" << " "
 		<< _monitoringArr[(int)MonitorType::SendJobQ] << "\n";

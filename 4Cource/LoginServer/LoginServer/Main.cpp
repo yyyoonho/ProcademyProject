@@ -14,6 +14,7 @@
 #include "NetServer.h"
 #include "LoginServer.h"
 
+#include "DB_Profiler.h"
 using namespace std;
 
 procademy::CCrashDump dump;
@@ -55,6 +56,7 @@ int main()
 		if (inputKey == 'Q' || inputKey == 'q')
 		{
 			loginServer1.Stop();
+			DBProfilerRecordStop();
 
 			break;
 		}

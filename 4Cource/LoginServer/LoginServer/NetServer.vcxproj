@@ -137,6 +137,7 @@
     <ClCompile Include="CpuUsage.cpp" />
     <ClCompile Include="DBConnector.cpp" />
     <ClCompile Include="DBJob.cpp" />
+    <ClCompile Include="DB_Profiler.cpp" />
     <ClCompile Include="LoginServer.cpp" />
     <ClCompile Include="LoginServer_Monitoring.cpp" />
     <ClCompile Include="LogManager.cpp" />
@@ -159,6 +160,7 @@
     <ClInclude Include="CpuUsage.h" />
     <ClInclude Include="DBConnector.h" />
     <ClInclude Include="DBJob.h" />
+    <ClInclude Include="DB_Profiler.h" />
     <ClInclude Include="LockFree_Queue.h" />
     <ClInclude Include="LoginServer.h" />
     <ClInclude Include="LogManager.h" />

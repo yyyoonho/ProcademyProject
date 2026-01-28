@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "DB_Profiler.h"
 
 #include "DBJob.h"
 
@@ -54,6 +55,8 @@ void DBQuestComplete::Exec(MYSQL* connection)
 
 void DBCheckAccountInfo::Exec(MYSQL* connection, DBResult& queryResult)
 {
+	DB_PRO_BEGIN("DBCheckAccountInfo");
+
 	// Select 쿼리문
 	string query = "SELECT * FROM sessionKey WHERE accountNo = " + to_string(_accountNo);
 	int query_stat = mysql_query(connection, query.c_str());
@@ -62,6 +65,8 @@ void DBCheckAccountInfo::Exec(MYSQL* connection, DBResult& queryResult)
 		printf("Mysql query error : %s", mysql_error(connection));
 		return;
 	}
+
+	DB_PRO_END("DBCheckAccountInfo");
 
 	// 결과출력
 	MYSQL_RES* sql_result;

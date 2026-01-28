@@ -185,6 +185,42 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 	pPacket.GetData((char*)&NicnkName, sizeof(WCHAR) * 20);
 	pPacket.GetData(sessionKey, sizeof(char) * 64);
 
+	bool hasNull = false;
+	for (int i = 0; i < 20; i++)
+	{
+		if (ID[i] == L'\0')
+		{
+			hasNull = true;
+			break;
+		}
+	}
+
+	if (hasNull == false)
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #15_1 Disconnect");
+		return false;
+	}
+
+	hasNull = false;
+	for (int i = 0; i < 20; i++)
+	{
+		if (NicnkName[i] == L'\0')
+		{
+			hasNull = true;
+			break;
+		}
+	}
+
+	if (hasNull == false)
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #15_2 Disconnect");
+		return false;
+	}
+
+
+
 	BYTE status = 1;
 
 	
@@ -333,8 +369,12 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 		loginPlayer->sessionID = sessionID;
 		loginPlayer->accountNo = accountNo;
-		wcscpy_s(loginPlayer->ID, ID);
-		wcscpy_s(loginPlayer->nickName, NicnkName);
+		//wcscpy_s(loginPlayer->ID, ID);
+		//wcscpy_s(loginPlayer->nickName, NicnkName);
+
+		wcscpy_s(loginPlayer->ID, _countof(loginPlayer->ID), ID);
+		wcscpy_s(loginPlayer->nickName, _countof(loginPlayer->nickName), NicnkName);
+
 		memcpy(loginPlayer->sessionKey, sessionKey, 64);
 
 		loginPlayer->heartbeat = GetTickCount64();
@@ -820,7 +860,7 @@ void ChatServer::HeartbeatThread()
 			if (diff > 1000 * 15)
 			{
 				unresponsivePlayers.push_back(sid);
-				_LOG(dfLOG_LEVEL_SYSTEM, L"%ls %llu\n", L"diff: ", diff);
+				//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls %llu\n", L"diff: ", diff);
 			}
 		}
 		ReleaseSRWLockShared(&tmpPlayerArrLock);
@@ -844,7 +884,7 @@ void ChatServer::HeartbeatThread()
 			if (diff > 1000 * 30)
 			{
 				unresponsivePlayers.push_back(sid);
-				_LOG(dfLOG_LEVEL_SYSTEM, L"%ls %llu\n", L"diff: ", diff);
+				//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls %llu\n", L"diff: ", diff);
 			}
 
 		}
@@ -959,6 +999,7 @@ bool ChatServer::CheckMessageRateLimit(DWORD64 sessionID)
 
 		if (pPlayer->rateLimitOutCount >= 2)
 		{
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"rateLimitOut");
 			ret = false;
 		}
 		else

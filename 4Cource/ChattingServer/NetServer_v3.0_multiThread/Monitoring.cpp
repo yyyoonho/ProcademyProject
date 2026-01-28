@@ -186,16 +186,16 @@ void Monitoring::PrintMonitoring()
 	cout << right << setw(NAME_WIDTH) << "PlayerArrSize:" << " "
 		<< _monitoringArr[(int)MonitorType::PlayerArrSize] << "\n";
 
-	cout << "-------------------------------------------------------------------------------\n";
-
-	cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
-		<< (_monitoringArr[(int)MonitorType::TokenFailed] +
-			_monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin]) << "\n";
-	cout << right << setw(NAME_WIDTH) << "Invalid Token:" << " "
-		<< _monitoringArr[(int)MonitorType::TokenFailed] << "\n";
-	cout << right << setw(NAME_WIDTH) << "Duplicate Login:" << " "
-		<< _monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin] << "\n";
-
+	//cout << "-------------------------------------------------------------------------------\n";
+	//
+	//cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
+	//	<< (_monitoringArr[(int)MonitorType::TokenFailed] +
+	//		_monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin]) << "\n";
+	//cout << right << setw(NAME_WIDTH) << "Invalid Token:" << " "
+	//	<< _monitoringArr[(int)MonitorType::TokenFailed] << "\n";
+	//cout << right << setw(NAME_WIDTH) << "Duplicate Login:" << " "
+	//	<< _monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin] << "\n";
+	//
 	cout << "-------------------------------------------------------------------------------\n";
 
 	cout << right << setw(NAME_WIDTH) << "SendJobQ Size:" << " "

@@ -462,7 +462,7 @@ void LoginServer::SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID)
 	newPacket.Clear();
 
 	WORD type = en_PACKET_CS_LOGIN_RES_LOGIN;
-	BYTE status = dfGAME_LOGIN_OK;
+	BYTE status = dfMONITOR_TOOL_LOGIN_OK;
 
 	WCHAR ID[20] = { 0 };
 	WCHAR Nickname[20] = { 0 };
@@ -488,9 +488,13 @@ void LoginServer::SendPacket_RES_LOGIN(INT64 accountNo, DWORD64 sessionID)
 	{
 		wcscpy_s(ChatServerIP, _chattingServerIpStr2);
 	}
-	else
+	else if(ntohl(playerAddr.sin_addr.S_un.S_addr) == 0x7f000001)
 	{
 		wcscpy_s(ChatServerIP, L"127.0.0.1");
+	}
+	else
+	{
+		wcscpy_s(ChatServerIP, L"106.245.38.102");
 	}
 	ChatServerPort = 20601;
 
@@ -752,6 +756,7 @@ bool LoginServer::CheckMessageRateLimit(DWORD64 sessionID)
 
 			if (pPlayer->rateLimitOutCount >= 2)
 			{
+				_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"rateLimitOut");
 				ret = false;
 			}
 			else

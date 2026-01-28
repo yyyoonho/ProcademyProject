@@ -107,6 +107,9 @@
     <ClCompile Include="LoginServer_Monitoring.cpp">
       <Filter>소스 파일\LoginServer\CS</Filter>
     </ClCompile>
+    <ClCompile Include="DB_Profiler.cpp">
+      <Filter>소스 파일\DB</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -171,6 +174,9 @@
     </ClInclude>
     <ClInclude Include="CpuUsage.h">
       <Filter>소스 파일\Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="DB_Profiler.h">
+      <Filter>소스 파일\DB</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

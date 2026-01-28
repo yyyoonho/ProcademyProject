@@ -107,6 +107,9 @@
     <ClCompile Include="LocalMonitoring.cpp">
       <Filter>소스 파일\MonitoringServer\LocalMonitoring</Filter>
     </ClCompile>
+    <ClCompile Include="DB_Profiler.cpp">
+      <Filter>소스 파일\DB</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -168,6 +171,9 @@
     </ClInclude>
     <ClInclude Include="LocalMonitoring.h">
       <Filter>소스 파일\MonitoringServer\LocalMonitoring</Filter>
+    </ClInclude>
+    <ClInclude Include="DB_Profiler.h">
+      <Filter>소스 파일\DB</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

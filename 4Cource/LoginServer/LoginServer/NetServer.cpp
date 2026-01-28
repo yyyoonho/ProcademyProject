@@ -30,7 +30,7 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 
 	for (int i = 19999; i >= 0; i--)
 	{
-		_sessionArray[i].recvQ.Resize(10000);
+		_sessionArray[i].recvQ.Resize(5000);
 
 		_releaseIdxLockFreeStack.Push(i);
 	}
@@ -267,6 +267,7 @@ bool CNetServer::RecvProc(Session* pSession)
 	int tmp = pSession->recvQ.GetFreeSize();
 	if (pSession->recvQ.GetFreeSize() == 0)
 	{
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 		return false;
 	}
 
@@ -500,11 +501,11 @@ void CNetServer::WorkerThread()
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
-					if (ret == false)
-					{
-						Disconnect(pSession->sessionID);
-						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
-					}
+					//if (ret == false)
+					//{
+					//	Disconnect(pSession->sessionID);
+					//	_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
+					//}
 
 
 					break;
@@ -526,11 +527,11 @@ void CNetServer::WorkerThread()
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
-					if (ret == false)
-					{
-						Disconnect(pSession->sessionID);
-						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
-					}
+					//if (ret == false)
+					//{
+					//	Disconnect(pSession->sessionID);
+					//	_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
+					//}
 
 
 					break;

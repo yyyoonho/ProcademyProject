@@ -56,18 +56,5 @@ int main()
 		Monitoring::GetInstance()->Clear();
 	}
 
-	//while (1)
-	//{
-	//	//ProfilerInput();
-
-	//	char inputKey = _getch();
-	//	if (inputKey == 'Q' || inputKey == 'q')
-	//	{
-	//		//chattingServer.Stop();
-
-	//		break;
-	//	}
-	//}
-
 	return 0;
 }

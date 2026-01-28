@@ -1,5 +1,5 @@
 #include "stdafx.h"
-
+#include "DB_Profiler.h"
 #include "DBJob.h"
 
 using namespace std;
@@ -106,6 +106,8 @@ void DBCheckAccountInfo::Exec(MYSQL* connection, DBResult& queryResult)
 
 void DBMonitoringLog::Exec(MYSQL* connection)
 {
+	DB_PRO_BEGIN("DBMonitoringLog");
+
 	string query =
 		"INSERT INTO monitorlog (logtime, serverno, type, avg, min, max) VALUES ("
 		"NOW(), " +
@@ -120,4 +122,6 @@ void DBMonitoringLog::Exec(MYSQL* connection)
 	{
 		printf("DBQuestComplete error: %s\n", mysql_error(connection));
 	}
+
+	DB_PRO_END("DBMonitoringLog");
 }

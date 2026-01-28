@@ -266,6 +266,7 @@ bool CNetServer::RecvProc(Session* pSession)
 	// attack #8 테스트
 	if (pSession->recvQ.GetFreeSize() == 0)
 	{
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 		return false;
 	}
 
@@ -506,11 +507,11 @@ void CNetServer::WorkerThread()
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
-					if (ret == false)
-					{
-						Disconnect(pSession->sessionID);
-						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
-					}
+					//if (ret == false)
+					//{
+					//	Disconnect(pSession->sessionID);
+					//	_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
+					//}
 
 
 					break;
@@ -532,11 +533,11 @@ void CNetServer::WorkerThread()
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
-					if (ret == false)
-					{
-						Disconnect(pSession->sessionID);
-						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
-					}
+					//if (ret == false)
+					//{
+					//	Disconnect(pSession->sessionID);
+					//	_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
+					//}
 
 
 					break;
