@@ -72,6 +72,9 @@ void GameManager::OnAccept_GameManager(DWORD64 sessionID, Session* pSession)
 	// OnAccept -> 첫 접속
 	// AuthTh의 큐에 삽입.
 
+	// 세션 수명관리 테스트
+	//IncreaseIO_Count(pSession);
+
 	FieldBundle* pAuthFieldBundle = NULL;
 
 	{
@@ -109,8 +112,6 @@ void GameManager::OnMessage_GameManager(DWORD64 sessionID, Session* pSession, Se
 
 void GameManager::OnRelease_GameManager(DWORD64 sessionID, Session* pSession)
 {
-	// (세션은 이미 Release된 상태)
-
 	// 세션에 표시를 해두자.
 	
 	// 이후는 콘텐츠에 맡기자.
@@ -282,6 +283,7 @@ void GameManager::FieldThreadFunc(void* param, int id)
 					break;
 				}
 
+				DecreaseIO_Count(pSession);
 				pFieldBundle->field->OnLeave(sid);
 			}
 
@@ -377,6 +379,7 @@ void GameManager::ShowFPS(int id)
 	thread_local static int count = 0;
 	count++;
 
+
 	if (timeGetTime() - tick >= 1000)
 	{
 		if (id == 0)
@@ -387,6 +390,8 @@ void GameManager::ShowFPS(int id)
 		count = 0;
 		tick += 1000;
 	}
+
+	return;
 }
 
 void GameManager::MonitorThread()

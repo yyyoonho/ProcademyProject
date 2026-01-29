@@ -41,11 +41,12 @@ private:
 	bool SendProc(Session* pSession);
 	void SendPost(Session* pSession);
 
-	void IncreaseIO_Count(Session* pSession);
-	bool DecreaseIO_Count(Session* pSession);
-
 	void PQCS_Release(Session* pSession);
 	void ReleaseProc(Session* pSession);
+
+protected:
+	void IncreaseIO_Count(Session* pSession);
+	bool DecreaseIO_Count(Session* pSession);
 
 protected:
 	unsigned int GetIdxFromSessionID(DWORD64 sessionID);

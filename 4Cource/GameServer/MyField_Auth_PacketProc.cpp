@@ -24,6 +24,9 @@ void MyField_Auth::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr sPacke
 	}
 
 	Player* pPlayer = iter->second;
+
+	pPlayer->accountNo = accountNo;
+	//memcpy(pPlayer->sessionKey, sessionKey, 64);
 	pPlayer->heartbeat = GetTickCount64();
 
 	MoveToOtherField(FieldName::Echo, sessionID, (void*)pPlayer);

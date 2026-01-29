@@ -104,6 +104,8 @@ bool CNetServer::Disconnect(DWORD64 sessionID)
 
 	CancelIoEx((HANDLE)(pSession->sock), NULL);
 
+	// 여기!
+
 	DecreaseIO_Count(pSession);
 
 	return true;
@@ -204,7 +206,8 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 void CNetServer::PQCS_SendReq(DWORD64 sessionID, SerializePacketPtr sPacket)
 {
 	SendPacketJob* pSendPacketJob = sendPacketJobPool.Alloc();
-	pSendPacketJob->sessionID;
+	
+	pSendPacketJob->sessionID = sessionID;
 	pSendPacketJob->packet = sPacket;
 
 	PostQueuedCompletionStatus(_hIOCP, NULL, (ULONG_PTR)pSendPacketJob, LPOVERLAPPED(&sendReqToIOCP));

@@ -42,7 +42,7 @@ void MyField_Echo::OnEnterWithPlayer(DWORD64 sessionID, void* pPlayer)
 	newPacket.Clear();
 
 	WORD type = en_PACKET_CS_GAME_RES_LOGIN;
-	BYTE status = 1;
+	BYTE status = dfGAME_LOGIN_OK;
 	INT64 accountNo = movePlayer->accountNo;
 
 	newPacket << type;
@@ -83,7 +83,7 @@ void MyField_Echo::OnUpdate()
 	// TODO(콘텐츠):
 	// 1. 하트비트 정도만 체크하자.
 
-	static DWORD64 oldTime = GetTickCount64();
+	/*static DWORD64 oldTime = GetTickCount64();
 
 	DWORD64 nowTime = GetTickCount64();
 	DWORD64 diff = nowTime - oldTime;
@@ -99,7 +99,7 @@ void MyField_Echo::OnUpdate()
 			continue;
 
 		Disconnect(sid);
-	}
+	}*/
 }
 
 void MyField_Echo::OnLeave(DWORD64 sessionID)
