@@ -44,6 +44,8 @@ private:
 	void PQCS_Release(Session* pSession);
 	void ReleaseProc(Session* pSession);
 
+	void NotifyDisconnect(Session* pSession);
+
 protected:
 	void IncreaseIO_Count(Session* pSession);
 	bool DecreaseIO_Count(Session* pSession);
@@ -115,4 +117,5 @@ private:
 private:
 	myOverlapped sendReqToIOCP;
 	myOverlapped disconnectReqToIOCP;
+	myOverlapped releaseReqToIOCP;
 };

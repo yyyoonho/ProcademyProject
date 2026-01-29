@@ -79,4 +79,5 @@ struct Session
     //LockFreeQueue<RawPtr> contentMsgQ;
     RingBuffer      contentMsgQ;
     bool            releaseWait;
+    LONG            disconnectNotified;
 };

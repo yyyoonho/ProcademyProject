@@ -104,7 +104,8 @@ bool CNetServer::Disconnect(DWORD64 sessionID)
 
 	CancelIoEx((HANDLE)(pSession->sock), NULL);
 
-	// 여기!
+	// NotifyDisconnect
+	NotifyDisconnect(pSession);
 
 	DecreaseIO_Count(pSession);
 
@@ -302,6 +303,9 @@ bool CNetServer::RecvProc(Session* pSession)
 		{
 			DecreaseIO_Count(pSession);
 
+			// NotifyDisconnect
+			NotifyDisconnect(pSession);
+
 			if (tmp != 10054 && tmp != 10038)
 				printf("Error: WSARecv() %d\n", tmp);
 
@@ -357,6 +361,9 @@ bool CNetServer::SendProc(Session* pSession)
 
 			DecreaseIO_Count(pSession);
 
+			// NotifyDisconnect
+			NotifyDisconnect(pSession);
+
 			if (tmp != 10054 && tmp != 10038)
 				printf("Error: WSASend() %d\n", tmp);
 
@@ -402,7 +409,7 @@ bool CNetServer::DecreaseIO_Count(Session* pSession)
 
 void CNetServer::PQCS_Release(Session* pSession)
 {
-	PostQueuedCompletionStatus(_hIOCP, NULL, (ULONG_PTR)pSession, NULL);
+	PostQueuedCompletionStatus(_hIOCP, NULL, (ULONG_PTR)pSession, LPOVERLAPPED(&releaseReqToIOCP));
 }
 
 void CNetServer::ReleaseProc(Session* pSession)
@@ -454,6 +461,16 @@ void CNetServer::ReleaseProc(Session* pSession)
 	_releaseIdxLockFreeStack.Push(idx);
 }
 
+void CNetServer::NotifyDisconnect(Session* pSession)
+{
+	// 중복 방지
+	if (InterlockedExchange(&pSession->disconnectNotified, TRUE) == TRUE)
+		return;
+
+	// GameManager에 알림
+	OnRelease_GameManager(pSession->sessionID, pSession);
+}
+
 unsigned int CNetServer::GetIdxFromSessionID(DWORD64 sessionID)
 {
 	unsigned int idx = (sessionID & 0xffff000000000000) >> 48;
@@ -502,17 +519,20 @@ void CNetServer::WorkerThread()
 
 
 		// TODO: ReleaseProc() 호출
-		if (pMyOverlapped == NULL && pSession != NULL)
+		if (pMyOverlapped == &releaseReqToIOCP)
 		{
 			ReleaseProc(pSession);
 			continue;
 		}
 
-		if (cbTransferred == 0)
+		if (cbTransferred == 0 && pMyOverlapped == NULL)
 		{
 			// 클라에서 FIN or RST 를 던졌다.
 			// 뭐.. 할수있느건 없다. 그저 DecreaseIO를 할 뿐
 			int a = 3;
+
+			// NotifyDisconnect
+			NotifyDisconnect(pSession);
 		}
 
 		if (pMyOverlapped == &sendReqToIOCP)
@@ -800,6 +820,8 @@ void CNetServer::AcceptThread()
 		_sessionArray[idx].cancelIOCheck = FALSE;
 
 		_sessionArray[idx].IOCountNReleaseCheck.releaseCheck = FALSE;
+
+		_sessionArray[idx].disconnectNotified = FALSE;
 
 
 		// Game용 변수 초기화

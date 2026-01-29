@@ -73,7 +73,7 @@ void GameManager::OnAccept_GameManager(DWORD64 sessionID, Session* pSession)
 	// AuthTh의 큐에 삽입.
 
 	// 세션 수명관리 테스트
-	//IncreaseIO_Count(pSession);
+	IncreaseIO_Count(pSession);
 
 	FieldBundle* pAuthFieldBundle = NULL;
 
