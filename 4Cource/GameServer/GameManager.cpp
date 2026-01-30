@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include "CustomProfiler.h"
+
 #include "Monitoring.h"
 #include "Field.h"
 #include "NetServer.h"
@@ -175,7 +177,6 @@ void GameManager::FieldThreadFunc(void* param, int id)
 		// 1. 넘어온 sessionID를 Key로 넘어온 Player 그대로 이양받기
 		// 2. newPlayer에게 줄 데이터들 sendPacket();
 		{
-			int tmp = pFieldBundle->threadQ_Join.GetUseSize();
 			int size = (pFieldBundle->threadQ_Join.GetUseSize() / sizeof(joinQContext));
 
 			for (int i = 0; i < size; i++)
@@ -217,6 +218,8 @@ void GameManager::FieldThreadFunc(void* param, int id)
 		// 2. 바로 메시지 처리하면된다.
 		{
 			int size = pFieldBundle->sessionVec.size();
+
+			PRO_BEGIN("OnRecv Out");
 			for (int i = 0; i < size; i++)
 			{
 				Session* pSession = pFieldBundle->sessionVec[i];
@@ -238,12 +241,14 @@ void GameManager::FieldThreadFunc(void* param, int id)
 
 					rawPtr.DecreaseRefCount();
 
+					PRO_BEGIN("OnRecv In");
 					// TODO: 4 O
 					pFieldBundle->field->OnRecv(sid, newPacket);
-				}
 
+					PRO_END("OnRecv In");
+				}
 			}
-			
+			PRO_END("OnRecv Out");
 		}
 
 		// OnUpdate

@@ -32,7 +32,7 @@ int main()
 	gameManager.RegistField(FieldName::Echo, echoField);
 
 
-	bool serverSet = gameManager.Start(L"127.0.0.1", 20609, 40, 10, TRUE, 25000, TRUE, 50, 119);
+	bool serverSet = gameManager.Start(L"127.0.0.1", 20609, 30, 10, TRUE, 25000, TRUE, 50, 119);
 	if (serverSet == false)
 	{
 		printf("server start error\n");

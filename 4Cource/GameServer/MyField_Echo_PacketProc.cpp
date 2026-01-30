@@ -25,7 +25,9 @@ void MyField_Echo::PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket
 	newPacket << accountNo;
 	newPacket << sendTick;
 
+	PRO_BEGIN("sendPacket");
 	SendPacket(sessionID, newPacket);
+	PRO_END("sendPacket");
 }
 
 void MyField_Echo::PacketProc_HB(DWORD64 sessionID)
