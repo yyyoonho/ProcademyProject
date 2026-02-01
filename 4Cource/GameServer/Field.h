@@ -30,6 +30,10 @@ public:
 	vector<FieldMovePack> movePackageVec;
 
 private:
+	// Å×½ºÆ®
+	procademy::MemoryPool_TLS<SendPacketJob> sendPacketJobPool{ 0,false };
+
+private:
 	GameManager* pGameManager;
 };
 

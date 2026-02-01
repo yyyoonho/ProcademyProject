@@ -29,9 +29,10 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	_hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
 	//for (int i = 19999; i >= 0; i--)
-	for (int i = 24999; i >= 0; i--)
+	//for (int i = 24999; i >= 0; i--)
+	for (int i = 9999; i >= 0; i--)
 	{
-		_sessionArray[i].recvQ.Resize(5000);
+		_sessionArray[i].recvQ.Resize(2000);
 
 		_releaseIdxLockFreeStack.Push(i);
 	}
@@ -61,6 +62,7 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 		hThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&CNetServer::WorkerThreadRun, this, NULL, NULL);
 		if (hThread == NULL)
 			return false;
+
 		_workerThreadHandles.push_back(hThread);
 	}
 
@@ -203,15 +205,9 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	return true;
 }
 
-
-void CNetServer::PQCS_SendReq(DWORD64 sessionID, SerializePacketPtr sPacket)
+void CNetServer::PQCS_SendReq(SendPacketJob* sendPacketJob)
 {
-	SendPacketJob* pSendPacketJob = sendPacketJobPool.Alloc();
-	
-	pSendPacketJob->sessionID = sessionID;
-	pSendPacketJob->packet = sPacket;
-
-	PostQueuedCompletionStatus(_hIOCP, NULL, (ULONG_PTR)pSendPacketJob, LPOVERLAPPED(&sendReqToIOCP));
+	PostQueuedCompletionStatus(_hIOCP, NULL, (ULONG_PTR)sendPacketJob, LPOVERLAPPED(&sendReqToIOCP));
 }
 
 
@@ -497,6 +493,8 @@ void CNetServer::WorkerThreadRun(LPVOID* lParam)
 
 void CNetServer::WorkerThread()
 {
+	LONG ret = Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::ActiveWorkerTh);
+
 	while (1)
 	{
 		// 비동기 IO 완료통지 대기
@@ -506,6 +504,8 @@ void CNetServer::WorkerThread()
 
 		SOCKADDR_IN clientAddr;
 		int addrLen = sizeof(clientAddr);
+
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::ActiveWorkerTh);
 
 		BOOL retVal = GetQueuedCompletionStatus(_hIOCP, &cbTransferred, (PULONG_PTR)&pSession, (LPWSAOVERLAPPED*)&pMyOverlapped, INFINITE);
 		if (pMyOverlapped == NULL && cbTransferred == NULL && pSession == NULL)
@@ -517,6 +517,7 @@ void CNetServer::WorkerThread()
 			return;
 		}
 
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::ActiveWorkerTh);
 
 		// TODO: ReleaseProc() 호출
 		if (pMyOverlapped == &releaseReqToIOCP)

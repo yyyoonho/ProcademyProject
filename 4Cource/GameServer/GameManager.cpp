@@ -32,6 +32,19 @@ bool GameManager::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	monitoringThread = thread(&GameManager::MonitorThread, this);
 
+	for (int i = 0; i < 3; i++)
+	{
+		RingBuffer* a = new RingBuffer;
+		sendPacketJobQ.push_back(a);
+
+		sendPacketJobQ[i]->Resize(2000000);
+
+		sendThreads.emplace_back(
+			&GameManager::SendPacketJobThread,
+			this,
+			i);
+	}
+
 	return true;
 }
 
@@ -135,6 +148,8 @@ void GameManager::FieldThreadFunc(void* param, int id)
 	{
 		FrameControl();
 		ShowFPS(id);
+
+		PRO_BEGIN("Total");
 
 		// OnEnter
 		// 1. threadQ_Create에서 디큐.
@@ -357,6 +372,8 @@ void GameManager::FieldThreadFunc(void* param, int id)
 			// 4.
 			pFieldBundle->field->movePackageVec.clear();
 		}
+
+		PRO_END("Total");
 	}
 }
 
@@ -456,4 +473,18 @@ void GameManager::RegistField(FieldName fieldName, Field* pField)
 void GameManager::RegistMonitoring(NetClient_Monitoring* pNetClient)
 {
 	this->pNetClient = pNetClient;
+}
+
+void GameManager::SendPacketJobThread(int id)
+{
+	while (1)
+	{
+		if (sendPacketJobQ[id]->GetUseSize() < sizeof(SendPacketJob*))
+			continue;
+
+		SendPacketJob* sendPacketJob;
+		sendPacketJobQ[id]->Dequeue((char*)&sendPacketJob, sizeof(SendPacketJob*));
+
+		PQCS_SendReq(sendPacketJob);
+	}
 }

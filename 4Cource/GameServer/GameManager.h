@@ -87,4 +87,10 @@ private:
 
 	unordered_map<FieldName, FieldBundle*>	fieldBundleMap;
 	mutex									fieldBundleMapLock;
+
+public:
+	// Å×½ºÆ®
+	vector<RingBuffer*>						sendPacketJobQ;
+	vector<std::thread>						sendThreads;
+	void									SendPacketJobThread(int id);
 };

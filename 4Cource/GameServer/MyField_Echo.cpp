@@ -74,8 +74,6 @@ void MyField_Echo::OnRecv(DWORD64 sessionID, SerializePacketPtr sPacket)
 		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvHeartbeatTPS);
 		break;
 	}
-
-
 }
 
 void MyField_Echo::OnUpdate()

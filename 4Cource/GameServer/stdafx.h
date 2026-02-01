@@ -3,7 +3,7 @@
 #pragma comment(lib, "winmm.lib")
 
 #pragma comment(lib, "ws2_32.lib")
-#pragma comment(lib, "RingBuffer.lib")
+//#pragma comment(lib, "RingBuffer.lib")
 
 //#pragma comment (lib, "cpp_redis.lib")
 //#pragma comment (lib, "tacopie.lib")

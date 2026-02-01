@@ -30,7 +30,7 @@ public:
 public:
 	procademy::MemoryPool_TLS<SendPacketJob> sendPacketJobPool{ 0,false };
 
-	void PQCS_SendReq(DWORD64 sessionID, SerializePacketPtr sPacket);
+	void PQCS_SendReq(SendPacketJob* sendPacketJob);
 	void PQCS_Disconnect(DWORD64 sessionID);
 	
 private:
@@ -97,7 +97,7 @@ private:
 
 protected:
 	// 멤버 변수: 세션배열관리
-	Session _sessionArray[25000];
+	Session _sessionArray[10000];
 	LockFreeStack<unsigned int> _releaseIdxLockFreeStack;
 
 private:

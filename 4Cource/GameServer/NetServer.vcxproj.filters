@@ -119,6 +119,9 @@
     <ClCompile Include="GameManager_Monitoring.cpp">
       <Filter>소스 파일\GameManager</Filter>
     </ClCompile>
+    <ClCompile Include="RingBuffer.cpp">
+      <Filter>소스 파일\NetLib\Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -186,6 +189,9 @@
     </ClInclude>
     <ClInclude Include="FieldStruct.h">
       <Filter>소스 파일\00. MyField\FieldStruct</Filter>
+    </ClInclude>
+    <ClInclude Include="RingBuffer.h">
+      <Filter>소스 파일\NetLib\Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

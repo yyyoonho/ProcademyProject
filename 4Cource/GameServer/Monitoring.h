@@ -30,6 +30,8 @@ enum class MonitorType : int
 
 	SendJobQ,				//										O
 
+	ActiveWorkerTh,
+
 	COUNT,
 };
 
@@ -41,6 +43,7 @@ private:
 private:
 	Monitoring();
 	~Monitoring();
+	
 
 public:
 	static Monitoring* GetInstance();

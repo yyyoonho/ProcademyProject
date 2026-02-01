@@ -12,6 +12,7 @@
 #include "Monitoring.h"
 
 Monitoring* Monitoring::_pMonitoring = NULL;
+mutex initLock;
 
 Monitoring::Monitoring()
 {
@@ -48,9 +49,18 @@ Monitoring::~Monitoring()
 
 Monitoring* Monitoring::GetInstance()
 {
-	if (_pMonitoring == NULL)
+	/*if (_pMonitoring == NULL)
 	{
 		_pMonitoring = new Monitoring;
+	}*/
+
+	if (_pMonitoring == NULL)
+	{
+		lock_guard<mutex> lock(initLock);
+		if (_pMonitoring == NULL)
+		{
+			_pMonitoring = new Monitoring;
+		}
 	}
 
 	return _pMonitoring;
@@ -74,6 +84,7 @@ void Monitoring::Decrease(MonitorType type)
 void Monitoring::DecreaseInterlocked(MonitorType type)
 {
 	InterlockedDecrement(&_monitoringArr[(int)type]);
+	
 }
 
 void Monitoring::Clear()
@@ -191,6 +202,8 @@ void Monitoring::PrintMonitoring()
 
 	cout << right << setw(NAME_WIDTH) << "SendJobQ Size:" << " "
 		<< _monitoringArr[(int)MonitorType::SendJobQ] << "\n";
+	cout << right << setw(NAME_WIDTH) << "ActiveWorkerTh Count:" << " "
+		<< _monitoringArr[(int)MonitorType::ActiveWorkerTh] << "\n";
 
 	cout << "===============================================================================\n\n";
 
