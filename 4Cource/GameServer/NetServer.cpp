@@ -542,8 +542,10 @@ void CNetServer::WorkerThread()
 
 			DWORD64 sessionID = pSendPacketJob->sessionID;
 			SerializePacketPtr sPacket = pSendPacketJob->packet;
+			pSendPacketJob->packet = NULL;
 
 			SendPacket(sessionID, sPacket);
+
 
 			sendPacketJobPool.Free(pSendPacketJob);
 			continue;

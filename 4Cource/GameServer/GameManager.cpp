@@ -32,7 +32,7 @@ bool GameManager::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	monitoringThread = thread(&GameManager::MonitorThread, this);
 
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 10; i++)
 	{
 		RingBuffer* a = new RingBuffer;
 		sendPacketJobQ.push_back(a);
