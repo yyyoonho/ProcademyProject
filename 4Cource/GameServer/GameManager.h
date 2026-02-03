@@ -90,7 +90,7 @@ private:
 
 public:
 	// Å×½ºÆ®
-	vector<RingBuffer*>						sendPacketJobQ;
+	vector<RingBuffer*>						sendPacketQ;
 	vector<std::thread>						sendThreads;
 	void									SendPacketJobThread(int id);
 };

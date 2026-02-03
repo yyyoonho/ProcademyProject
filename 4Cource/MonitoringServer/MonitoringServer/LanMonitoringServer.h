@@ -9,7 +9,7 @@ struct LanClient
 	SOCKADDR_IN		addr;
 
 	//SESSION_ROLE	sessionRole;
-	BYTE			serverNo;
+	int				serverNo;
 
 	// ตฅภฬลอ
 	std::mutex		LanClientLock;

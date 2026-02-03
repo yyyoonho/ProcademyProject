@@ -32,12 +32,12 @@ bool GameManager::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	monitoringThread = thread(&GameManager::MonitorThread, this);
 
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 5; i++)
 	{
 		RingBuffer* a = new RingBuffer;
-		sendPacketJobQ.push_back(a);
+		sendPacketQ.push_back(a);
 
-		sendPacketJobQ[i]->Resize(2000000);
+		sendPacketQ[i]->Resize(8000000);
 
 		sendThreads.emplace_back(
 			&GameManager::SendPacketJobThread,
@@ -479,12 +479,22 @@ void GameManager::SendPacketJobThread(int id)
 {
 	while (1)
 	{
-		if (sendPacketJobQ[id]->GetUseSize() < sizeof(SendPacketJob*))
+		if (sendPacketQ[id]->GetUseSize() < sizeof(RawPtr))
+		{
+			//Sleep(10);
 			continue;
+		}
+		
+		SendPacketJob tmpJob;
+		sendPacketQ[id]->Dequeue((char*)&tmpJob, sizeof(SendPacketJob));
 
-		SendPacketJob* sendPacketJob;
-		sendPacketJobQ[id]->Dequeue((char*)&sendPacketJob, sizeof(SendPacketJob*));
 
-		PQCS_SendReq(sendPacketJob);
+		DWORD64 sid = tmpJob.sid;
+
+		SerializePacketPtr sPacket(tmpJob.r);
+		tmpJob.r.DecreaseRefCount();
+		
+
+		SendPacket(sid, sPacket);
 	}
 }

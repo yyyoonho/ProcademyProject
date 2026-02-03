@@ -51,6 +51,11 @@ namespace procademy
 		__int64 _poolId;
 
 		CRITICAL_SECTION cs;
+
+	public:
+		// 디버깅용 변수
+		inline static LONG			emptyChunkStackCount = 0;
+		inline static LONG			fullChunkStackCount = 0;
 	};
 
 

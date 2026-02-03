@@ -205,12 +205,6 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	return true;
 }
 
-void CNetServer::PQCS_SendReq(SendPacketJob* sendPacketJob)
-{
-	PostQueuedCompletionStatus(_hIOCP, NULL, (ULONG_PTR)sendPacketJob, LPOVERLAPPED(&sendReqToIOCP));
-}
-
-
 void CNetServer::PQCS_Disconnect(DWORD64 sessionID)
 {
 	PostQueuedCompletionStatus(_hIOCP, NULL, (ULONG_PTR)sessionID, LPOVERLAPPED(&disconnectReqToIOCP));
@@ -534,21 +528,6 @@ void CNetServer::WorkerThread()
 
 			// NotifyDisconnect
 			NotifyDisconnect(pSession);
-		}
-
-		if (pMyOverlapped == &sendReqToIOCP)
-		{
-			SendPacketJob* pSendPacketJob = (SendPacketJob*)pSession;
-
-			DWORD64 sessionID = pSendPacketJob->sessionID;
-			SerializePacketPtr sPacket = pSendPacketJob->packet;
-			pSendPacketJob->packet = NULL;
-
-			SendPacket(sessionID, sPacket);
-
-
-			sendPacketJobPool.Free(pSendPacketJob);
-			continue;
 		}
 
 		if (pMyOverlapped == &disconnectReqToIOCP)

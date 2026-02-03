@@ -26,9 +26,10 @@ struct alignas(8) IOReleasePair
 
 struct SendPacketJob
 {
-    DWORD64 sessionID;
-    SerializePacketPtr packet;
+    DWORD64 sid;
+    RawPtr r;
 };
+
 
 enum class FieldName
 {

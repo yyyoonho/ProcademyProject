@@ -141,7 +141,7 @@ bool LanMonitoringServer::ReleaseOriginclient(DWORD64 sessionID)
 		clientMap.erase(iter);
 	}
 
-	BYTE serverNo;
+	int serverNo;
 	{
 		lock_guard<mutex> lock(removed->LanClientLock);
 

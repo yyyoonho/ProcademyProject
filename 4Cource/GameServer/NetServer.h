@@ -27,12 +27,8 @@ public:
 	bool Disconnect(DWORD64 sessionID);
 	bool SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket);
 
-public:
-	procademy::MemoryPool_TLS<SendPacketJob> sendPacketJobPool{ 0,false };
-
-	void PQCS_SendReq(SendPacketJob* sendPacketJob);
 	void PQCS_Disconnect(DWORD64 sessionID);
-	
+
 private:
 	// 클래스 내부 함수
 	bool NetInit();
@@ -115,7 +111,6 @@ private:
 	NetCodec* _netCodec;
 
 private:
-	myOverlapped sendReqToIOCP;
 	myOverlapped disconnectReqToIOCP;
 	myOverlapped releaseReqToIOCP;
 };

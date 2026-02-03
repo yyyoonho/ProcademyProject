@@ -25,16 +25,22 @@ void Field::MoveToOtherField(FieldName fieldName, DWORD64 sessionID, void* pPlay
 void Field::SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket)
 {
 	// send담당 쓰레드에게 일감 넘기기.
-	SendPacketJob* pSendPacketJob = sendPacketJobPool.Alloc();
+	RawPtr r;
+	sPacket.GetRawPtr(&r);
+	r.IncreaseRefCount();
 
-	pSendPacketJob->sessionID = sessionID;
-	pSendPacketJob->packet = sPacket;
+	SendPacketJob tmpJob;
+	tmpJob.sid = sessionID;
+	tmpJob.r = r;
+
 
 	// 로드밸런스
 	static int idx = 0;
-	idx = (idx + 10) % 3;
+	idx = (idx + 1) % 5;
 
-	pGameManager->sendPacketJobQ[idx]->Enqueue((char*)&pSendPacketJob, sizeof(SendPacketJob*));
+	pGameManager->sendPacketQ[idx]->Enqueue((char*)&tmpJob, sizeof(SendPacketJob));
+
+	//pGameManager->SendPacket(sessionID, sPacket);
 
 	return;
 }

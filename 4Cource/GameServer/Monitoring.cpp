@@ -100,6 +100,8 @@ void Monitoring::Clear()
 
 	_monitoringArr[(int)MonitorType::PacketPool_FULL] = procademy::MemoryPool_TLS<Net_SerializePacket>::fullChunkStackCount;
 	_monitoringArr[(int)MonitorType::PacketPool_EMPTY] = procademy::MemoryPool_TLS<Net_SerializePacket>::emptyChunkStackCount;
+
+	_monitoringArr[(int)MonitorType::SendPacketJobPool_FULL] = procademy::MemoryPool_TLS<SendPacketJob>::fullChunkStackCount;
 }
 
 LONG Monitoring::GetInterlocked(MonitorType type)
@@ -203,7 +205,12 @@ void Monitoring::PrintMonitoring()
 	cout << right << setw(NAME_WIDTH) << "SendJobQ Size:" << " "
 		<< _monitoringArr[(int)MonitorType::SendJobQ] << "\n";
 	cout << right << setw(NAME_WIDTH) << "ActiveWorkerTh Count:" << " "
-		<< _monitoringArr[(int)MonitorType::ActiveWorkerTh] << "\n";
+		<< _monitoringArr[(int)MonitorType::ActiveWorkerTh] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "SendPacektJobPool_FULL:" << " "
+		<< _monitoringArr[(int)MonitorType::SendPacketJobPool_FULL] << "\n";
+	cout << right << setw(NAME_WIDTH) << "PQCS_SendPacketJob Count:" << " "
+		<< _monitoringArr[(int)MonitorType::PQCS_SendPacketJob] << "\n";
 
 	cout << "===============================================================================\n\n";
 

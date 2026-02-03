@@ -172,7 +172,7 @@ namespace procademy
 	{
 		srand((unsigned int)time(NULL));
 
-		__int64 tmp = (__int64)rand();
+		__int64 tmp = (__int64)rand() * GetCurrentThreadId();
 
 		for (int i = 1; i <= 4; i++)
 		{
