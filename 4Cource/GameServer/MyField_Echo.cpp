@@ -66,8 +66,10 @@ void MyField_Echo::OnRecv(DWORD64 sessionID, SerializePacketPtr sPacket)
 	switch (msgType)
 	{
 	case en_PACKET_CS_GAME_REQ_ECHO:
+		PRO_BEGIN("case");
 		PacketProc_Echo(sessionID, sPacket);
 		Monitoring::GetInstance()->Increase(MonitorType::RecvEchoTPS);
+		PRO_END("case");
 		break;
 	case en_PACKET_CS_GAME_REQ_HEARTBEAT:
 		PacketProc_HB(sessionID);

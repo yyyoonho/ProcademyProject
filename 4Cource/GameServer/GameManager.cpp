@@ -379,19 +379,17 @@ void GameManager::FieldThreadFunc(void* param, int id)
 
 void GameManager::FrameControl()
 {
-	thread_local static int oldTick1 = timeGetTime();
+	thread_local static DWORD oldTick1 = timeGetTime();
 
-	int time = timeGetTime() - oldTick1;
+	DWORD nowTime = timeGetTime();
+	DWORD diffTime = nowTime - oldTick1;
 
-	if (time < 20)
+	if (diffTime < 20)
 	{
-		Sleep(20 - time);
-		oldTick1 += 20;
-
-		return;
+		Sleep(20 - diffTime);
 	}
 
-	oldTick1 += 20;
+	oldTick1 = timeGetTime();
 	return;
 }
 
@@ -494,7 +492,6 @@ void GameManager::SendPacketJobThread(int id)
 		SerializePacketPtr sPacket(tmpJob.r);
 		tmpJob.r.DecreaseRefCount();
 		
-
 		SendPacket(sid, sPacket);
 	}
 }

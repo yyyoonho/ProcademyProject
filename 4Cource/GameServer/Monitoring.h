@@ -32,9 +32,6 @@ enum class MonitorType : int
 
 	ActiveWorkerTh,
 
-	SendPacketJobPool_FULL,
-	PQCS_SendPacketJob,
-
 	COUNT,
 };
 

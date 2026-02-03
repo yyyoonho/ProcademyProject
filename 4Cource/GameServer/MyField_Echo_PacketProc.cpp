@@ -10,6 +10,7 @@
 
 void MyField_Echo::PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket)
 {
+	PRO_BEGIN("Echo In");
 	WORD type;
 	INT64 accountNo;
 	LONGLONG sendTick;
@@ -24,6 +25,8 @@ void MyField_Echo::PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket
 	newPacket << type;
 	newPacket << accountNo;
 	newPacket << sendTick;
+	PRO_END("Echo In");
+
 
 	PRO_BEGIN("sendPacket");
 	SendPacket(sessionID, newPacket);
