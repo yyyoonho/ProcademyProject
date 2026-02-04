@@ -207,17 +207,6 @@ void Monitoring::PrintMonitoring()
 	cout << right << setw(NAME_WIDTH) << "ActiveWorkerTh Count:" << " "
 		<< _monitoringArr[(int)MonitorType::ActiveWorkerTh] << "\n\n";
 
-	cout << right << setw(NAME_WIDTH) << "SendPacketQ_0:" << " "
-		<< _monitoringArr[(int)MonitorType::SendPacketQ_0] << "\n";
-	cout << right << setw(NAME_WIDTH) << "SendPacketQ_1:" << " "
-		<< _monitoringArr[(int)MonitorType::SendPacketQ_1] << "\n";
-	cout << right << setw(NAME_WIDTH) << "SendPacketQ_2:" << " "
-		<< _monitoringArr[(int)MonitorType::SendPacketQ_2] << "\n";
-	cout << right << setw(NAME_WIDTH) << "SendPacketQ_3:" << " "
-		<< _monitoringArr[(int)MonitorType::SendPacketQ_3] << "\n";
-	cout << right << setw(NAME_WIDTH) << "SendPacketQ_4:" << " "
-		<< _monitoringArr[(int)MonitorType::SendPacketQ_4] << "\n\n";
-
 	cout << right << setw(NAME_WIDTH) << "TotalSendPacketCount:" << " "
 		<< _monitoringArr[(int)MonitorType::TotalSendPacketCount] << "\n";
 

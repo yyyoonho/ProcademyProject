@@ -159,8 +159,8 @@ void GameManager::FieldThreadFunc(void* param, int id)
 		// 1. 넘어온 sessionID를 Key로 Player생성하기.
 		// 2. newPlayer에게 줄 데이터들 sendPacket();
 		{
-			int tmp = pFieldBundle->threadQ_Create.GetUseSize();
-			int size = (pFieldBundle->threadQ_Create.GetUseSize() / sizeof(Session*));
+			int useSize = pFieldBundle->threadQ_Create.GetUseSize();
+			int size = (useSize / sizeof(Session*));
 
 			for (int i = 0; i < size; i++)
 			{
@@ -192,7 +192,8 @@ void GameManager::FieldThreadFunc(void* param, int id)
 		// 1. 넘어온 sessionID를 Key로 넘어온 Player 그대로 이양받기
 		// 2. newPlayer에게 줄 데이터들 sendPacket();
 		{
-			int size = (pFieldBundle->threadQ_Join.GetUseSize() / sizeof(joinQContext));
+			int useSize = pFieldBundle->threadQ_Join.GetUseSize();
+			int size = (useSize / sizeof(joinQContext));
 
 			for (int i = 0; i < size; i++)
 			{
@@ -204,15 +205,18 @@ void GameManager::FieldThreadFunc(void* param, int id)
 				void* pPlayer = joinQContext.pPlayer;
 
 				// 새로운곳에 왔으니 세션 큐 비우기.
+				int contentQUseSize = newSession->contentMsgQ.GetUseSize();
 				while (1)
 				{
-					if (newSession->contentMsgQ.GetUseSize() <= 0)
+					if (contentQUseSize <= 0)
 						break;
 
 					RawPtr r;
 					newSession->contentMsgQ.Dequeue((char*)&r, sizeof(RawPtr));
 
 					r.DecreaseRefCount();
+
+					contentQUseSize--;
 				}
 				newSession->contentMsgQ.ClearBuffer();
 
@@ -234,7 +238,6 @@ void GameManager::FieldThreadFunc(void* param, int id)
 		{
 			int size = pFieldBundle->sessionVec.size();
 
-			//PRO_BEGIN("OnRecv Out");
 			for (int i = 0; i < size; i++)
 			{
 				Session* pSession = pFieldBundle->sessionVec[i];
@@ -247,7 +250,8 @@ void GameManager::FieldThreadFunc(void* param, int id)
 				}
 
 				int msgCnt = (pSession->contentMsgQ.GetUseSize() / sizeof(RawPtr));
-				for (int j = 0; j < msgCnt; j++)
+				//for (int j = 0; j < msgCnt; j++)
+				while(msgCnt--)
 				{
 					RawPtr rawPtr;
 					pSession->contentMsgQ.Dequeue((char*)&rawPtr, sizeof(RawPtr));
@@ -256,13 +260,11 @@ void GameManager::FieldThreadFunc(void* param, int id)
 
 					rawPtr.DecreaseRefCount();
 
-					
 					// TODO: 4 O
 					pFieldBundle->field->OnRecv(sid, newPacket);
 				}
 				
 			}
-			//PRO_END("OnRecv Out");
 		}
 
 		// OnUpdate
@@ -348,7 +350,6 @@ void GameManager::FieldThreadFunc(void* param, int id)
 				}
 
 				// 2.
-				//pFieldBundle->field->OnLeave(sid);
 				pFieldBundle->field->OnFieldLeave(sid);
 
 				// 3. 
@@ -493,24 +494,24 @@ void GameManager::SendPacketJobThread(int id)
 		SendPacketJob tmpJob;
 		sendPacketQ[id]->Dequeue((char*)&tmpJob, sizeof(SendPacketJob));
 
-		switch (id)
-		{
-		case 0:
-			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_0);
-			break;
-		case 1:
-			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_1);
-			break;
-		case 2:
-			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_2);
-			break;
-		case 3:
-			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_3);
-			break;
-		case 4:
-			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_4);
-			break;
-		}
+		//switch (id)
+		//{
+		//case 0:
+		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_0);
+		//	break;
+		//case 1:
+		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_1);
+		//	break;
+		//case 2:
+		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_2);
+		//	break;
+		//case 3:
+		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_3);
+		//	break;
+		//case 4:
+		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_4);
+		//	break;
+		//}
 
 		DWORD64 sid = tmpJob.sid;
 

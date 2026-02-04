@@ -1,5 +1,8 @@
 #pragma once
-class GameManager;
+//class GameManager;
+
+#include "NetServer.h"
+#include "GameManager.h"
 
 class Field
 {
@@ -21,7 +24,8 @@ public:
 	// 3. A쓰레드에서는 sessionID로 해당 session을 찾는다.
 	// 4. 찾아서 moveVec에 넣어둔다.
 	void MoveToOtherField(FieldName fieldName, DWORD64 sessionID, void* pPlayer);
-	void SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket);
+	__inline void SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket);
+
 	void Disconnect(DWORD64 sessionID);
 
 	void RegistGameManager(GameManager* pGM);
@@ -33,3 +37,22 @@ private:
 	GameManager* pGameManager;
 };
 
+__inline void Field::SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket)
+{
+	RawPtr r;
+	sPacket.GetRawPtr(&r);
+	r.IncreaseRefCount();
+
+	SendPacketJob tmpJob;
+	tmpJob.sid = sessionID;
+	tmpJob.r = r;
+
+
+	// 로드밸런스
+	static int idx = 0;
+	idx = (idx + 1) % 5;
+
+	pGameManager->sendPacketQ[idx]->Enqueue((char*)&tmpJob, sizeof(SendPacketJob));
+
+	return;
+}
