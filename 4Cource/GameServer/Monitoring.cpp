@@ -98,6 +98,8 @@ void Monitoring::Clear()
 	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvEchoTPS], 0);
 	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvHeartbeatTPS], 0);
 
+	InterlockedExchange(&_monitoringArr[(int)::MonitorType::TotalSendPacketCount], 0);
+
 	_monitoringArr[(int)MonitorType::PacketPool_FULL] = procademy::MemoryPool_TLS<Net_SerializePacket>::fullChunkStackCount;
 	_monitoringArr[(int)MonitorType::PacketPool_EMPTY] = procademy::MemoryPool_TLS<Net_SerializePacket>::emptyChunkStackCount;
 }
@@ -204,6 +206,20 @@ void Monitoring::PrintMonitoring()
 		<< _monitoringArr[(int)MonitorType::SendJobQ] << "\n";
 	cout << right << setw(NAME_WIDTH) << "ActiveWorkerTh Count:" << " "
 		<< _monitoringArr[(int)MonitorType::ActiveWorkerTh] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "SendPacketQ_0:" << " "
+		<< _monitoringArr[(int)MonitorType::SendPacketQ_0] << "\n";
+	cout << right << setw(NAME_WIDTH) << "SendPacketQ_1:" << " "
+		<< _monitoringArr[(int)MonitorType::SendPacketQ_1] << "\n";
+	cout << right << setw(NAME_WIDTH) << "SendPacketQ_2:" << " "
+		<< _monitoringArr[(int)MonitorType::SendPacketQ_2] << "\n";
+	cout << right << setw(NAME_WIDTH) << "SendPacketQ_3:" << " "
+		<< _monitoringArr[(int)MonitorType::SendPacketQ_3] << "\n";
+	cout << right << setw(NAME_WIDTH) << "SendPacketQ_4:" << " "
+		<< _monitoringArr[(int)MonitorType::SendPacketQ_4] << "\n\n";
+
+	cout << right << setw(NAME_WIDTH) << "TotalSendPacketCount:" << " "
+		<< _monitoringArr[(int)MonitorType::TotalSendPacketCount] << "\n";
 
 	cout << "===============================================================================\n\n";
 

@@ -32,6 +32,14 @@ enum class MonitorType : int
 
 	ActiveWorkerTh,
 
+	SendPacketQ_0,
+	SendPacketQ_1,
+	SendPacketQ_2,
+	SendPacketQ_3,
+	SendPacketQ_4,
+
+	TotalSendPacketCount,
+
 	COUNT,
 };
 

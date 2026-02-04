@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include "Monitoring.h"
 #include "NetServer.h"
 #include "GameManager.h"
 #include "Field.h"
@@ -38,9 +39,28 @@ void Field::SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket)
 	static int idx = 0;
 	idx = (idx + 1) % 5;
 
-	pGameManager->sendPacketQ[idx]->Enqueue((char*)&tmpJob, sizeof(SendPacketJob));
+	switch (idx)
+	{
+	case 0:
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendPacketQ_0);
+		break;
+	case 1:
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendPacketQ_1);
+		break;
+	case 2:
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendPacketQ_2);
+		break;
+	case 3:
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendPacketQ_3);
+		break;
+	case 4:
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendPacketQ_4);
+		break;
+	}
 
-	//pGameManager->SendPacket(sessionID, sPacket);
+	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::TotalSendPacketCount);
+
+	pGameManager->sendPacketQ[idx]->Enqueue((char*)&tmpJob, sizeof(SendPacketJob));
 
 	return;
 }

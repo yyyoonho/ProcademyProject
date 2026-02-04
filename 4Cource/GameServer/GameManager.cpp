@@ -149,7 +149,7 @@ void GameManager::FieldThreadFunc(void* param, int id)
 		FrameControl();
 		ShowFPS(id);
 
-		PRO_BEGIN("Total");
+		//PRO_BEGIN("Total");
 
 		// OnEnter
 		// 1. threadQ_Create에서 디큐.
@@ -234,7 +234,7 @@ void GameManager::FieldThreadFunc(void* param, int id)
 		{
 			int size = pFieldBundle->sessionVec.size();
 
-			PRO_BEGIN("OnRecv Out");
+			//PRO_BEGIN("OnRecv Out");
 			for (int i = 0; i < size; i++)
 			{
 				Session* pSession = pFieldBundle->sessionVec[i];
@@ -256,14 +256,13 @@ void GameManager::FieldThreadFunc(void* param, int id)
 
 					rawPtr.DecreaseRefCount();
 
-					PRO_BEGIN("OnRecv In");
+					
 					// TODO: 4 O
 					pFieldBundle->field->OnRecv(sid, newPacket);
-
-					PRO_END("OnRecv In");
 				}
+				
 			}
-			PRO_END("OnRecv Out");
+			//PRO_END("OnRecv Out");
 		}
 
 		// OnUpdate
@@ -373,23 +372,31 @@ void GameManager::FieldThreadFunc(void* param, int id)
 			pFieldBundle->field->movePackageVec.clear();
 		}
 
-		PRO_END("Total");
+		//PRO_END("Total");
 	}
 }
 
 void GameManager::FrameControl()
 {
 	thread_local static DWORD oldTick1 = timeGetTime();
-
 	DWORD nowTime = timeGetTime();
+
 	DWORD diffTime = nowTime - oldTick1;
 
-	if (diffTime < 20)
+	/*if (diffTime < 20)
 	{
 		Sleep(20 - diffTime);
-	}
+	}*/
 
-	oldTick1 = timeGetTime();
+	int sleepTick = 20 - diffTime;
+	if (sleepTick > 0)
+	{
+		Sleep(sleepTick);
+	}
+		
+	//oldTick1 = timeGetTime();
+	oldTick1 += 20;
+	
 	return;
 }
 
@@ -479,13 +486,31 @@ void GameManager::SendPacketJobThread(int id)
 	{
 		if (sendPacketQ[id]->GetUseSize() < sizeof(RawPtr))
 		{
-			//Sleep(10);
+			Sleep(0);
 			continue;
 		}
 		
 		SendPacketJob tmpJob;
 		sendPacketQ[id]->Dequeue((char*)&tmpJob, sizeof(SendPacketJob));
 
+		switch (id)
+		{
+		case 0:
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_0);
+			break;
+		case 1:
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_1);
+			break;
+		case 2:
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_2);
+			break;
+		case 3:
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_3);
+			break;
+		case 4:
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_4);
+			break;
+		}
 
 		DWORD64 sid = tmpJob.sid;
 

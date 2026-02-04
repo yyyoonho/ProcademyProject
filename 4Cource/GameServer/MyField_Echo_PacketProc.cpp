@@ -10,7 +10,6 @@
 
 void MyField_Echo::PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket)
 {
-	PRO_BEGIN("Echo In");
 	WORD type;
 	INT64 accountNo;
 	LONGLONG sendTick;
@@ -19,18 +18,13 @@ void MyField_Echo::PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket
 	sPacket >> accountNo;
 	sPacket >> sendTick;
 
-	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
-	newPacket.Clear();
+	sPacket.Clear();
 
-	newPacket << type;
-	newPacket << accountNo;
-	newPacket << sendTick;
-	PRO_END("Echo In");
+	sPacket << type;
+	sPacket << accountNo;
+	sPacket << sendTick;
 
-
-	PRO_BEGIN("sendPacket");
-	SendPacket(sessionID, newPacket);
-	PRO_END("sendPacket");
+	SendPacket(sessionID, sPacket);
 }
 
 void MyField_Echo::PacketProc_HB(DWORD64 sessionID)
