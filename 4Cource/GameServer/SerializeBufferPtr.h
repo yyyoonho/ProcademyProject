@@ -1,4 +1,5 @@
 #pragma once
+#include "Monitoring.h"
 
 // ************************************
 // »ùÇÃ ÄÚµå
@@ -25,8 +26,8 @@ struct RawPtr
 	Net_SerializePacket* _ptr;
 	RefCountBlock* _RCBPtr;
 
-	void IncreaseRefCount();
-	void DecreaseRefCount();
+	__inline void IncreaseRefCount();
+	__inline void DecreaseRefCount();
 };
 
 class SerializePacketPtr
@@ -107,3 +108,24 @@ private:
 	Net_SerializePacket* _ptr = NULL;
 	RefCountBlock* _RCBPtr = NULL;
 };
+
+
+__inline void RawPtr::IncreaseRefCount()
+{
+	InterlockedIncrement(&_RCBPtr->count);
+}
+
+__inline void RawPtr::DecreaseRefCount()
+{
+	if (InterlockedDecrement(&_RCBPtr->count) == 0)
+	{
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PacketUseCount);
+
+
+		Net_SerializePacket::SPacketMP.Free(_ptr);
+		SerializePacketPtr::RcbMP.Free(_RCBPtr);
+
+		_ptr = NULL;
+		_RCBPtr = NULL;
+	}
+}

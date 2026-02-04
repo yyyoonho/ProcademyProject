@@ -8,25 +8,25 @@
 
 using namespace std;
 
-void RawPtr::IncreaseRefCount()
-{
-	InterlockedIncrement(&_RCBPtr->count);
-}
-
-void RawPtr::DecreaseRefCount()
-{
-    if (InterlockedDecrement(&_RCBPtr->count) == 0)
-    {
-        Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PacketUseCount);
-
-
-        Net_SerializePacket::SPacketMP.Free(_ptr);
-        SerializePacketPtr::RcbMP.Free(_RCBPtr);
-
-        _ptr = NULL;
-        _RCBPtr = NULL;
-    }
-}
+//void RawPtr::IncreaseRefCount()
+//{
+//	InterlockedIncrement(&_RCBPtr->count);
+//}
+//
+//void RawPtr::DecreaseRefCount()
+//{
+//    if (InterlockedDecrement(&_RCBPtr->count) == 0)
+//    {
+//        Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PacketUseCount);
+//
+//
+//        Net_SerializePacket::SPacketMP.Free(_ptr);
+//        SerializePacketPtr::RcbMP.Free(_RCBPtr);
+//
+//        _ptr = NULL;
+//        _RCBPtr = NULL;
+//    }
+//}
 
 SerializePacketPtr::SerializePacketPtr()
 {
