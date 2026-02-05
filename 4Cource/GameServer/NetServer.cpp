@@ -540,15 +540,20 @@ void CNetServer::WorkerThread()
 
 		else if (pMyOverlapped->type == RECV)
 		{
-			pSession->recvQ.MoveRear(cbTransferred);
+			RingBuffer& recvQ = pSession->recvQ;
+			recvQ.MoveRear(cbTransferred);
 
 			while (1)
 			{
 				stNetHeader header;
 
+				// ===============================
+				// 1. 헤더 크기 체크 (useSize 1회)
+				// ===============================
+				
 				// 헤더 만큼도 안들어와 있는 경우.
-				int tmp = pSession->recvQ.GetUseSize();
-				if (pSession->recvQ.GetUseSize() < sizeof(stNetHeader))
+				int useSize = pSession->recvQ.GetUseSize();
+				if (useSize < sizeof(stNetHeader))
 				{
 					// 비동기IO: Recv 요청 후 break
 					// cancel IO 했는지 안했는지 검사.
@@ -560,24 +565,24 @@ void CNetServer::WorkerThread()
 					{
 						CancelIoEx((HANDLE)(pSession->sock), NULL);
 					}
-					//if (ret == false)
-					//{
-					//	Disconnect(pSession->sessionID);
-					//	_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
-					//}
-
 
 					break;
 				}
 
-				pSession->recvQ.Peek((char*)&header, sizeof(stNetHeader));
-				unsigned short payloadLen;
-				memcpy_s(&payloadLen, sizeof(BYTE) * 2, header.len, sizeof(BYTE) * 2);
+				// ===============================
+				// 2. 헤더 Peek
+				// ===============================
 
+				recvQ.Peek((char*)&header, sizeof(stNetHeader));
+				unsigned short payloadLen = *(unsigned short*)header.len;
+				int totalSize = sizeof(stNetHeader) + payloadLen;
+
+				// ===============================
+				// 3. 페이로드 크기 체크
+				// ===============================
 
 				// 헤더에 기입된 len만큼 페이로드가 안들어온 경우.
-				tmp = pSession->recvQ.GetUseSize();
-				if (pSession->recvQ.GetUseSize() < sizeof(stNetHeader) + payloadLen)
+				if (useSize < totalSize)
 				{
 					// 비동기IO: Recv 요청 후 break
 					// cancel IO 했는지 안했는지 검사.
@@ -595,11 +600,18 @@ void CNetServer::WorkerThread()
 					//	_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 					//}
 
-
 					break;
 				}
 
+				// ===============================
+				// 4. 헤더 소비
+				// ===============================
+
 				pSession->recvQ.MoveFront(sizeof(header));
+
+				// ===============================
+				// 5. 패킷 코드 검증 (attack #1)
+				// ===============================
 
 				// attack #1 - code가 다른 패킷이 왔을 경우 킥. O
 				{
@@ -612,9 +624,13 @@ void CNetServer::WorkerThread()
 					}
 				}
 
-				// attack #9
+
+				// ===============================
+				// 6. payload 크기 검증 (attack #9)
 				// 직렬화패킷의 기본 버퍼사이즈는 1400
 				// 그 이상 pPacket에 넣으려고 하면 오버런 가능성O
+				// ===============================
+				
 				if (payloadLen > Net_SerializePacket::eBUFFER_DEFAULT)
 				{
 					Disconnect(pSession->sessionID);
@@ -622,14 +638,18 @@ void CNetServer::WorkerThread()
 					break;
 				}
 
+				// ===============================
+				// 7. payload 읽기
+				// ===============================
 				SerializePacketPtr pPacket = SerializePacketPtr::MakeSerializePacket();
 				pPacket.Clear();
 
-				int ret = pSession->recvQ.Dequeue(pPacket.GetBufferPtr(), payloadLen);
+				int ret = recvQ.Dequeue(pPacket.GetBufferPtr(), payloadLen);
 				pPacket.MoveWritePos(ret);
 
-				// 디코딩
-				// attack #7 O
+				// ===============================
+				// 8. 디코딩 (attack #7)
+				// ===============================
 				if (_codecOnOff == TRUE)
 				{
 					bool decodingRet = _netCodec->DecodingPacket(pPacket, header);
@@ -641,10 +661,15 @@ void CNetServer::WorkerThread()
 					}
 				}
 
+				// ===============================
+				// 9. TPS 카운트
+				// ===============================
 				Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageTPS);
 
-				// 컨텐츠에 메시지 전달
-				OnMessage(pSession->sessionID, pPacket);
+				// ===============================
+				// 10. 컨텐츠 전달
+				// ===============================
+				//OnMessage(pSession->sessionID, pPacket);
 				OnMessage_GameManager(pSession->sessionID, pSession, pPacket);
 			}
 		}
