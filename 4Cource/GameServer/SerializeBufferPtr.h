@@ -55,7 +55,7 @@ public:
 	static Net_SerializePacket* MakeSerializePacket();
 
 private:
-	void DecreaseRefCount();
+	__forceinline void DecreaseRefCount();
 
 public:
 	void Clear();
@@ -109,6 +109,22 @@ private:
 	RefCountBlock* _RCBPtr = NULL;
 };
 
+__forceinline void SerializePacketPtr::DecreaseRefCount()
+{
+	if (_ptr != NULL)
+	{
+		if (InterlockedDecrement(&_RCBPtr->count) == 0)
+		{
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PacketUseCount);
+
+			Net_SerializePacket::SPacketMP.Free(_ptr);
+			SerializePacketPtr::RcbMP.Free(_RCBPtr);
+
+			_ptr = NULL;
+			_RCBPtr = NULL;
+		}
+	}
+}
 
 __forceinline void RawPtr::IncreaseRefCount()
 {

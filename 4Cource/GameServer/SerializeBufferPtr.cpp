@@ -8,25 +8,6 @@
 
 using namespace std;
 
-//void RawPtr::IncreaseRefCount()
-//{
-//	InterlockedIncrement(&_RCBPtr->count);
-//}
-//
-//void RawPtr::DecreaseRefCount()
-//{
-//    if (InterlockedDecrement(&_RCBPtr->count) == 0)
-//    {
-//        Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PacketUseCount);
-//
-//
-//        Net_SerializePacket::SPacketMP.Free(_ptr);
-//        SerializePacketPtr::RcbMP.Free(_RCBPtr);
-//
-//        _ptr = NULL;
-//        _RCBPtr = NULL;
-//    }
-//}
 
 SerializePacketPtr::SerializePacketPtr()
 {
@@ -117,25 +98,6 @@ Net_SerializePacket* SerializePacketPtr::MakeSerializePacket()
     Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::PacketUseCount);
 
     return Net_SerializePacket::SPacketMP.Alloc();
-}
-
-
-void SerializePacketPtr::DecreaseRefCount()
-{
-    if (_ptr != NULL)
-    {
-        if (InterlockedDecrement(&_RCBPtr->count) == 0)
-        {
-            Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PacketUseCount);
-
-            Net_SerializePacket::SPacketMP.Free(_ptr);
-            //delete _RCBPtr;
-            SerializePacketPtr::RcbMP.Free(_RCBPtr);
-
-            _ptr = NULL;
-            _RCBPtr = NULL;
-        }
-    }
 }
 
 void SerializePacketPtr::Clear()
