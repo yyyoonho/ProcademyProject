@@ -26,8 +26,8 @@ struct RawPtr
 	Net_SerializePacket* _ptr;
 	RefCountBlock* _RCBPtr;
 
-	__inline void IncreaseRefCount();
-	__inline void DecreaseRefCount();
+	__forceinline void IncreaseRefCount();
+	__forceinline void DecreaseRefCount();
 };
 
 class SerializePacketPtr
@@ -110,12 +110,12 @@ private:
 };
 
 
-__inline void RawPtr::IncreaseRefCount()
+__forceinline void RawPtr::IncreaseRefCount()
 {
 	InterlockedIncrement(&_RCBPtr->count);
 }
 
-__inline void RawPtr::DecreaseRefCount()
+__forceinline void RawPtr::DecreaseRefCount()
 {
 	if (InterlockedDecrement(&_RCBPtr->count) == 0)
 	{

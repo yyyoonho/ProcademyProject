@@ -24,7 +24,7 @@ public:
 	// 3. A쓰레드에서는 sessionID로 해당 session을 찾는다.
 	// 4. 찾아서 moveVec에 넣어둔다.
 	void MoveToOtherField(FieldName fieldName, DWORD64 sessionID, void* pPlayer);
-	__inline void SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket);
+	__forceinline void SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket);
 
 	void Disconnect(DWORD64 sessionID);
 
@@ -33,11 +33,11 @@ public:
 public:
 	vector<FieldMovePack> movePackageVec;
 
-private:
+protected:
 	GameManager* pGameManager;
 };
 
-__inline void Field::SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket)
+__forceinline void Field::SendPacket(DWORD64 sessionID, SerializePacketPtr sPacket)
 {
 	RawPtr r;
 	sPacket.GetRawPtr(&r);

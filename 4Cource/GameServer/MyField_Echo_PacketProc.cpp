@@ -23,7 +23,7 @@ void MyField_Echo::PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket
 	sPacket << type;
 	sPacket << accountNo;
 	sPacket << sendTick;
-
+	
 	SendPacket(sessionID, sPacket);
 }
 

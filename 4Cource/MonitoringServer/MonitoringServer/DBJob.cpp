@@ -108,7 +108,7 @@ void DBMonitoringLog::Exec(MYSQL* connection)
 {
 	DB_PRO_BEGIN("DBMonitoringLog");
 
-	string query =
+	/*string query =
 		"INSERT INTO monitorlog (logtime, serverno, type, avg, min, max) VALUES ("
 		"NOW(), " +
 		to_string(_serverNo) + ", " +
@@ -121,6 +121,64 @@ void DBMonitoringLog::Exec(MYSQL* connection)
 	if (mysql_query(connection, query.c_str()) != 0)
 	{
 		printf("DBQuestComplete error: %s\n", mysql_error(connection));
+	}*/
+
+	// -----------------------------
+	// 1. 월별 테이블명 생성
+	// -----------------------------
+	time_t now = time(nullptr);
+	tm local{};
+	localtime_s(&local, &now);
+
+	char tableName[64];
+	sprintf_s(
+		tableName,
+		"monitorlog_%04d%02d",
+		local.tm_year + 1900,
+		local.tm_mon + 1
+	);
+
+	// -----------------------------
+	// 2. INSERT 쿼리 생성
+	// -----------------------------
+	string query =
+		"INSERT INTO " + string(tableName) +
+		" (logtime, serverno, type, avg, min, max) VALUES ("
+		"NOW(), " +
+		std::to_string(_serverNo) + ", " +
+		std::to_string(_dataType) + ", " +
+		std::to_string(_avg) + ", " +
+		std::to_string(_min) + ", " +
+		std::to_string(_max) +
+		")";
+
+	// -----------------------------
+	// 3. INSERT 시도
+	// -----------------------------
+	if (mysql_query(connection, query.c_str()) != 0)
+	{
+		unsigned int err = mysql_errno(connection);
+
+		// 테이블 없음
+		if (err == 1146)
+		{
+			string createQuery =
+				"CREATE TABLE " + string(tableName) +
+				" LIKE monitorlog";
+
+			// 테이블 생성
+			if (mysql_query(connection, createQuery.c_str()) != 0)
+			{
+				DebugBreak();
+				return;
+			}
+
+			// 다시 INSERT
+			if (mysql_query(connection, query.c_str()) != 0)
+			{
+				DebugBreak();
+			}
+		}
 	}
 
 	DB_PRO_END("DBMonitoringLog");

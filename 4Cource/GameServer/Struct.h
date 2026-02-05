@@ -53,32 +53,55 @@ struct joinQContext
     void* pPlayer;
 };
 
-struct Session
+struct alignas(64) Session
 {
+    //=================================================
+
+    DWORD64 sessionID;
+
+    LONG checkSend = TRUE;
+    LONG            disconnectNotified;
+    LONG cancelIOCheck;
+
+    IOReleasePair IOCountNReleaseCheck; // game
+
+    char    _pad0[64 - (
+        sizeof(DWORD64) +
+        sizeof(LONG) * 3 +
+        sizeof(IOReleasePair)
+        )];
+
+    //=================================================
+
     SOCKET sock;
 
     myOverlapped recvMyOverlapped;
     myOverlapped sendMyOverlapped;
 
+    char    _pad1[64 - (
+        sizeof(SOCKET) +
+        sizeof(myOverlapped) * 2)
+        % 64];
+
+    //=================================================
+
     RingBuffer recvQ;
     LockFreeQueue<RawPtr> LockFreeSendQ; // Now This sendQ is Q for SerializeBuffer Pointer.
 
-    DWORD64 sessionID;
+    char _pad2[64 - (
+        sizeof(RingBuffer) +
+        sizeof(LockFreeQueue<RawPtr>)
+        ) % 64];
 
-    // Send 1회로 제한
-    // TRUE -> send 호출 가능
-    // FALSE -> send 호출 불가능.
-    LONG checkSend = TRUE;
+    //=================================================
 
     bool loginCheck;
-    bool cancelIOCheck;
+    bool releaseWait;
 
-    IOReleasePair IOCountNReleaseCheck;
+    char        _pad3[62];
 
-
-    // Game
-    //LockFreeQueue<RawPtr> contentMsgQ;
+    //=================================================
+    // game
     RingBuffer      contentMsgQ;
-    bool            releaseWait;
-    LONG            disconnectNotified;
+    
 };
