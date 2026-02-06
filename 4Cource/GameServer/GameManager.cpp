@@ -434,6 +434,7 @@ void GameManager::MonitorThread()
 
 		Monitoring::GetInstance()->UpdatePDHnCpuUsage();
 
+		Monitoring::GetInstance()->CollectPerSecond();
 		TossMonitoringData();
 
 		Monitoring::GetInstance()->PrintMonitoring();
@@ -493,25 +494,6 @@ void GameManager::SendPacketJobThread(int id)
 		
 		SendPacketJob tmpJob;
 		sendPacketQ[id]->Dequeue((char*)&tmpJob, sizeof(SendPacketJob));
-
-		//switch (id)
-		//{
-		//case 0:
-		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_0);
-		//	break;
-		//case 1:
-		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_1);
-		//	break;
-		//case 2:
-		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_2);
-		//	break;
-		//case 3:
-		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_3);
-		//	break;
-		//case 4:
-		//	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendPacketQ_4);
-		//	break;
-		//}
 
 		DWORD64 sid = tmpJob.sid;
 

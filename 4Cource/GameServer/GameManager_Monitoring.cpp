@@ -63,7 +63,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_SESSION;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::SessionNum];
+		int dataValue = Monitoring::GetInstance()->_globalCounter[(int)MonitorType::SessionNum];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;
@@ -78,7 +78,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_AUTH_PLAYER;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::AuthPlayerCount];
+		int dataValue = Monitoring::GetInstance()->_globalCounter[(int)MonitorType::AuthPlayerCount];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;
@@ -93,7 +93,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_GAME_PLAYER;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::GamePlayerCount];
+		int dataValue = Monitoring::GetInstance()->_globalCounter[(int)MonitorType::GamePlayerCount];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;
@@ -108,7 +108,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_ACCEPT_TPS;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::AcceptTPS];
+		int dataValue = Monitoring::GetInstance()->_globalCounter[(int)MonitorType::AcceptTPS];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;
@@ -123,7 +123,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_PACKET_RECV_TPS;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::RecvMessageTPS];
+		int dataValue = Monitoring::GetInstance()->_globalCounter[(int)MonitorType::RecvMessageTPS];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;
@@ -138,7 +138,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_PACKET_SEND_TPS;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::SendMessageTPS];
+		int dataValue = Monitoring::GetInstance()->_globalCounter[(int)MonitorType::SendMessageTPS];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;
@@ -163,7 +163,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_AUTH_THREAD_FPS;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::AuthFieldFrame];
+		int dataValue = Monitoring::GetInstance()->_globalCounter[(int)MonitorType::AuthFieldFrame];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;
@@ -178,7 +178,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_GAME_THREAD_FPS;
-		int dataValue = Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::EchoFieldFrame];
+		int dataValue = Monitoring::GetInstance()->_globalCounter[(int)MonitorType::EchoFieldFrame];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;
@@ -193,7 +193,7 @@ void GameManager::TossMonitoringData()
 	{
 		WORD type = en_PACKET_SS_MONITOR_DATA_UPDATE;
 		BYTE dataType = dfMONITOR_DATA_TYPE_GAME_PACKET_POOL;
-		int dataValue = (int)Monitoring::GetInstance()->_monitoringArr[(int)MonitorType::PacketPool_FULL];
+		int dataValue = (int)Monitoring::GetInstance()->_globalCounter[(int)MonitorType::PacketPool_FULL];
 		int timeStamp = (int)time(nullptr);
 
 		stSendJob job;

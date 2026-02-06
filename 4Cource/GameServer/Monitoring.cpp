@@ -14,11 +14,13 @@
 Monitoring* Monitoring::_pMonitoring = NULL;
 mutex initLock;
 
+thread_local MonitoringTLS* _tlsCount;
+
 Monitoring::Monitoring()
 {
 	for (int i = 0; i < (int)MonitorType::COUNT; i++)
 	{
-		_monitoringArr[i] = 0;
+		_globalCounter[i] = 0;
 	}
 
 	_cpu = new CCpuUsage();
@@ -49,11 +51,6 @@ Monitoring::~Monitoring()
 
 Monitoring* Monitoring::GetInstance()
 {
-	/*if (_pMonitoring == NULL)
-	{
-		_pMonitoring = new Monitoring;
-	}*/
-
 	if (_pMonitoring == NULL)
 	{
 		lock_guard<mutex> lock(initLock);
@@ -68,57 +65,101 @@ Monitoring* Monitoring::GetInstance()
 
 void Monitoring::Increase(MonitorType type)
 {
-	_monitoringArr[(int)type]++;
+	InitTls();
+
+	int idx = _tlsCount->activeIdx;
+	++_tlsCount->counter[idx][(int)type];
 }
 
 LONG Monitoring::IncreaseInterlocked(MonitorType type)
 {
-	return InterlockedIncrement(&_monitoringArr[(int)type]);
+	return InterlockedIncrement(&_globalCounter[(int)type]);
 }
 
 void Monitoring::Decrease(MonitorType type)
 {
-	_monitoringArr[(int)type]--;
+	InitTls();
+
+	int idx = _tlsCount->activeIdx;
+	--_tlsCount->counter[idx][(int)type];
 }
 
 void Monitoring::DecreaseInterlocked(MonitorType type)
 {
-	InterlockedDecrement(&_monitoringArr[(int)type]);
-	
+	InterlockedDecrement(&_globalCounter[(int)type]);
+}
+
+void Monitoring::CollectPerSecond()
+{
+	vector<MonitoringTLS*> snapshot;
+	{
+		lock_guard<mutex> lock(_counterArrLock);
+		snapshot = _counterArr;
+	}
+
+	for (MonitoringTLS* tls : snapshot)
+	{
+		if (tls == nullptr) 
+			continue;
+
+		// old = 기존 activeIdx, new = 1-old
+		LONG oldIdx = tls->activeIdx;
+		LONG newIdx = 1 - oldIdx;
+
+		// activeIdx 변경 (이 순간 이후 쓰레드들은 newIdx로만 증가)
+		tls->activeIdx = newIdx;
+
+
+		LONG* oldBuf = tls->counter[oldIdx];
+
+		for (int i = 0; i < (int)MonitorType::COUNT; i++)
+		{
+			LONG v = oldBuf[i];
+			if (v == 0)
+				continue;
+
+			_globalCounter[i] += v;
+			oldBuf[i] = 0;
+		}
+	}
 }
 
 void Monitoring::Clear()
 {
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::AcceptTPS], 0);
+	// Reset
+	InterlockedExchange(&_globalCounter[(int)MonitorType::AcceptTPS], 0);
 
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvMessageTPS], 0);
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::SendMessageTPS], 0);
+	InterlockedExchange(&_globalCounter[(int)MonitorType::RecvMessageTPS], 0);
+	InterlockedExchange(&_globalCounter[(int)MonitorType::SendMessageTPS], 0);
 
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvLoginTPS], 0);
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvEchoTPS], 0);
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::RecvHeartbeatTPS], 0);
+	InterlockedExchange(&_globalCounter[(int)MonitorType::RecvLoginTPS], 0);
+	InterlockedExchange(&_globalCounter[(int)MonitorType::RecvEchoTPS], 0);
+	InterlockedExchange(&_globalCounter[(int)MonitorType::RecvHeartbeatTPS], 0);
 
-	InterlockedExchange(&_monitoringArr[(int)::MonitorType::TotalSendPacketCount], 0);
+	InterlockedExchange(&_globalCounter[(int)MonitorType::TotalSendPacketCount], 0);
 
-	_monitoringArr[(int)MonitorType::PacketPool_FULL] = procademy::MemoryPool_TLS<Net_SerializePacket>::fullChunkStackCount;
-	_monitoringArr[(int)MonitorType::PacketPool_EMPTY] = procademy::MemoryPool_TLS<Net_SerializePacket>::emptyChunkStackCount;
+	_globalCounter[(int)MonitorType::PacketPool_FULL] =
+		procademy::MemoryPool_TLS<Net_SerializePacket>::fullChunkStackCount;
+
+	_globalCounter[(int)MonitorType::PacketPool_EMPTY] =
+		procademy::MemoryPool_TLS<Net_SerializePacket>::emptyChunkStackCount;
 }
 
 LONG Monitoring::GetInterlocked(MonitorType type)
 {
-	LONG ret = InterlockedAdd(&_monitoringArr[(int)type], 0);
+	LONG ret = InterlockedAdd(&_globalCounter[(int)type], 0);
 
 	return ret;
 }
 
 void Monitoring::SetAuthFPS(int fps)
 {
-	_monitoringArr[(int)MonitorType::AuthFieldFrame] = fps;
+	_globalCounter[(int)MonitorType::AuthFieldFrame] = fps;
 }
 
 void Monitoring::SetEchoFPS(int fps)
 {
-	_monitoringArr[(int)MonitorType::EchoFieldFrame] = fps;
+	_globalCounter[(int)MonitorType::EchoFieldFrame] = fps;
 }
 
 void Monitoring::UpdatePDHnCpuUsage()
@@ -145,6 +186,24 @@ int Monitoring::GetPrivateBytes()
 	return mBytes;
 }
 
+void Monitoring::InitTls()
+{
+	if (_tlsCount == NULL)
+	{
+		_tlsCount = new MonitoringTLS;
+		_tlsCount->activeIdx = 0;
+
+		for (int i = 0; i < (int)MonitorType::COUNT; i++)
+		{
+			_tlsCount->counter[0][i] = 0;
+			_tlsCount->counter[1][i] = 0;
+		}
+
+		lock_guard<mutex> lock(_counterArrLock);
+		_counterArr.push_back(_tlsCount);
+	}
+}
+
 void Monitoring::PrintMonitoring()
 {
 	constexpr int NAME_WIDTH = sizeof("Disconnect From Server:") - 1;
@@ -152,63 +211,54 @@ void Monitoring::PrintMonitoring()
 	cout << "===============================================================================\n";
 
 	cout << right << setw(NAME_WIDTH) << "PacketPool_fullChunk:" << " "
-		<< _monitoringArr[(int)MonitorType::PacketPool_FULL] << "\n";
+		<< _globalCounter[(int)MonitorType::PacketPool_FULL] << "\n";
 	cout << right << setw(NAME_WIDTH) << "PacketPool_emptyChunk:" << " "
-		<< _monitoringArr[(int)MonitorType::PacketPool_EMPTY] << "\n\n";
+		<< _globalCounter[(int)MonitorType::PacketPool_EMPTY] << "\n\n";
 
 	cout << right << setw(NAME_WIDTH) << "PacketUseSize:" << " "
-		<< _monitoringArr[(int)MonitorType::PacketUseCount] << "\n";
+		<< _globalCounter[(int)MonitorType::PacketUseCount] << "\n";
 
 	cout << "-------------------------------------------------------------------------------\n\n";
 
 	cout << right << setw(NAME_WIDTH) << "SessionNum:" << " "
-		<< _monitoringArr[(int)MonitorType::SessionNum] << "\n";
+		<< _globalCounter[(int)MonitorType::SessionNum] << "\n";
 	cout << right << setw(NAME_WIDTH) << "AuthPlayerCount:" << " "
-		<< _monitoringArr[(int)MonitorType::AuthPlayerCount] << "\n";
+		<< _globalCounter[(int)MonitorType::AuthPlayerCount] << "\n";
 	cout << right << setw(NAME_WIDTH) << "GamePlayerCount:" << " "
-		<< _monitoringArr[(int)MonitorType::GamePlayerCount] << "\n\n";
+		<< _globalCounter[(int)MonitorType::GamePlayerCount] << "\n\n";
 
 	cout << right << setw(NAME_WIDTH) << "AcceptTotal:" << " "
-		<< _monitoringArr[(int)MonitorType::AcceptTotal] << "\n";
+		<< _globalCounter[(int)MonitorType::AcceptTotal] << "\n";
 	cout << right << setw(NAME_WIDTH) << "AcceptTPS:" << " "
-		<< _monitoringArr[(int)MonitorType::AcceptTPS] << "\n\n";
+		<< _globalCounter[(int)MonitorType::AcceptTPS] << "\n\n";
 
 	cout << right << setw(NAME_WIDTH) << "RecvMessageTPS:" << " "
-		<< _monitoringArr[(int)MonitorType::RecvMessageTPS] << "\n";
+		<< _globalCounter[(int)MonitorType::RecvMessageTPS] << "\n";
 	cout << right << setw(NAME_WIDTH) << "SendMessageTPS:" << " "
-		<< _monitoringArr[(int)MonitorType::SendMessageTPS] << "\n\n";
+		<< _globalCounter[(int)MonitorType::SendMessageTPS] << "\n\n";
 
 	cout << right << setw(NAME_WIDTH) << "RecvLoginTPS:" << " "
-		<< _monitoringArr[(int)MonitorType::RecvLoginTPS] << "\n";
+		<< _globalCounter[(int)MonitorType::RecvLoginTPS] << "\n";
 	cout << right << setw(NAME_WIDTH) << "RecvEchoTPS:" << " "
-		<< _monitoringArr[(int)MonitorType::RecvEchoTPS] << "\n";
+		<< _globalCounter[(int)MonitorType::RecvEchoTPS] << "\n";
 	cout << right << setw(NAME_WIDTH) << "RecvHeartbeatTPS:" << " "
-		<< _monitoringArr[(int)MonitorType::RecvHeartbeatTPS] << "\n\n";
+		<< _globalCounter[(int)MonitorType::RecvHeartbeatTPS] << "\n\n";
 
 	cout << right << setw(NAME_WIDTH) << "AuthFieldFrame:" << " "
-		<< _monitoringArr[(int)MonitorType::AuthFieldFrame] << "\n";
+		<< _globalCounter[(int)MonitorType::AuthFieldFrame] << "\n";
 	cout << right << setw(NAME_WIDTH) << "EchoFieldFrame:" << " "
-		<< _monitoringArr[(int)MonitorType::EchoFieldFrame] << "\n\n";
+		<< _globalCounter[(int)MonitorType::EchoFieldFrame] << "\n\n";
 
-	//cout << "-------------------------------------------------------------------------------\n";
-	//
-	//cout << right << setw(NAME_WIDTH) << "Disconnect From Server:" << " "
-	//	<< (_monitoringArr[(int)MonitorType::TokenFailed] +
-	//		_monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin]) << "\n";
-	//cout << right << setw(NAME_WIDTH) << "Invalid Token:" << " "
-	//	<< _monitoringArr[(int)MonitorType::TokenFailed] << "\n";
-	//cout << right << setw(NAME_WIDTH) << "Duplicate Login:" << " "
-	//	<< _monitoringArr[(int)MonitorType::DisconnectTotal_alreadyLogin] << "\n";
-	//
+
 	cout << "-------------------------------------------------------------------------------\n";
 
 	cout << right << setw(NAME_WIDTH) << "SendJobQ Size:" << " "
-		<< _monitoringArr[(int)MonitorType::SendJobQ] << "\n";
+		<< _globalCounter[(int)MonitorType::SendJobQ] << "\n";
 	cout << right << setw(NAME_WIDTH) << "ActiveWorkerTh Count:" << " "
-		<< _monitoringArr[(int)MonitorType::ActiveWorkerTh] << "\n\n";
+		<< _globalCounter[(int)MonitorType::ActiveWorkerTh] << "\n\n";
 
 	cout << right << setw(NAME_WIDTH) << "TotalSendPacketCount:" << " "
-		<< _monitoringArr[(int)MonitorType::TotalSendPacketCount] << "\n";
+		<< _globalCounter[(int)MonitorType::TotalSendPacketCount] << "\n";
 
 	cout << "===============================================================================\n\n";
 

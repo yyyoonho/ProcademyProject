@@ -95,7 +95,7 @@ int SerializePacketPtr::GetRefCount()
 
 Net_SerializePacket* SerializePacketPtr::MakeSerializePacket()
 {
-    Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::PacketUseCount);
+    Monitoring::GetInstance()->Increase(MonitorType::PacketUseCount);
 
     return Net_SerializePacket::SPacketMP.Alloc();
 }

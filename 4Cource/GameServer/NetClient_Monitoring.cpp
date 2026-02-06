@@ -68,7 +68,7 @@ void NetClient_Monitoring::OnSendJob()
 	if (ret == false)
 		return;
 
-	Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::SendJobQ);
+	Monitoring::GetInstance()->Decrease(MonitorType::SendJobQ);
 
 	SerializePacketPtr newPacket = SerializePacketPtr::MakeSerializePacket();
 	newPacket.Clear();
@@ -97,7 +97,7 @@ void NetClient_Monitoring::EnqueueSendJob(stSendJob sendJob)
 	// 1.
 	sendJobQ.Enqueue(sendJob);
 
-	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendJobQ);
+	Monitoring::GetInstance()->Increase(MonitorType::SendJobQ);
 
 	// 2.
 	PQCSSendJob();

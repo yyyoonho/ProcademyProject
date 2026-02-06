@@ -38,6 +38,12 @@ enum class MonitorType : int
 	COUNT,
 };
 
+struct MonitoringTLS
+{
+	alignas(64) LONG counter[2][(int)MonitorType::COUNT];
+	alignas(64) LONG activeIdx; // 0 or 1
+};
+
 class Monitoring
 {
 private:
@@ -55,6 +61,7 @@ public:
 	void Decrease(MonitorType type);
 	void DecreaseInterlocked(MonitorType type);
 	void PrintMonitoring();
+	void CollectPerSecond();
 	void Clear();
 
 	LONG GetInterlocked(MonitorType type);
@@ -69,7 +76,6 @@ public:
 	int GetPrivateBytes();
 
 public:
-	LONG _monitoringArr[(int)MonitorType::COUNT];
 	CCpuUsage* _cpu;
 
 	// PDH 쿼리 핸들 생성
@@ -77,5 +83,13 @@ public:
 
 	// PDH 리소스 카운터 생성 (여러개 수집시 이를 여러개 생성)
 	PDH_HCOUNTER _privateBytes;
+
+private:
+	void InitTls();
+	mutex						_counterArrLock;
+	vector<MonitoringTLS*>		_counterArr;
+
+public:
+	LONG						_globalCounter[(int)MonitorType::COUNT];
 };
 

@@ -71,7 +71,7 @@ void MyField_Echo::OnRecv(DWORD64 sessionID, SerializePacketPtr sPacket)
 		break;
 	case en_PACKET_CS_GAME_REQ_HEARTBEAT:
 		PacketProc_HB(sessionID);
-		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvHeartbeatTPS);
+		Monitoring::GetInstance()->Increase(MonitorType::RecvHeartbeatTPS);
 		break;
 	}
 }

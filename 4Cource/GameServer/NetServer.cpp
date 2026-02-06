@@ -197,7 +197,8 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 		return false;
 	}
 
-	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendMessageTPS);
+	//Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendMessageTPS);
+	Monitoring::GetInstance()->Increase(MonitorType::SendMessageTPS);
 
 	SendPost(pSession);
 
@@ -487,7 +488,7 @@ void CNetServer::WorkerThreadRun(LPVOID* lParam)
 
 void CNetServer::WorkerThread()
 {
-	LONG ret = Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::ActiveWorkerTh);
+	Monitoring::GetInstance()->Increase(MonitorType::ActiveWorkerTh);
 
 	while (1)
 	{
@@ -499,7 +500,7 @@ void CNetServer::WorkerThread()
 		SOCKADDR_IN clientAddr;
 		int addrLen = sizeof(clientAddr);
 
-		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::ActiveWorkerTh);
+		Monitoring::GetInstance()->Decrease(MonitorType::ActiveWorkerTh);
 
 		BOOL retVal = GetQueuedCompletionStatus(_hIOCP, &cbTransferred, (PULONG_PTR)&pSession, (LPWSAOVERLAPPED*)&pMyOverlapped, INFINITE);
 		if (pMyOverlapped == NULL && cbTransferred == NULL && pSession == NULL)
@@ -511,7 +512,7 @@ void CNetServer::WorkerThread()
 			return;
 		}
 
-		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::ActiveWorkerTh);
+		Monitoring::GetInstance()->Increase(MonitorType::ActiveWorkerTh);
 
 		// TODO: ReleaseProc() 호출
 		if (pMyOverlapped == &releaseReqToIOCP)
@@ -664,7 +665,8 @@ void CNetServer::WorkerThread()
 				// ===============================
 				// 9. TPS 카운트
 				// ===============================
-				Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageTPS);
+				//Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageTPS);
+				Monitoring::GetInstance()->Increase(MonitorType::RecvMessageTPS);
 
 				// ===============================
 				// 10. 컨텐츠 전달
@@ -851,7 +853,6 @@ void CNetServer::AcceptThread()
 		WCHAR addrBuf[40];
 		InetNtop(AF_INET, &clientAddr.sin_addr, addrBuf, 40);
 
-		//Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SessionNum);
 
 		// 소켓 <-> IOCP 연결
 		CreateIoCompletionPort((HANDLE)_sessionArray[idx].sock, _hIOCP, (ULONG_PTR)&_sessionArray[idx], NULL);
