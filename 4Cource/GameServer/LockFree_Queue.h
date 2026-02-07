@@ -14,9 +14,14 @@ private:
     };
 
     Node* _head;
-    Node* _tail;
+    char  _pad1[64 - sizeof(Node*)];
 
-    int _useSize;
+    Node* _tail;
+    char  _pad2[64 - sizeof(Node*)];
+
+    int   _useSize;
+    char  _pad3[64 - sizeof(int)];
+
     int maximumQSize = 20000;
 
     LONG _uniqueCode;
