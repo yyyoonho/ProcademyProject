@@ -50,7 +50,7 @@ __forceinline void Field::SendPacket(DWORD64 sessionID, SerializePacketPtr sPack
 
 	// ·Îµå¹ë·±½º
 	static int idx = 0;
-	idx = (idx + 1) % 5;
+	idx = (idx + 1) % 3;
 
 	pGameManager->sendPacketQ[idx]->Enqueue((char*)&tmpJob, sizeof(SendPacketJob));
 

@@ -58,87 +58,144 @@ __forceinline int RingBuffer::GetUseSize()
 
 __forceinline int RingBuffer::Enqueue(const char* data, int size)
 {
-	int freeSize = GetFreeSize();
+	if (size <= 0)
+		return 0;
 
-	if (freeSize == 0 || size == 0)
+	int front = _front;
+	int rear = _rear;
+
+	int useSize;
+	if (front == rear)
+	{
+		useSize = 0;
+	}
+	else if (front > rear)
+	{
+		useSize = _capacity - (front - rear);
+	}
+	else
+	{
+		useSize = rear - front;
+	}
+
+	int freeSize;
+	freeSize = _capacity - useSize - 1;
+	if (freeSize <= 0)
 		return 0;
 
 	int writeSize = size;
-
 	if (writeSize > freeSize)
 	{
 		writeSize = freeSize;
 	}
 
-	if (_rear + writeSize > _capacity)
+
+
+
+	int newRear = rear + writeSize;
+
+	if (newRear <= _capacity)
 	{
-		int oneStep = _capacity - _rear;
-		memcpy_s(&_buf[_rear], oneStep, data, oneStep);
-		int twoStep = writeSize - oneStep;
-		memcpy_s(_buf, twoStep, &data[oneStep], twoStep);
+		memcpy(&_buf[rear], data, writeSize);
+
+		if (newRear == _capacity)
+			newRear = 0;
 	}
 	else
 	{
-		memcpy_s(&_buf[_rear], writeSize, data, writeSize);
+		int oneStep = _capacity - rear;
+		memcpy(&_buf[rear], data, oneStep);
+
+		int twoStep = writeSize - oneStep;
+		memcpy(_buf, data + oneStep, twoStep);
+
+		newRear = twoStep;
 	}
 
-	_rear = (_rear + writeSize) % _capacity;
-
+	_rear = newRear;
 	return writeSize;
 }
 __forceinline int RingBuffer::Dequeue(char* dest, int size)
 {
-	int useSize = GetUseSize();
-	if (useSize == 0 || size == 0)
+	if (size <= 0)
+		return 0;
+
+	int front = _front;
+	int rear = _rear;
+
+	int useSize;
+	if (rear >= front)
+		useSize = rear - front;
+	else
+		useSize = _capacity - (front - rear);
+
+	if (useSize <= 0)
 		return 0;
 
 	int readSize = size;
-	if (useSize < readSize)
-	{
+	if (readSize > useSize)
 		readSize = useSize;
-	}
 
-	if (_front + readSize > _capacity)
+
+	int newFront = front + readSize;
+
+	if (newFront <= _capacity)  
 	{
-		int oneStep = _capacity - _front;
-		memcpy_s(dest, oneStep, &_buf[_front], oneStep);
-		int twoStep = readSize - oneStep;
-		memcpy_s(&dest[oneStep], twoStep, _buf, twoStep);
+		memcpy(dest, &_buf[front], readSize);
+
+		if (newFront == _capacity)
+			newFront = 0;
 	}
 	else
 	{
-		memcpy_s(dest, readSize, &_buf[_front], readSize);
+		int oneStep = _capacity - front;
+		memcpy(dest, &_buf[front], oneStep);
+
+		int twoStep = readSize - oneStep;
+		memcpy(dest + oneStep, _buf, twoStep);
+
+		newFront = twoStep;
 	}
 
-
-	_front = (_front + readSize) % _capacity;
-
+	_front = newFront;
 	return readSize;
 }
 
 __forceinline int RingBuffer::Peek(char* dest, int size)
 {
-	int useSize = GetUseSize();
-	if (useSize == 0 || size == 0)
+	if (size <= 0)
+		return 0;
+
+	int front = _front;
+	int rear = _rear;
+
+	int useSize;
+	if (rear >= front)
+		useSize = rear - front;
+	else
+		useSize = _capacity - (front - rear);
+
+	if (useSize <= 0)
 		return 0;
 
 	int readSize = size;
-	if (useSize < readSize)
-	{
+	if (readSize > useSize)
 		readSize = useSize;
-	}
 
-	if (_front + readSize > _capacity)
+
+	int endPos = front + readSize;
+
+	if (endPos <= _capacity)
 	{
-		int oneStep = _capacity - _front;
-		memcpy_s(dest, oneStep, &_buf[_front], oneStep);
-
-		int twoStep = readSize - oneStep;
-		memcpy_s(&dest[oneStep], twoStep, _buf, twoStep);
+		memcpy(dest, &_buf[front], readSize); 
 	}
 	else
 	{
-		memcpy_s(dest, readSize, &_buf[_front], readSize);
+		int oneStep = _capacity - front;
+		memcpy(dest, &_buf[front], oneStep);  
+
+		int twoStep = readSize - oneStep;
+		memcpy(dest + oneStep, _buf, twoStep); 
 	}
 
 	return readSize;
@@ -146,24 +203,20 @@ __forceinline int RingBuffer::Peek(char* dest, int size)
 
 __forceinline int RingBuffer::DirectEnqueueSize()
 {
-	int a = _front;
-	int b = _rear;
+	int front = _front;
+	int rear = _rear;
 
-	if (a > b)
+	if (front > rear)
 	{
-		return GetFreeSize();
+		return (front - rear) - 1;
 	}
-	else
+
+	if (front == 0)
 	{
-		if (a == 0)
-		{
-			return (_capacity - b) - 1;
-		}
-		else
-		{
-			return (_capacity - b);
-		}
+		return (_capacity - rear) - 1;
 	}
+
+	return (_capacity - rear);
 }
 __forceinline int RingBuffer::DirectDequeueSize()
 {
@@ -187,24 +240,60 @@ __forceinline int RingBuffer::DirectDequeueSize()
 
 __forceinline int RingBuffer::MoveRear(int size)
 {
-	int freeSize = GetFreeSize();
+	if (size <= 0)
+		return 0;
+
+	int front = _front;
+	int rear = _rear;
+
+	int useSize;
+	if (rear >= front)
+		useSize = rear - front;
+	else
+		useSize = _capacity - (front - rear);
+
+	int freeSize = _capacity - useSize - 1;
+	if (freeSize <= 0)
+		return 0;
+
 	if (size > freeSize)
-	{
 		size = freeSize;
-	}
-	_rear = (_rear + size) % _capacity;
+
+	int newRear = rear + size; 
+	if (newRear >= _capacity)  
+		newRear -= _capacity;
+
+	_rear = newRear;
 
 	return size;
 }
 __forceinline int RingBuffer::MoveFront(int size)
 {
-	int useSize = GetUseSize();
-	if (size > useSize)
-	{
-		size = useSize;
-	}
+	if (size <= 0)
+		return 0;
 
-	_front = (_front + size) % _capacity;
+	int front = _front;
+	int rear = _rear;
+
+
+	int useSize;
+	if (rear >= front)
+		useSize = rear - front;
+	else
+		useSize = _capacity - (front - rear);
+
+	if (useSize <= 0)
+		return 0;
+
+	if (size > useSize)
+		size = useSize;
+
+
+	int newFront = front + size;
+	if (newFront >= _capacity)  
+		newFront -= _capacity;
+
+	_front = newFront;
 
 	return size;
 }

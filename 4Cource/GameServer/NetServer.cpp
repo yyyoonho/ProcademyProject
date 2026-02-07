@@ -33,6 +33,7 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	for (int i = 9999; i >= 0; i--)
 	{
 		_sessionArray[i].recvQ.Resize(2000);
+		_sessionArray[i].contentMsgQ.Resize(2000);
 
 		_releaseIdxLockFreeStack.Push(i);
 	}
