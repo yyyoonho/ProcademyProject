@@ -250,7 +250,6 @@ void GameManager::FieldThreadFunc(void* param, int id)
 				}
 
 				int msgCnt = (pSession->contentMsgQ.GetUseSize() / sizeof(RawPtr));
-				//for (int j = 0; j < msgCnt; j++)
 				while(msgCnt--)
 				{
 					RawPtr rawPtr;

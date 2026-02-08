@@ -17,7 +17,7 @@ private:
 	void PacketProc_HB(DWORD64 sessionID);
 
 private:
-	procademy::MemoryPool_TLS<Player> playerPool{ 0,false };
+	//procademy::MemoryPool_TLS<Player> playerPool{ 0,false };
 
 	vector<Player*>					PlayerArr;
 	unordered_map<DWORD64, Player*>	SIDToPlayer;

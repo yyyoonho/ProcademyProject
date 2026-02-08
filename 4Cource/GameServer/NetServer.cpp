@@ -487,10 +487,20 @@ void CNetServer::WorkerThreadRun(LPVOID* lParam)
 	self->WorkerThread();
 }
 
+struct ActiveWorkerScope
+{
+	ActiveWorkerScope()
+	{
+		Monitoring::GetInstance()->Increase(MonitorType::ActiveWorkerTh);
+	}
+	~ActiveWorkerScope()
+	{
+		Monitoring::GetInstance()->Decrease(MonitorType::ActiveWorkerTh);
+	}
+};
+
 void CNetServer::WorkerThread()
 {
-	Monitoring::GetInstance()->Increase(MonitorType::ActiveWorkerTh);
-
 	while (1)
 	{
 		// 비동기 IO 완료통지 대기
@@ -500,8 +510,6 @@ void CNetServer::WorkerThread()
 
 		SOCKADDR_IN clientAddr;
 		int addrLen = sizeof(clientAddr);
-
-		Monitoring::GetInstance()->Decrease(MonitorType::ActiveWorkerTh);
 
 		BOOL retVal = GetQueuedCompletionStatus(_hIOCP, &cbTransferred, (PULONG_PTR)&pSession, (LPWSAOVERLAPPED*)&pMyOverlapped, INFINITE);
 		if (pMyOverlapped == NULL && cbTransferred == NULL && pSession == NULL)
@@ -513,7 +521,7 @@ void CNetServer::WorkerThread()
 			return;
 		}
 
-		Monitoring::GetInstance()->Increase(MonitorType::ActiveWorkerTh);
+		ActiveWorkerScope activeGuard;
 
 		// TODO: ReleaseProc() 호출
 		if (pMyOverlapped == &releaseReqToIOCP)
@@ -749,7 +757,7 @@ void CNetServer::AcceptThread()
 			return;
 		}
 
-		Monitoring::GetInstance()->Increase(MonitorType::AcceptTotal);
+		Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::AcceptTotal);
 		Monitoring::GetInstance()->Increase(MonitorType::AcceptTPS);
 
 		// OnConnectionRequest

@@ -8,6 +8,9 @@ enum class MonitorType : int
 	PacketPool_FULL,		// packet 메모리풀_full					O
 	PacketPool_EMPTY,		// packet 메모리풀_empty					O
 
+	PacketPool2_FULL,		// 
+	PacketPool2_EMPTY,		// 
+
 	PacketUseCount,			//										O
 		
 	SessionNum,				// NetServer 의 세션수					O	

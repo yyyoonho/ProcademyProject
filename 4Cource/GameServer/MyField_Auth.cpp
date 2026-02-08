@@ -22,9 +22,9 @@ void MyField_Auth::OnEnter(DWORD64 sessionID)
 	// 1. 넘어온 sessionID를 Key로 Player생성하기.
 	// 2. newPlayer에게 줄 데이터들 sendPacket();
 
-	Player* newPlayer = playerPool.Alloc();
+	Player* newPlayer = Field::playerPool.Alloc();
 
-	newPlayer->sessionID;
+	newPlayer->sessionID = sessionID;
 	newPlayer->accountNo = INT64_MAX;
 	newPlayer->heartbeat = GetTickCount64();
 	newPlayer->state = PLAYER_STATE::ACCEPT;
@@ -77,7 +77,7 @@ void MyField_Auth::OnUpdate()
 	// TODO(콘텐츠):
 	// 1. 하트비트 정도만 체크하자.
 
-	/*static DWORD64 oldTime = GetTickCount64();
+	static DWORD64 oldTime = GetTickCount64();
 
 	DWORD64 nowTime = GetTickCount64();
 	DWORD64 diff = nowTime - oldTime;
@@ -93,7 +93,9 @@ void MyField_Auth::OnUpdate()
 			continue;
 
 		Disconnect(sid);
-	}*/
+	}
+
+	oldTime = nowTime;
 }
 
 void MyField_Auth::OnLeave(DWORD64 sessionID)
@@ -121,7 +123,7 @@ void MyField_Auth::OnLeave(DWORD64 sessionID)
 		break;
 	}
 	
-	playerPool.Free(pPlayer);
+	Field::playerPool.Free(pPlayer);
 
 	Monitoring::GetInstance()->Decrease(MonitorType::AuthPlayerCount);
 }

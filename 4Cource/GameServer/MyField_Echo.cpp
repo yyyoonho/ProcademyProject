@@ -81,7 +81,7 @@ void MyField_Echo::OnUpdate()
 	// TODO(콘텐츠):
 	// 1. 하트비트 정도만 체크하자.
 
-	/*static DWORD64 oldTime = GetTickCount64();
+	static DWORD64 oldTime = GetTickCount64();
 
 	DWORD64 nowTime = GetTickCount64();
 	DWORD64 diff = nowTime - oldTime;
@@ -97,7 +97,9 @@ void MyField_Echo::OnUpdate()
 			continue;
 
 		Disconnect(sid);
-	}*/
+	}
+
+	oldTime = nowTime;
 }
 
 void MyField_Echo::OnLeave(DWORD64 sessionID)
@@ -125,7 +127,7 @@ void MyField_Echo::OnLeave(DWORD64 sessionID)
 		break;
 	}
 
-	playerPool.Free(pPlayer);
+	Field::playerPool.Free(pPlayer);
 
 	Monitoring::GetInstance()->Decrease(MonitorType::GamePlayerCount);
 }

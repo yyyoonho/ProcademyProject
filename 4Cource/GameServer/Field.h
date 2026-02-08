@@ -3,6 +3,7 @@
 
 #include "NetServer.h"
 #include "GameManager.h"
+#include "FieldStruct.h"
 
 class Field
 {
@@ -29,6 +30,9 @@ public:
 	void Disconnect(DWORD64 sessionID);
 
 	void RegistGameManager(GameManager* pGM);
+
+public:
+	inline static procademy::MemoryPool_TLS<Player> playerPool{ 0,false };
 
 public:
 	vector<FieldMovePack> movePackageVec;

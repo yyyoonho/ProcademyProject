@@ -1,8 +1,11 @@
 #include "stdafx.h"
 
+#include "FieldStruct.h"
+
 #include "Monitoring.h"
 #include "NetServer.h"
 #include "GameManager.h"
+
 #include "Field.h"
 
 Field::Field()
