@@ -242,7 +242,7 @@ bool ChatServer::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr pPacket)
 		return false;
 	}
 
-	// attack 14
+	// attack #14
 	// 비정상 accountNo에 대한 컷
 	{
 		bool valid = false;

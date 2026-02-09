@@ -33,9 +33,6 @@ enum class MonitorType : int
 
 	SendJobQ,				//										O
 
-	ActiveWorkerTh,
-
-
 	TotalSendPacketCount,
 
 	COUNT,
@@ -44,7 +41,7 @@ enum class MonitorType : int
 struct MonitoringTLS
 {
 	alignas(64) LONG counter[2][(int)MonitorType::COUNT];
-	alignas(64) LONG activeIdx; // 0 or 1
+	alignas(64) atomic<LONG> activeIdx; // 0 or 1
 };
 
 class Monitoring

@@ -32,6 +32,26 @@ void MyField_Echo::OnEnterWithPlayer(DWORD64 sessionID, void* pPlayer)
 	// 2. newPlayer에게 줄 데이터들 sendPacket();
 
 	Player* movePlayer = (Player*)pPlayer;
+
+
+	// 중복로그인 검사 + 등록
+	INT64 tmpAccountNo = movePlayer->accountNo;
+	DWORD64 oldSID = 0;
+	auto iter = accountNoToSID.find(tmpAccountNo);
+	if (iter != accountNoToSID.end())
+	{
+		oldSID = iter->second;
+	}
+	accountNoToSID[tmpAccountNo] = sessionID;
+
+	// oldSID가 있고, 그게 지금 세션이 아리나면 중복로그인 -> old 끊기
+	if (oldSID != 0 && oldSID != sessionID)
+	{
+		Disconnect(oldSID);
+		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"중복로그인");
+	}
+
+	
 	movePlayer->heartbeat = GetTickCount64();
 
 	PlayerArr.push_back(movePlayer);
@@ -63,17 +83,34 @@ void MyField_Echo::OnRecv(DWORD64 sessionID, SerializePacketPtr sPacket)
 	WORD msgType;
 	sPacket >> msgType;
 
+	bool flag = true;
+
 	switch (msgType)
 	{
 	case en_PACKET_CS_GAME_REQ_ECHO:
-		PacketProc_Echo(sessionID, sPacket);
+		flag = PacketProc_Echo(sessionID, sPacket);
 		Monitoring::GetInstance()->Increase(MonitorType::RecvEchoTPS);
 		break;
 	case en_PACKET_CS_GAME_REQ_HEARTBEAT:
-		PacketProc_HB(sessionID);
+		flag = PacketProc_HB(sessionID);
 		Monitoring::GetInstance()->Increase(MonitorType::RecvHeartbeatTPS);
 		break;
+	dafault:
+		Disconnect(sessionID);
+		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
+		return;
 	}
+
+	//if (flag == true)
+	//{
+	//	// 클라이언트가 1초에 800개 이상의 메시지를 보냈으면 킥. (단, 2OUT 시 킥)
+	//	bool rateRet = CheckMessageRateLimit(sessionID);
+	//	if (rateRet == false)
+	//	{
+	//		Disconnect(sessionID);
+	//		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #12 Disconnect");
+	//	}
+	//}
 }
 
 void MyField_Echo::OnUpdate()
@@ -81,7 +118,7 @@ void MyField_Echo::OnUpdate()
 	// TODO(콘텐츠):
 	// 1. 하트비트 정도만 체크하자.
 
-	static DWORD64 oldTime = GetTickCount64();
+	/*static DWORD64 oldTime = GetTickCount64();
 
 	DWORD64 nowTime = GetTickCount64();
 	DWORD64 diff = nowTime - oldTime;
@@ -99,7 +136,7 @@ void MyField_Echo::OnUpdate()
 		Disconnect(sid);
 	}
 
-	oldTime = nowTime;
+	oldTime = nowTime;*/
 }
 
 void MyField_Echo::OnLeave(DWORD64 sessionID)
@@ -116,6 +153,10 @@ void MyField_Echo::OnLeave(DWORD64 sessionID)
 
 	Player* pPlayer = iter->second;
 	SIDToPlayer.erase(iter);
+
+	INT64 accountNo = pPlayer->accountNo;
+	accountNoToSID.erase(accountNo);
+
 
 	for (int i = 0; i < PlayerArr.size(); i++)
 	{
@@ -146,6 +187,9 @@ void MyField_Echo::OnFieldLeave(DWORD64 sessionID)
 
 	Player* pPlayer = iter->second;
 	SIDToPlayer.erase(iter);
+
+	INT64 accountNo = pPlayer->accountNo;
+	accountNoToSID.erase(accountNo);
 
 	for (int i = 0; i < PlayerArr.size(); i++)
 	{

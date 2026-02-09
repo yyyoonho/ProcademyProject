@@ -13,8 +13,10 @@ public:
 	virtual void OnFieldLeave(DWORD64 sessionID) override;
 
 private:
-	void PacketProc_Login(DWORD64 sessionID, SerializePacketPtr sPacket);
-	void PacketProc_HB(DWORD64 sessionID);
+	bool PacketProc_Login(DWORD64 sessionID, SerializePacketPtr sPacket);
+	bool PacketProc_HB(DWORD64 sessionID);
+
+	bool CheckMessageRateLimit(DWORD64 sessionID);
 
 private:
 	//procademy::MemoryPool_TLS<Player> playerPool{ 0,false };

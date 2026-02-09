@@ -13,13 +13,16 @@ public:
 	virtual void OnFieldLeave(DWORD64 sessionID) override;
 
 private:
-	void PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket);
-	void PacketProc_HB(DWORD64 sessionID);
+	bool PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket);
+	bool PacketProc_HB(DWORD64 sessionID);
+
+	bool CheckMessageRateLimit(Player* pPlayer);
 
 private:
 	//procademy::MemoryPool_TLS<Player> playerPool{ 0,false };
 
 	vector<Player*>					PlayerArr;
 	unordered_map<DWORD64, Player*>	SIDToPlayer;
+	unordered_map<INT64, DWORD64>	accountNoToSID;
 };
 

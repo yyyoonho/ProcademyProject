@@ -194,7 +194,7 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	if (ret == false)
 	{
 		Disconnect(sessionID);
-		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #11 Disconnect");
+		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #11 Disconnect");
 		return false;
 	}
 
@@ -280,7 +280,7 @@ bool CNetServer::RecvProc(Session* pSession)
 	int tmp = pSession->recvQ.GetFreeSize();
 	if (pSession->recvQ.GetFreeSize() == 0)
 	{
-		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
+		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 		return false;
 	}
 
@@ -487,18 +487,6 @@ void CNetServer::WorkerThreadRun(LPVOID* lParam)
 	self->WorkerThread();
 }
 
-struct ActiveWorkerScope
-{
-	ActiveWorkerScope()
-	{
-		Monitoring::GetInstance()->Increase(MonitorType::ActiveWorkerTh);
-	}
-	~ActiveWorkerScope()
-	{
-		Monitoring::GetInstance()->Decrease(MonitorType::ActiveWorkerTh);
-	}
-};
-
 void CNetServer::WorkerThread()
 {
 	while (1)
@@ -520,8 +508,6 @@ void CNetServer::WorkerThread()
 
 			return;
 		}
-
-		ActiveWorkerScope activeGuard;
 
 		// TODO: ReleaseProc() 호출
 		if (pMyOverlapped == &releaseReqToIOCP)
@@ -629,7 +615,7 @@ void CNetServer::WorkerThread()
 					if (_netCodec->isValidCode(packetCode) == false)
 					{
 						Disconnect(pSession->sessionID);
-						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #1 Disconnect");
+						//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #1 Disconnect");
 						break;
 					}
 				}
@@ -644,7 +630,7 @@ void CNetServer::WorkerThread()
 				if (payloadLen > Net_SerializePacket::eBUFFER_DEFAULT)
 				{
 					Disconnect(pSession->sessionID);
-					_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #9 Disconnect");
+					//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #9 Disconnect");
 					break;
 				}
 
@@ -666,7 +652,7 @@ void CNetServer::WorkerThread()
 					if (decodingRet == FALSE)
 					{
 						Disconnect(pSession->sessionID);
-						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #7 Disconnect");
+						//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #7 Disconnect");
 						break;
 					}
 				}

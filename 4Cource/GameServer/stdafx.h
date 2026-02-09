@@ -27,6 +27,7 @@
 //#include <cpp_redis/cpp_redis>
 
 #include "CrashDump.h"
+#include "LogManager.h"
 
 #include "RingBuffer.h"
 #include "CustomProfiler.h"

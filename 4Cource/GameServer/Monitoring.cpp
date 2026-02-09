@@ -103,11 +103,13 @@ void Monitoring::CollectPerSecond()
 			continue;
 
 		// old = 기존 activeIdx, new = 1-old
-		LONG oldIdx = tls->activeIdx;
+		//LONG oldIdx = tls->activeIdx;
+		LONG oldIdx = tls->activeIdx.load();
 		LONG newIdx = 1 - oldIdx;
 
 		// activeIdx 변경 (이 순간 이후 쓰레드들은 newIdx로만 증가)
-		tls->activeIdx = newIdx;
+		//tls->activeIdx = newIdx;
+		tls->activeIdx.store(newIdx);
 
 
 		LONG* oldBuf = tls->counter[oldIdx];
@@ -254,11 +256,6 @@ void Monitoring::PrintMonitoring()
 
 	cout << right << setw(NAME_WIDTH) << "SendJobQ Size:" << " "
 		<< _globalCounter[(int)MonitorType::SendJobQ] << "\n";
-	cout << right << setw(NAME_WIDTH) << "ActiveWorkerTh Count:" << " "
-		<< _globalCounter[(int)MonitorType::ActiveWorkerTh] << "\n\n";
-
-	cout << right << setw(NAME_WIDTH) << "TotalSendPacketCount:" << " "
-		<< _globalCounter[(int)MonitorType::TotalSendPacketCount] << "\n";
 
 	cout << "===============================================================================\n\n";
 

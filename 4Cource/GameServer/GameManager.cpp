@@ -378,27 +378,21 @@ void GameManager::FieldThreadFunc(void* param, int id)
 
 void GameManager::FrameControl()
 {
-	thread_local static DWORD oldTick1 = timeGetTime();
+	thread_local static DWORD oldTick = timeGetTime();
+
 	DWORD nowTime = timeGetTime();
+	DWORD diffTime = nowTime - oldTick;
 
-	DWORD diffTime = nowTime - oldTick1;
-
-	/*if (diffTime < 20)
+	if (diffTime < 20)
 	{
 		Sleep(20 - diffTime);
-	}*/
-
-	int sleepTick = 20 - diffTime;
-	if (sleepTick > 0)
-	{
-		Sleep(sleepTick);
 	}
-		
-	//oldTick1 = timeGetTime();
-	oldTick1 += 20;
-	
+
+	oldTick = timeGetTime();
+
 	return;
 }
+
 
 void GameManager::ShowFPS(int id)
 {

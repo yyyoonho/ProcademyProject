@@ -1,5 +1,7 @@
 #pragma once
 
+#define MAXPLAYER 7500
+
 struct Player
 {
 	DWORD64 sessionID;
