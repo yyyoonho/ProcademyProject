@@ -22,7 +22,7 @@ bool MyField_Auth::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr sPacke
 	if (iter == SIDToPlayer.end())
 	{
 		Disconnect(sessionID);
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
 		return false;
 	}
 
@@ -31,7 +31,7 @@ bool MyField_Auth::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr sPacke
 	if (authPlayerCount + echoPlayerCount > MAXPLAYER)
 	{
 		Disconnect(sessionID);
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #6 Disconnect");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #6 Disconnect");
 		return false;
 	}
 
@@ -57,7 +57,7 @@ bool MyField_Auth::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr sPacke
 		if (!valid)
 		{
 			Disconnect(sessionID);
-			//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #14");
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #14");
 
 			return false;
 		}
@@ -65,6 +65,8 @@ bool MyField_Auth::PacketProc_Login(DWORD64 sessionID, SerializePacketPtr sPacke
 
 
 	Player* pPlayer = iter->second;
+
+	pGameManager->SetAccountNoToSession(sessionID, accountNo);
 
 	pPlayer->accountNo = accountNo;
 	pPlayer->heartbeat = GetTickCount64();
@@ -80,7 +82,7 @@ bool MyField_Auth::PacketProc_HB(DWORD64 sessionID)
 	if (iter == SIDToPlayer.end())
 	{
 		Disconnect(sessionID);
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
 		return false;
 	}
 

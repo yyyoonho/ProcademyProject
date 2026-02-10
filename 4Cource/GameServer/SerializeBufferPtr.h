@@ -115,7 +115,7 @@ __forceinline void SerializePacketPtr::DecreaseRefCount()
 	{
 		if (InterlockedDecrement(&_RCBPtr->count) == 0)
 		{
-			Monitoring::GetInstance()->Decrease(MonitorType::PacketUseCount);
+			Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PacketUseCount);
 
 			Net_SerializePacket::SPacketMP.Free(_ptr);
 			SerializePacketPtr::RcbMP.Free(_RCBPtr);
@@ -135,7 +135,7 @@ __forceinline void RawPtr::DecreaseRefCount()
 {
 	if (InterlockedDecrement(&_RCBPtr->count) == 0)
 	{
-		Monitoring::GetInstance()->Decrease(MonitorType::PacketUseCount);
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PacketUseCount);
 
 
 		Net_SerializePacket::SPacketMP.Free(_ptr);

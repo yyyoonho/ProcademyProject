@@ -47,7 +47,7 @@ protected:
 	bool DecreaseIO_Count(Session* pSession);
 
 protected:
-	unsigned int GetIdxFromSessionID(DWORD64 sessionID);
+	__forceinline unsigned int GetIdxFromSessionID(DWORD64 sessionID);
 	void SetIdxToSessionID(DWORD64* pSessionID, unsigned int idx);
 
 private:
@@ -114,3 +114,10 @@ private:
 	myOverlapped disconnectReqToIOCP;
 	myOverlapped releaseReqToIOCP;
 };
+
+__forceinline unsigned int CNetServer::GetIdxFromSessionID(DWORD64 sessionID)
+{
+	unsigned int idx = (sessionID & 0xffff000000000000) >> 48;
+
+	return idx;
+}

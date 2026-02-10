@@ -6,8 +6,11 @@
 // 3. Auth 쓰레드를 등록한다.
 // 4. field 쓰레드들을 등록한다.
 
+#include "FieldStruct.h"
+
 class Field;
 class NetClient_Monitoring;
+class Player;
 
 class GameManager : public CNetServer
 {
@@ -66,6 +69,13 @@ public:
 	virtual void OnMessage_GameManager(DWORD64 sessionID, Session* pSession, SerializePacketPtr pPacket) override;
 	virtual void OnRelease_GameManager(DWORD64 sessionID, Session* pSession) override;
 
+	__forceinline Player*		GetPlayerFromSID(DWORD64 sessionID);
+	void						SetPlayerToSession(DWORD64 sessionID, Player* pPlayer);
+
+	__forceinline INT64			GetAccountNoFromSID(DWORD64 sessionID);
+	void						SetAccountNoToSession(DWORD64 sessionID, INT64 accountNo);
+	
+
 private:
 	void FieldThreadFunc(void* param, int id);
 	void FrameControl();
@@ -94,3 +104,22 @@ public:
 	vector<std::thread>						sendThreads;
 	void									SendPacketJobThread(int id);
 };
+
+__forceinline Player* GameManager::GetPlayerFromSID(DWORD64 sessionID)
+{
+	int idx = GetIdxFromSessionID(sessionID);
+	Player* pPlayer = _sessionArray[idx].pPlayer;
+
+	return pPlayer;
+}
+
+
+__forceinline INT64 GameManager::GetAccountNoFromSID(DWORD64 sessionID)
+{
+	int idx = GetIdxFromSessionID(sessionID);
+
+	// 틈새
+	_sessionArray[idx].pPlayer->heartbeat = GetTickCount64();
+
+	return _sessionArray[idx].accountNo;
+}

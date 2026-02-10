@@ -16,24 +16,16 @@ bool MyField_Echo::PacketProc_Echo(DWORD64 sessionID, SerializePacketPtr sPacket
 	sPacket >> accountNo;
 	sPacket >> sendTick;
 
-	//Player* pPlayer = nullptr;
-	//auto iter = SIDToPlayer.find(sessionID);
-	//if (iter == SIDToPlayer.end())
-	//{
-	//	Disconnect(sessionID);
-	//	//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #4 Disconnect");
-	//	return false;
-	//}
-	//pPlayer = iter->second;
-	//
-	//INT64 playerAccountNO = pPlayer->accountNo;
-	//if (playerAccountNO != accountNo)
-	//{
-	//	Disconnect(sessionID);
-	//	//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #10 Disconnect");
-	//	return false;
-	//}
 		
+	INT64 tmpAccountNo = pGameManager->GetAccountNoFromSID(sessionID);
+	if (tmpAccountNo != accountNo || tmpAccountNo == -1)
+	{
+		Disconnect(sessionID);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #10 Disconnect");
+		return false;
+	}
+
+
 	sPacket.Clear();
 
 	type = en_PACKET_CS_GAME_RES_ECHO;
@@ -52,7 +44,7 @@ bool MyField_Echo::PacketProc_HB(DWORD64 sessionID)
 	if (iter == SIDToPlayer.end())
 	{
 		Disconnect(sessionID);
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #3 Disconnect");
 		return false;
 	}
 
@@ -62,10 +54,13 @@ bool MyField_Echo::PacketProc_HB(DWORD64 sessionID)
 	return true;
 }
 
-bool MyField_Echo::CheckMessageRateLimit(Player* pPlayer)
+bool MyField_Echo::CheckMessageRateLimit(DWORD64 sessionID)
 {
-	Player* player = pPlayer;
-
+	Player* player = pGameManager->GetPlayerFromSID(sessionID);
+	if (player == nullptr)
+	{
+		return false;
+	}
 
 	DWORD now = timeGetTime();
 	bool ret = true;
@@ -87,7 +82,7 @@ bool MyField_Echo::CheckMessageRateLimit(Player* pPlayer)
 
 		if (player->rateLimitOutCount >= 2)
 		{
-			//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"rateLimitOut");
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"rateLimitOut");
 			ret = false;
 		}
 		else

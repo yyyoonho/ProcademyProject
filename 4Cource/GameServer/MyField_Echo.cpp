@@ -48,7 +48,7 @@ void MyField_Echo::OnEnterWithPlayer(DWORD64 sessionID, void* pPlayer)
 	if (oldSID != 0 && oldSID != sessionID)
 	{
 		Disconnect(oldSID);
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"중복로그인");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"중복로그인");
 	}
 
 	
@@ -97,20 +97,9 @@ void MyField_Echo::OnRecv(DWORD64 sessionID, SerializePacketPtr sPacket)
 		break;
 	dafault:
 		Disconnect(sessionID);
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
 		return;
 	}
-
-	//if (flag == true)
-	//{
-	//	// 클라이언트가 1초에 800개 이상의 메시지를 보냈으면 킥. (단, 2OUT 시 킥)
-	//	bool rateRet = CheckMessageRateLimit(sessionID);
-	//	if (rateRet == false)
-	//	{
-	//		Disconnect(sessionID);
-	//		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #12 Disconnect");
-	//	}
-	//}
 }
 
 void MyField_Echo::OnUpdate()
@@ -118,11 +107,11 @@ void MyField_Echo::OnUpdate()
 	// TODO(콘텐츠):
 	// 1. 하트비트 정도만 체크하자.
 
-	/*static DWORD64 oldTime = GetTickCount64();
+	static DWORD64 oldTime = GetTickCount64();
 
 	DWORD64 nowTime = GetTickCount64();
 	DWORD64 diff = nowTime - oldTime;
-	if (diff < 1000 * 10)
+	if (diff < 1000 * 60)
 		return;
 
 	for (int i = 0; i < PlayerArr.size(); i++)
@@ -130,13 +119,14 @@ void MyField_Echo::OnUpdate()
 		DWORD64 sid = PlayerArr[i]->sessionID;
 		DWORD64 hb = PlayerArr[i]->heartbeat;
 
-		if (nowTime - hb < 1000 * 40)
+		if (nowTime - hb < 1000 * 60 * 2)
 			continue;
 
 		Disconnect(sid);
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"하트비트 Disconnect");
 	}
 
-	oldTime = nowTime;*/
+	oldTime = nowTime;
 }
 
 void MyField_Echo::OnLeave(DWORD64 sessionID)

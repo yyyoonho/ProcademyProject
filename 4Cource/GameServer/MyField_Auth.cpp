@@ -29,6 +29,8 @@ void MyField_Auth::OnEnter(DWORD64 sessionID)
 	newPlayer->heartbeat = GetTickCount64();
 	newPlayer->state = PLAYER_STATE::ACCEPT;
 
+	pGameManager->SetPlayerToSession(sessionID, newPlayer);
+
 	loginWaitPlayerArr.push_back(newPlayer);
 	SIDToPlayer.insert({ sessionID, newPlayer });
 
@@ -73,61 +75,58 @@ void MyField_Auth::OnRecv(DWORD64 sessionID, SerializePacketPtr sPacket)
 		break;
 	dafault:
 		Disconnect(sessionID);
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #2 Disconnect");
 		return;
 	}
 
-	//if (flag == true)
-	//{
-	//	// 클라이언트가 1초에 800개 이상의 메시지를 보냈으면 킥. (단, 2OUT 시 킥)
-	//	bool rateRet = CheckMessageRateLimit(sessionID);
-	//	if (rateRet == false)
-	//	{
-	//		Disconnect(sessionID);
-	//		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #12 Disconnect");
-	//	}
-	//}
+	if (flag == true)
+	{
+		// 클라이언트가 1초에 800개 이상의 메시지를 보냈으면 킥. (단, 2OUT 시 킥)
+		bool rateRet = CheckMessageRateLimit(sessionID);
+		if (rateRet == false)
+		{
+			Disconnect(sessionID);
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #12 Disconnect");
+		}
+	}
 }
 
 
 bool MyField_Auth::CheckMessageRateLimit(DWORD64 sessionID)
 {
-	auto iter = SIDToPlayer.find(sessionID);
-	if (iter == SIDToPlayer.end())
+	Player* player = pGameManager->GetPlayerFromSID(sessionID);
+	if (player == nullptr)
 	{
-		return true;
+		return false;
 	}
-
-	Player* pPlayer = iter->second;
-
 
 	DWORD now = timeGetTime();
 	bool ret = true;
 
 	// 1초 갱신
-	if (now - pPlayer->rateLimitTick >= 1000)
+	if (now - player->rateLimitTick >= 1000)
 	{
-		pPlayer->rateLimitTick = now;
-		pPlayer->rateLimitMsgCount = 0;
+		player->rateLimitTick = now;
+		player->rateLimitMsgCount = 0;
 	}
 
 	// 메시지 갯수 증가
-	pPlayer->rateLimitMsgCount++;
+	player->rateLimitMsgCount++;
 
 	// 아웃카운트 검사
-	if (pPlayer->rateLimitMsgCount > 900)
+	if (player->rateLimitMsgCount > 900)
 	{
-		pPlayer->rateLimitOutCount++;
+		player->rateLimitOutCount++;
 
-		if (pPlayer->rateLimitOutCount >= 2)
+		if (player->rateLimitOutCount >= 2)
 		{
-			//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"rateLimitOut");
+			_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"rateLimitOut");
 			ret = false;
 		}
 		else
 		{
-			pPlayer->rateLimitTick = now;
-			pPlayer->rateLimitMsgCount = 0;
+			player->rateLimitTick = now;
+			player->rateLimitMsgCount = 0;
 		}
 	}
 
@@ -140,11 +139,11 @@ void MyField_Auth::OnUpdate()
 	// TODO(콘텐츠):
 	// 1. 하트비트 정도만 체크하자.
 
-	/*static DWORD64 oldTime = GetTickCount64();
+	static DWORD64 oldTime = GetTickCount64();
 
 	DWORD64 nowTime = GetTickCount64();
 	DWORD64 diff = nowTime - oldTime;
-	if (diff < 1000 * 2)
+	if (diff < 1000 * 60)
 		return;
 
 	for (int i = 0; i < loginWaitPlayerArr.size(); i++)
@@ -152,13 +151,13 @@ void MyField_Auth::OnUpdate()
 		DWORD64 sid = loginWaitPlayerArr[i]->sessionID;
 		DWORD64 hb = loginWaitPlayerArr[i]->heartbeat;
 
-		if (nowTime - hb < 1000 * 10)
+		if (nowTime - hb < 1000 * 60 * 2)
 			continue;
 
 		Disconnect(sid);
 	}
 
-	oldTime = nowTime;*/
+	oldTime = nowTime;
 }
 
 void MyField_Auth::OnLeave(DWORD64 sessionID)

@@ -19,9 +19,7 @@ private:
 	bool CheckMessageRateLimit(DWORD64 sessionID);
 
 private:
-	//procademy::MemoryPool_TLS<Player> playerPool{ 0,false };
-
-	vector<Player*>					loginWaitPlayerArr;
-	unordered_map<DWORD64, Player*>	SIDToPlayer;
+	vector<Player*>						loginWaitPlayerArr;
+	unordered_map<DWORD64, Player*>		SIDToPlayer;
 };
 

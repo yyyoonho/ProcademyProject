@@ -11,8 +11,6 @@
 #include "GameManager.h"
 
 
-unsigned int GetIdxFromSessionID(DWORD64 sessionID);
-
 GameManager::GameManager()
 {
 }
@@ -134,6 +132,25 @@ void GameManager::OnRelease_GameManager(DWORD64 sessionID, Session* pSession)
 	// OnLeave 가 실행될대 해당 벡터를 참조. Leave로직 진행.
 
 	pSession->releaseWait = true;
+}
+
+
+
+void GameManager::SetPlayerToSession(DWORD64 sessionID, Player* pPlayer)
+{
+	int idx = GetIdxFromSessionID(sessionID);
+	_sessionArray[idx].pPlayer = pPlayer;
+
+	return;
+}
+
+
+void GameManager::SetAccountNoToSession(DWORD64 sessionID, INT64 accountNo)
+{
+	int idx = GetIdxFromSessionID(sessionID);
+	_sessionArray[idx].accountNo = accountNo;
+
+	return;
 }
 
 void GameManager::FieldThreadFunc(void* param, int id)
@@ -479,12 +496,13 @@ void GameManager::SendPacketJobThread(int id)
 {
 	while (1)
 	{
-		if (sendPacketQ[id]->GetUseSize() < sizeof(RawPtr))
+		if (sendPacketQ[id]->GetUseSize() < sizeof(SendPacketJob))
 		{
-			Sleep(0);
+			YieldProcessor();
 			continue;
 		}
 		
+
 		SendPacketJob tmpJob;
 		sendPacketQ[id]->Dequeue((char*)&tmpJob, sizeof(SendPacketJob));
 

@@ -194,7 +194,7 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 	if (ret == false)
 	{
 		Disconnect(sessionID);
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #11 Disconnect");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #11 Disconnect");
 		return false;
 	}
 
@@ -280,7 +280,7 @@ bool CNetServer::RecvProc(Session* pSession)
 	int tmp = pSession->recvQ.GetFreeSize();
 	if (pSession->recvQ.GetFreeSize() == 0)
 	{
-		//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
+		_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #8 Disconnect");
 		return false;
 	}
 
@@ -463,12 +463,6 @@ void CNetServer::NotifyDisconnect(Session* pSession)
 	OnRelease_GameManager(pSession->sessionID, pSession);
 }
 
-unsigned int CNetServer::GetIdxFromSessionID(DWORD64 sessionID)
-{
-	unsigned int idx = (sessionID & 0xffff000000000000) >> 48;
-
-	return idx;
-}
 
 void CNetServer::SetIdxToSessionID(DWORD64* pSessionID, unsigned int idx)
 {
@@ -615,7 +609,7 @@ void CNetServer::WorkerThread()
 					if (_netCodec->isValidCode(packetCode) == false)
 					{
 						Disconnect(pSession->sessionID);
-						//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #1 Disconnect");
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #1 Disconnect");
 						break;
 					}
 				}
@@ -630,7 +624,7 @@ void CNetServer::WorkerThread()
 				if (payloadLen > Net_SerializePacket::eBUFFER_DEFAULT)
 				{
 					Disconnect(pSession->sessionID);
-					//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #9 Disconnect");
+					_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #9 Disconnect");
 					break;
 				}
 
@@ -652,7 +646,7 @@ void CNetServer::WorkerThread()
 					if (decodingRet == FALSE)
 					{
 						Disconnect(pSession->sessionID);
-						//_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #7 Disconnect");
+						_LOG(dfLOG_LEVEL_SYSTEM, L"%ls\n", L"attack #7 Disconnect");
 						break;
 					}
 				}
@@ -826,6 +820,10 @@ void CNetServer::AcceptThread()
 		_sessionArray[idx].IOCountNReleaseCheck.releaseCheck = FALSE;
 
 		_sessionArray[idx].disconnectNotified = FALSE;
+
+		_sessionArray[idx].pPlayer = nullptr;
+
+		_sessionArray[idx].accountNo = -1;
 
 
 		// Game용 변수 초기화

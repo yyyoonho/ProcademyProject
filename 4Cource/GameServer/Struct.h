@@ -1,6 +1,8 @@
 #pragma once
 
+class Player;
 class Session;
+
 
 enum
 {
@@ -55,6 +57,13 @@ struct joinQContext
 
 struct alignas(64) Session
 {
+    Player* pPlayer;
+    INT64   accountNo;
+    char    _pad00[64 - (
+        sizeof(Player*) +
+        sizeof(INT64)
+        )];
+
     //=================================================
 
     DWORD64 sessionID;
@@ -66,7 +75,6 @@ struct alignas(64) Session
     IOReleasePair IOCountNReleaseCheck; // game
 
     char    _pad0[64 - (
-        sizeof(DWORD64) +
         sizeof(LONG) * 3 +
         sizeof(IOReleasePair)
         )];
