@@ -28,6 +28,7 @@ bool GameManager::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 	}
 
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
+
 	monitoringThread = thread(&GameManager::MonitorThread, this);
 
 	for (int i = 0; i < 3; i++)
@@ -498,7 +499,8 @@ void GameManager::SendPacketJobThread(int id)
 	{
 		if (sendPacketQ[id]->GetUseSize() < sizeof(SendPacketJob))
 		{
-			YieldProcessor();
+			//YieldProcessor();
+			Sleep(10);
 			continue;
 		}
 		
