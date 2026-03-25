@@ -587,6 +587,8 @@ void ChatServer::ReleaseProc(DWORD64 sessionID, SerializePacketPtr pPacket)
 		accountNoToIdx.erase(accountNo);
 		SIDToIdx.erase(sessionID);
 		playerPool.Free(removed);
+
+		Monitoring::GetInstance()->DecreaseInterlocked(MonitorType::PlayerCount);
 	}
 
 }

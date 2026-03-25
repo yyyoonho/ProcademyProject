@@ -86,12 +86,12 @@ void Monitoring::PrintMonitoring()
 	cout << "PacketPool_fullChunk: " << _monitoringArr[(int)MonitorType::PacketPool_FULL] << "\n";
 	cout << "PacketPool_emptyChunk: " << _monitoringArr[(int)MonitorType::PacketPool_EMPTY] << "\n";
 	cout << "\n";
-	cout << "RCBPool_fullChunk: " << _monitoringArr[(int)MonitorType::RCBPool_FULL] << "\n";
-	cout << "RCBPool_emptyChunk: " << _monitoringArr[(int)MonitorType::RCBPool_EMPTY] << "\n";
-	cout << "\n";
-	cout << "LockFreeQ_fullChunk: " << _monitoringArr[(int)MonitorType::lockfreeQ_FULL] << "\n";
-	cout << "LockFreeQ_emptyChunk: " << _monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] << "\n";
-	cout << "\n";
+	//cout << "RCBPool_fullChunk: " << _monitoringArr[(int)MonitorType::RCBPool_FULL] << "\n";
+	//cout << "RCBPool_emptyChunk: " << _monitoringArr[(int)MonitorType::RCBPool_EMPTY] << "\n";
+	//cout << "\n";
+	//cout << "LockFreeQ_fullChunk: " << _monitoringArr[(int)MonitorType::lockfreeQ_FULL] << "\n";
+	//cout << "LockFreeQ_emptyChunk: " << _monitoringArr[(int)MonitorType::lockfreeQ_EMPTY] << "\n";
+	//cout << "\n";
 	cout << "PacketUseSize: " << _monitoringArr[(int)MonitorType::PacketUseCount] << "\n";
 	cout << "-------------------------------------------------------------------------------\n";
 	cout << "\n";
@@ -111,12 +111,12 @@ void Monitoring::PrintMonitoring()
 	cout << "RecvMessageMove: " << _monitoringArr[(int)MonitorType::RecvMessageMoveTPS] << "\n";
 	cout << "RecvMessageChat: " << _monitoringArr[(int)MonitorType::RecvMessageChatTPS] << "\n";
 	cout << "\n";
-	cout << "WaitDuration: " << _monitoringArr[(int)MonitorType::WaitDuration] << "\n";
-	cout << "WorkDuration: " << _monitoringArr[(int)MonitorType::WorkDuration] << "\n"; 
-	cout << "\n";
-	cout << "\n";
-	cout << "Disconnect-중복로그인(new): " << _monitoringArr[(int)MonitorType::DuplicatedDisconnect_new] << "\n";
-	cout << "Disconnect-중복로그인(old): " << _monitoringArr[(int)MonitorType::DuplicatedDisconnect_old] << "\n";
+	//cout << "WaitDuration: " << _monitoringArr[(int)MonitorType::WaitDuration] << "\n";
+	//cout << "WorkDuration: " << _monitoringArr[(int)MonitorType::WorkDuration] << "\n"; 
+	//cout << "\n";
+	//cout << "\n";
+	//cout << "Disconnect-중복로그인(new): " << _monitoringArr[(int)MonitorType::DuplicatedDisconnect_new] << "\n";
+	//cout << "Disconnect-중복로그인(old): " << _monitoringArr[(int)MonitorType::DuplicatedDisconnect_old] << "\n";
 	cout << "===============================================================================\n";
 	cout << "\n";
 

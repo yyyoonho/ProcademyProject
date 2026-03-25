@@ -58,20 +58,15 @@ struct joinQContext
 struct alignas(64) Session
 {
     // =================================================
-    // 🔥 [CACHE LINE 0] : Echo / TPS Hot Path
-    // =================================================
 
     Player* pPlayer;        // 8
     INT64   accountNo;      // 8
 
-    // padding → 정확히 64B 맞춤
     char    _pad00[64 - (
         sizeof(Player*) +
         sizeof(INT64)
         )];
 
-    // =================================================
-    // [CACHE LINE 1] : Connection / State (IO, Send)
     // =================================================
 
     DWORD64 sessionID;      // 8
@@ -89,8 +84,6 @@ struct alignas(64) Session
         )];
 
     // =================================================
-    // [CACHE LINE 2] : Socket / Overlapped (IOCP)
-    // =================================================
 
     SOCKET sock;
 
@@ -103,8 +96,6 @@ struct alignas(64) Session
         )) & 63];
 
     // =================================================
-    // [CACHE LINE 3+] : Buffers / Queues (COLD)
-    // =================================================
 
     RingBuffer recvQ;
     LockFreeQueue<RawPtr> LockFreeSendQ;
@@ -115,16 +106,12 @@ struct alignas(64) Session
         )) & 63];
 
     // =================================================
-    // [CACHE LINE N] : Flags / Content (VERY COLD)
-    // =================================================
 
     bool loginCheck;
     bool releaseWait;
 
     char _pad3[64 - 2];
 
-    // =================================================
-    // game (coldest)
     // =================================================
 
     RingBuffer contentMsgQ;
