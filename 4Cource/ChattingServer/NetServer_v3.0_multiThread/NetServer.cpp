@@ -587,7 +587,8 @@ void CNetServer::WorkerThread()
 				}
 
 				Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::RecvMessageTPS);
-				// 컨텐츠에 메시지 전달
+
+				// 콘텐츠에 메시지 전달
 				OnMessage(pSession->sessionID, pPacket);
 			}
 		}

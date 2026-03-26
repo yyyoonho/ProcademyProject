@@ -50,6 +50,9 @@ private:
 	void WorkerThread();
 	static void AcceptThreadRun(LPVOID* lParam);
 	void AcceptThread();
+
+	static void PQCSSendPacketThreadRun(LPVOID* lParam);
+	void PQCSSendPacketThread();
 	
 public:
 	// 핸들링 함수
@@ -101,4 +104,9 @@ private:
 
 	myOverlapped sendReqToIOCP;
 	myOverlapped releaseReqToIOCP;
+
+private:
+	// PQCS 전용 스레드
+	HANDLE hThread_Send;
+	RingBuffer sendJobQ;
 };

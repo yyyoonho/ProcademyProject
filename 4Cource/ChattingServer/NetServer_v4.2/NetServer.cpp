@@ -48,6 +48,13 @@ bool CNetServer::Start(const WCHAR* ipAddress, unsigned short port, unsigned sho
 	if (_hIOCP == NULL)
 		return false;
 
+	hThread_Send = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)&CNetServer::PQCSSendPacketThreadRun, this, NULL, NULL);
+	if (hThread_Send == NULL)
+		return false;
+
+	sendJobQ.Resize(15000000);
+
+
 	HANDLE hThread;
 	for (int i = 0; i < _workerThreadCount; i++)
 	{
@@ -216,7 +223,8 @@ bool CNetServer::SendPacket(DWORD64 sessionID, SerializePacketPtr pPacket)
 
 	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::SendMessageTPS);
 
-	PQCS_SendReq(sessionID);
+	//PQCS_SendReq(sessionID);
+	sendJobQ.Enqueue((char*)&sessionID, sizeof(DWORD64));
 
 	DecreaseIO_Count(pSession);
 	return true;
@@ -738,6 +746,29 @@ void CNetServer::AcceptThread()
 			DecreaseIO_Count(&_sessionArray[idx]);
 			_sessionArray[idx].loginCheck = TRUE;
 		}
+	}
+}
+
+void CNetServer::PQCSSendPacketThreadRun(LPVOID* lParam)
+{
+	CNetServer* self = (CNetServer*)lParam;
+	self->PQCSSendPacketThread();
+}
+
+void CNetServer::PQCSSendPacketThread()
+{
+	while (1)
+	{
+		if (sendJobQ.GetUseSize() < sizeof(DWORD64))
+		{
+			Sleep(10);
+			continue;
+		}
+
+		DWORD64 sid;
+		sendJobQ.Dequeue((char*)&sid, sizeof(DWORD64));
+
+		PQCS_SendReq(sid);
 	}
 }
 

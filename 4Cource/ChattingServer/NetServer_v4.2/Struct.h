@@ -47,3 +47,9 @@ struct Session
 
     IOReleasePair IOCountNReleaseCheck;
 };
+
+struct SendPacketJob
+{
+    DWORD64 sid;
+    RawPtr r;
+};

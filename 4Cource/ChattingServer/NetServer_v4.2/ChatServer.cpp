@@ -109,17 +109,15 @@ void ChatServer::OnMessage(DWORD64 sessionID, SerializePacketPtr pPacket)
 	MSG_CATEGORY msgCategory = MSG_CATEGORY::MESSAGE;
 	pPacket.PushExtraBuffer((char*)&msgCategory, sizeof(MSG_CATEGORY));
 
-	AcquireSRWLockExclusive(&_contentMSGLock);
-	
 	RawPtr rawPtr;
 	pPacket.GetRawPtr(&rawPtr);
 	rawPtr.IncreaseRefCount();
 
+	AcquireSRWLockExclusive(&_contentMSGLock);
 	_contentMSGQueue.Enqueue(rawPtr);
+	ReleaseSRWLockExclusive(&_contentMSGLock);
 
 	SetEvent(_hEventMsg);
-
-	ReleaseSRWLockExclusive(&_contentMSGLock);
 
 	Monitoring::GetInstance()->IncreaseInterlocked(MonitorType::MSGQueueSize);
 }
