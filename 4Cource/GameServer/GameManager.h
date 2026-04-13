@@ -103,6 +103,10 @@ public:
 	vector<RingBuffer*>						sendPacketQ;
 	vector<std::thread>						sendThreads;
 	void									SendPacketJobThread(int id);
+
+public:
+	HANDLE									hEvent_SendPacketJob[3];
+	atomic<bool>							needWake[3];
 };
 
 __forceinline Player* GameManager::GetPlayerFromSID(DWORD64 sessionID)

@@ -57,7 +57,14 @@ __forceinline void Field::SendPacket(DWORD64 sessionID, SerializePacketPtr sPack
 	idx++;
 	if (idx == 3) idx = 0;
 
+	bool wasEmpty = (pGameManager->sendPacketQ[idx]->GetUseSize() == 0);
+
 	pGameManager->sendPacketQ[idx]->Enqueue((char*)&tmpJob, sizeof(SendPacketJob));
+
+	if (wasEmpty)
+	{
+		SetEvent(pGameManager->hEvent_SendPacketJob[idx]);
+	}
 
 	return;
 }

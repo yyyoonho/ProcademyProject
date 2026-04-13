@@ -29,6 +29,12 @@ bool GameManager::Start(const WCHAR* ipAddress, unsigned short port, unsigned sh
 
 	hEvent_Quit = CreateEvent(NULL, TRUE, FALSE, NULL);
 
+	for (int i = 0; i < 3; i++)
+	{
+		hEvent_SendPacketJob[i] = CreateEvent(NULL, FALSE, FALSE, NULL);
+		needWake[i] = true;
+	}
+
 	monitoringThread = thread(&GameManager::MonitorThread, this);
 
 	for (int i = 0; i < 3; i++)
@@ -497,22 +503,25 @@ void GameManager::SendPacketJobThread(int id)
 {
 	while (1)
 	{
-		if (sendPacketQ[id]->GetUseSize() < sizeof(SendPacketJob))
+		WaitForSingleObject(hEvent_SendPacketJob[id], INFINITE);
+
+		while(1)
 		{
-			//YieldProcessor();
-			Sleep(10);
-			continue;
+			SendPacketJob tmpJob;
+
+			if (sendPacketQ[id]->Dequeue((char*)&tmpJob, sizeof(SendPacketJob)) == 0)
+				break;
+
+			DWORD64 sid = tmpJob.sid;
+			SerializePacketPtr sPacket(tmpJob.r);
+			tmpJob.r.DecreaseRefCount();
+
+			SendPacket(sid, sPacket);
 		}
-		
-
-		SendPacketJob tmpJob;
-		sendPacketQ[id]->Dequeue((char*)&tmpJob, sizeof(SendPacketJob));
-
-		DWORD64 sid = tmpJob.sid;
-
-		SerializePacketPtr sPacket(tmpJob.r);
-		tmpJob.r.DecreaseRefCount();
-		
-		SendPacket(sid, sPacket);
+		if (sendPacketQ[id]->GetUseSize() >= 0)
+		{
+			Sleep(10);
+			SetEvent(hEvent_SendPacketJob[id]);
+		}
 	}
 }
